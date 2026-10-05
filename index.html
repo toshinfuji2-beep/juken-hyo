@@ -160,33 +160,31 @@ details[data-sec]{scroll-margin-top:118px}
 summary{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 summary .rs{font-weight:400;font-size:12px;color:var(--mut);margin-left:6px}
 /* roster */
-#drop{padding:22px 12px}
-#drop .dz-t{font-size:15px;font-weight:700;color:var(--fg);line-height:1.5}
-#drop .dz-s{font-size:12px;margin:2px 0 10px}
-#drop .row{justify-content:center}
+#drop{padding:10px 12px;margin-top:6px}
+#drop .dz-t{font-size:12px}
+#drop .row{justify-content:center;margin-top:6px}
 #drop.over{background:rgba(59,130,246,.1)}
-#rosterSec.has #drop{padding:6px 10px;margin-bottom:6px}
-#rosterSec.has #drop .dz-t{font-size:12px;font-weight:400;color:var(--mut)}
-#rosterSec.has #drop .dz-s{display:none}
-#rosterSec.has #drop .row{display:inline-flex;margin-left:6px;vertical-align:middle}
-#rosterSec.has #drop .row button{padding:2px 8px;font-size:12px}
-#rosterSec.has #drop .row #trysample{display:none}
+#other{margin:8px 0 0}
+#other>summary{font-weight:400;font-size:12px;padding:5px 8px}
+#other .sec{padding:6px 8px}
 #pastebox{margin:8px 0 0;border:0}
 #pastebox summary{font-weight:400;font-size:12px;padding:4px 0;background:none}
-.mp{border:1px solid var(--bd);border-radius:4px;margin-top:8px}
-.mp-h{font-size:11px;color:var(--mut);padding:3px 6px;background:var(--bg);border-bottom:1px solid var(--bd);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mp-r{display:grid;grid-template-columns:minmax(0,5.2em) minmax(0,1fr) minmax(0,6.5em);gap:6px;align-items:center;padding:3px 6px;font-size:12px}
-.mp-r+.mp-r{border-top:1px solid var(--bd)}
-.mp-r.bad{background:var(--warnbg)}
-.mp-k,.mp-v{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mp-v{color:var(--mut)}.mp-r.bad .mp-v{color:var(--warn);font-weight:700}
-.mp-r select{padding:2px 4px;font-size:12px}
-.un{max-height:128px;overflow:auto}
-.un-r{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,5em) auto;gap:6px;align-items:center;padding:2px 6px;font-size:12px}
-.un-r+.un-r{border-top:1px solid var(--bd)}
-.un-r span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.un-r span+span{color:var(--mut)}
-.un-r button{padding:1px 6px;font-size:11px}
+.sl{display:grid;grid-template-columns:6.4em minmax(0,1fr);gap:2px 8px;padding:6px 0;border-top:1px solid var(--bd)}
+.sl:first-child{border-top:0}
+.sl-h{display:flex;flex-direction:column;align-items:flex-start;gap:3px;min-width:0}
+.sl-k{font-size:12px;font-weight:700;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sl-n{font-size:11px;white-space:nowrap;background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:0 7px;color:var(--mut)}
+.sl-n.on{color:var(--ok);border-color:var(--ok)}
+.sl-n.ng{color:var(--warn);border-color:var(--warn);background:var(--warnbg)}
+.sl-h button{padding:1px 8px;font-size:11px}
+.sl textarea{min-height:82px;max-height:190px;overflow:auto;white-space:pre;font:12px/1.4 ui-monospace,Consolas,"Meiryo",monospace;resize:vertical;padding:4px 6px}
+.sl-m{grid-column:2;min-width:0}
+.sl-m div{font-size:11px;margin:2px 0 0;line-height:1.4;overflow-wrap:anywhere}
+.sl-m .w{color:var(--warn)}
+.sl-m .i{color:var(--mut)}
+.sl-m button{padding:0 6px;font-size:11px;margin-left:4px;white-space:nowrap}
+.sl-m a{color:var(--ac);cursor:pointer;text-decoration:underline;white-space:nowrap}
+.sl-foot{border-top:1px solid var(--bd);padding-top:6px;margin-top:2px}
 /* preview affordances (screen only) */
 #pane:focus{outline:none}
 @media screen{
@@ -258,14 +256,19 @@ html,body{background:#fff}
 <div id="steps" role="navigation" aria-label="作業ステップ"><button type="button" data-st="1"><b>① 名簿</b><small id="s1"></small></button><button type="button" data-st="2"><b>② デザイン</b><small id="s2"></small></button><button type="button" data-st="3"><b>③ 確認</b><small id="s3"></small></button><button type="button" data-st="4"><b>④ 印刷</b><small id="s4"></small></button></div>
 </div>
 <details open id="rosterSec" data-sec="roster"><summary>名簿<span class="rs" id="rsum"></span></summary><div class="sec">
-<div id="drop"><div class="dz-t">Excelで範囲をコピーして、この画面で Ctrl+V</div><div class="dz-s">またはCSV / Excelファイルをここにドロップ（1行目は見出し）</div><div class="row"><button id="fbtn" type="button">ファイルを選択</button><button id="trysample" type="button">サンプルで試す</button><input id="file" type="file" accept=".csv,.xlsx,.xls" hidden></div></div>
-<details id="pastebox"><summary>テキストを貼り付けて読み込み（スマホ向け）</summary><textarea id="paste" rows="3" placeholder="Excelからコピーしたタブ区切り・1行目は見出し"></textarea>
+<p class="note" style="margin-top:0">項目ごとに、Excelの1列をコピーして貼り付けてください（1行に1人・同じ順番で）。</p>
+<div id="slots"></div>
+<div class="sl-foot"><p class="note" id="slhint" style="margin-top:0">名簿から入れる項目は「項目」で種類を「名簿の列」にすると、ここに欄が増えます。</p><button id="cadd" type="button">＋名簿の項目を追加</button></div>
+<p class="note">※名簿（個人情報）はこの端末の中だけで処理され、送信されません。保存もされません。ページを閉じる・再読込で消えます。</p>
+<details id="other"><summary>その他の読み込み方法（Excel/CSVファイル・表ごと貼り付け）</summary><div class="sec">
+<p class="note" style="margin-top:0">1行目が見出しの表を読み込むと、見出しが項目名と一致する列が上の各欄に入ります。</p>
+<div id="drop"><div class="dz-t">CSV / Excelファイルをここにドロップ</div><div class="row"><button id="fbtn" type="button">ファイルを選択</button><button id="trysample" type="button">サンプルで試す</button><input id="file" type="file" accept=".csv,.xlsx,.xls" hidden></div></div>
+<details id="pastebox"><summary>表ごと貼り付けて読み込み</summary><textarea id="paste" rows="3" placeholder="Excelからコピーしたタブ区切り・1行目は見出し"></textarea>
 <div class="row" style="margin-top:6px"><button id="pbtn" type="button">貼り付けを読み込む</button></div></details>
 <div class="row" style="margin-top:6px"><button id="sample" type="button">サンプルCSVをダウンロード</button></div>
-<p class="note">※名簿（個人情報）はこの端末の中だけで処理され、送信されません。保存もされません。ページを閉じる・再読込で消えます。</p>
+</div></details>
 <div id="loaded" hidden>
-<div class="row"><span id="cnt" style="font-weight:700;flex:1;min-width:0"></span><button id="rclr" type="button" style="padding:2px 8px;font-size:12px">名簿をクリア</button></div>
-<div id="map"></div><div id="unused"></div>
+<div class="row" style="margin-top:6px"><span id="cnt" style="font-weight:700;flex:1;min-width:0"></span><button id="rclr" type="button" style="padding:2px 8px;font-size:12px">全てクリア</button></div>
 <div class="row" style="margin-top:8px"><button id="sall" type="button">全選択</button><button id="snone" type="button">全解除</button><span id="selcnt" class="note"></span></div>
 <div id="list"></div>
 </div></div></details>
@@ -520,21 +523,19 @@ function fld(label,ctl,cls){var d=el('div',cls||'');d.appendChild(el('label',nul
 function findItem(id){for(var i=0;i<V.items.length;i++)if(V.items[i].id===id)return V.items[i]}
 function moveItem(id,dd){var a=V.items,i=a.indexOf(findItem(id)),j=i+dd;if(i<0||j<0||j>=a.length)return;var x=a[i];a[i]=a[j];a[j]=x;save();drawItems();render()}
 function removeItem(id,ask){var it=findItem(id);if(!it)return false;if(ask!==false&&!confirm('「'+(it.label||'項目')+'」を削除しますか？'))return false;V.items.splice(V.items.indexOf(it),1);if(selId===id)clearSel();save();drawItems();render();return true}
-function drawItems(){var box=$('items');box.textContent='';if(!tpl().hasItems){drawMap();return}
+function drawItems(){var box=$('items');box.textContent='';if(!tpl().hasItems){drawRoster();return}
 var dl=el('datalist');dl.id='hdrs';(headers.length?headers:COMMON_COLS).forEach(function(h){var o=el('option');o.value=h;dl.appendChild(o)});box.appendChild(dl);
 V.items.forEach(function(it,idx){var d=el('div','it'+(it.hidden?' hid':'')+(it.id===selId?' cur':''));d.setAttribute('data-id',it.id);d.addEventListener('focusin',function(){if(selId!==it.id)selectItem(it.id,false)});var h=el('div','it-h');
 var mv=el('div','it-mv');var up=btn('▲','上へ'),dn=btn('▼','下へ');up.disabled=idx===0;dn.disabled=idx===V.items.length-1;
 up.onclick=function(){moveItem(it.id,-1)};dn.onclick=function(){moveItem(it.id,1)};mv.appendChild(up);mv.appendChild(dn);h.appendChild(mv);
-var lb=el('input');lb.type='text';lb.value=it.label;lb.placeholder='項目名';lb.oninput=function(){it.label=lb.value;save();render()};h.appendChild(lb);
+var lb=el('input');lb.type='text';lb.value=it.label;lb.placeholder='項目名';lb.oninput=function(){it.label=lb.value;save();drawRoster();render()};h.appendChild(lb);
 var ss=opt(el('select'),SRC,it.source);ss.onchange=function(){it.source=ss.value;if(it.source==='schedule'&&!it.rows.length)it.rows=[{t:'',c:''}];save();drawItems();render()};h.appendChild(ss);
 var gb=btn('⚙','詳細設定');gb.onclick=function(){openIt[it.id]=!openIt[it.id];drawItems()};h.appendChild(gb);
 var db=btn('🗑','削除');db.onclick=function(){removeItem(it.id)};h.appendChild(db);
 d.appendChild(h);
 var vb=el('div','it-v');
-if(it.source==='column'){var ci=el('input');ci.type='text';ci.setAttribute('list','hdrs');ci.value=it.column;ci.placeholder='名簿の見出し名（例：氏名）';
-var wn=el('div','note');var updW=function(){wn.textContent='';wn.className='note';if(!headers.length)return;var n=colIdx(it.column);
-if(n<0){wn.className='warn';wn.textContent='名簿に該当する列がありません（代替文字を使用）'}else if(headers[n]!==it.column){wn.textContent='→ 列「'+headers[n]+'」を使用'}};
-ci.oninput=function(){it.column=ci.value;updW();save();drawMap();render()};vb.appendChild(ci);updW();vb.appendChild(wn)}
+if(it.source==='column'){var ci=el('input');ci.type='text';ci.setAttribute('list','hdrs');ci.value=it.column;ci.placeholder='ファイル読込時の見出し名（空なら項目名）';
+ci.oninput=function(){it.column=ci.value;save()};var pb=btn('貼り付け欄へ','名簿の貼り付け欄へ移動');pb.style.cssText='padding:2px 8px;font-size:11px;margin-top:3px';pb.onclick=function(){focusSlot(it.id)};vb.appendChild(ci);vb.appendChild(pb)}
 else if(it.source==='fixed'){var fi=el('input');fi.type='text';fi.value=it.value;fi.placeholder='表示する文字';fi.oninput=function(){it.value=fi.value;save();render()};vb.appendChild(fi)}
 else if(it.source==='date'){var di=el('input');di.type='date';di.value=it.value;di.oninput=function(){it.value=di.value;save();render()};vb.appendChild(di)}
 else if(it.source==='autonumber'){var gr=el('div','grid3');var mk=function(lab,key,type){var i=el('input');i.type=type;i.value=it.auto[key];
@@ -554,10 +555,9 @@ var as=opt(el('select'),[['','自動'],['left','左揃え'],['center','中央']]
 var hl=el('label','chk');var hk=el('input');hk.type='checkbox';hk.checked=it.hidden;hk.onchange=function(){it.hidden=hk.checked;save();drawItems();render()};hl.appendChild(hk);hl.appendChild(document.createTextNode('非表示'));dt.appendChild(hl);
 if(it.source==='column'){var fb=el('input');fb.type='text';fb.value=it.fallback;fb.placeholder='列の値が空のとき表示';fb.oninput=function(){it.fallback=fb.value;save();render()};dt.appendChild(fld('代替文字（空欄時）',fb,'wd'))}
 d.appendChild(dt)}
-box.appendChild(d)});drawMap()}
+box.appendChild(d)});drawRoster()}
 $('iadd').onclick=function(){if(!tpl().hasItems)return;var it=mkItem('新しい項目','fixed',{});V.items.push(it);openIt[it.id]=true;save();drawItems();render();
 var ls=$('items').querySelectorAll('.it-h input[type=text]');if(ls.length){var l=ls[ls.length-1];l.focus();l.select()}};
-function addColItem(h){var it=mkItem(h,'column',{column:h});V.items.push(it);save();drawItems();render();selectItem(it.id,false)}
 
 /* ---------- デザイン選択・保存済み ---------- */
 function drawTplSel(){var s=$('tpl');s.textContent='';TPL_ORDER.forEach(function(id){var o=el('option',null,TEMPLATES[id].name);o.value=id;s.appendChild(o)});s.value=S.tpl}
@@ -658,7 +658,7 @@ if(f!==''||row.length){row.push(f);out.push(row)}
 return out}
 function decode(buf){var t;try{t=new TextDecoder('utf-8',{fatal:true}).decode(buf)}catch(e){t=new TextDecoder('shift_jis').decode(buf)}
 return t.replace(/^﻿/,'')}
-var headers=[],rows=[],sel={},navPos=0,showAll=false,zoom='fit',selId='';
+var headers=[],rows=[],sel={},slots=[],slotIndex={},texts={},keepHdr={},lastSlots=[],R={n:0,cnt:{},has:{},hdr:{},multi:{},vals:{}},navPos=0,showAll=false,zoom='fit',selId='';
 /* 見出しの同義語（列名が見つからないときの自動推測） */
 var SG={name:['氏名','名前','生徒名','お名前','name'],
 kana:['カナ氏名','カナ','フリガナ','ふりがな','よみ','読み','ヨミ','かな'],
@@ -675,29 +675,79 @@ if(g==='name'){for(var j=0;j<headers.length;j++)if(/氏名|名前|name/i.test(he
 return -1}
 function colIdx(name){var n=normH(name);if(!n)return -1;for(var i=0;i<headers.length;i++)if(normH(headers[i])===n)return i;var g=groupOf(name);return g?groupIdx(g):-1}
 function autoNum(a,idx){var d=Math.max(1,a.digits||3);return (a.prefix||'')+String((+a.start||0)+idx).padStart(d,'0')}
-function colVal(st,name){if(!st.row){var g=groupOf(name);return g?SAMPLE[g]:'〈'+name+'〉'}
-var ix=colIdx(name);return ix>=0?(st.row[ix]||''):''}
-function groupVal(st,g){if(!st.row)return SAMPLE[g]||'';var ix=groupIdx(g);if(ix>=0)return st.row[ix]||'';
+function colVal(st,it){if(!st.row){var nm=it.column||it.label,g=groupOf(nm);return g?SAMPLE[g]:'〈'+nm+'〉'}
+var ix=slotIndex[it.id];return ix>=0?(st.row[ix]||''):''}
+function groupVal(st,g){if(!st.row)return SAMPLE[g]||'';if(R.has[g]&&slotIndex[g]>=0)return st.row[slotIndex[g]]||'';
 return g==='no'?autoNum({prefix:V.apre,start:V.astart,digits:V.adig},st.idx):''}
 function itemVal(it,st){var s=it.source;
 if(s==='fixed')return it.value||'';
 if(s==='date')return fmtDate(it.value);
 if(s==='autonumber')return autoNum(it.auto,st.idx);
-if(s==='column'){var v=colVal(st,it.column);if(v)return v;
+if(s==='column'){var v=colVal(st,it);if(v)return v;
 if(it.fallback)return it.fallback;return ''}
 return ''}
-function rosterChanged(){var has=rows.length>0;$('loaded').hidden=!has;$('rosterSec').classList.toggle('has',has);
-$('cnt').textContent=rows.length+'名読み込み（'+headers.length+'列）';$('rsum').textContent=has?rows.length+'名':'';drawItems();drawList();render()}
+/* 項目ごとの貼り付け欄（真実の源）。texts[欄キー]=テキスト。保存・送信しない */
+var SIMPLE_SLOTS=[['no','受験番号'],['name','氏名'],['kana','カナ氏名'],['school','学校名'],['grade','学年']];
+function getSlots(){if(tpl().hasItems)return V.items.filter(function(i){return i.source==='column'}).map(function(i){return {key:i.id,label:i.label||'（無題）',col:i.column||i.label,req:!i.hidden&&!i.fallback}});
+return SIMPLE_SLOTS.map(function(g){return {key:g[0],label:g[1],col:g[1],req:g[0]==='name'}})}
+function isHdrLine(sl,x){var n=normH(x);if(!n)return false;if(n===normH(sl.label)||n===normH(sl.col))return true;var g=groupOf(x);return !!g&&g===groupOf(sl.label)}
+function trimTail(a){while(a.length&&a[a.length-1]==='')a.pop();return a}
+function computeRoster(){R={n:0,cnt:{},has:{},hdr:{},multi:{},vals:{}};slotIndex={};
+slots.forEach(function(sl,ix){slotIndex[sl.key]=ix;var ls=trimTail((texts[sl.key]||'').split(/\r?\n/).map(function(x){return x.trim()}));
+if(ls.length&&!keepHdr[sl.key]&&isHdrLine(sl,ls[0])){R.hdr[sl.key]=ls[0];ls=trimTail(ls.slice(1))}
+R.multi[sl.key]=ls.some(function(x){return x.indexOf('\t')>=0});
+ls=ls.map(function(x){return x.replace(/\s*\t+\s*/g,' ')});R.vals[sl.key]=ls;R.cnt[sl.key]=ls.length;R.has[sl.key]=ls.length>0;if(ls.length>R.n)R.n=ls.length});
+rows=[];for(var i=0;i<R.n;i++)rows.push(slots.map(function(sl){return R.vals[sl.key][i]||''}));
+var ns={};rows.forEach(function(_,i){ns[i]=sel[i]===undefined?true:sel[i]});sel=ns}
+function mismatch(){var f=slots.filter(function(sl){return R.cnt[sl.key]>0});if(f.length<2)return null;
+var mx=f[0],mn=f[0];f.forEach(function(sl){if(R.cnt[sl.key]>R.cnt[mx.key])mx=sl;if(R.cnt[sl.key]<R.cnt[mn.key])mn=sl});return R.cnt[mx.key]===R.cnt[mn.key]?null:{mx:mx,mn:mn}}
+function emptyReq(){return rows.length?slots.filter(function(sl){return sl.req&&!R.has[sl.key]}).length:0}
+var slotEls={};
+function growTa(ta){ta.style.height='auto';ta.style.height=Math.min(190,Math.max(82,ta.scrollHeight+2))+'px'}
+function updRosterUI(){var mm=mismatch();
+slots.forEach(function(sl){var e=slotEls[sl.key];if(!e)return;var c=R.cnt[sl.key]||0;e.n.textContent=c+'件';
+var bad=!!mm&&c>0&&(c!==R.n||sl===mm.mx);e.n.className='sl-n'+(c&&!bad?' on':'')+(bad?' ng':'');
+e.m.textContent='';
+if(R.hdr[sl.key]!==undefined){var d=el('div','i','1行目の見出し『'+R.hdr[sl.key]+'』を除きました ');var a=el('a',null,'元に戻す');a.onclick=function(){keepHdr[sl.key]=true;rosterInput()};d.appendChild(a);e.m.appendChild(d)}
+if(R.multi[sl.key]){var d2=el('div','w','複数の列が含まれています。1列だけコピーしてください');var b=btn('1列目だけ使う');
+b.onclick=function(){var prev=texts[sl.key]||'';var t=prev.split(/\r?\n/).map(function(x){return x.split('\t')[0]}).join('\n');texts[sl.key]=t;e.ta.value=t;rosterInput();
+toast('「'+sl.label+'」を1列目だけにしました','元に戻す',function(){texts[sl.key]=prev;e.ta.value=prev;rosterInput()})};d2.appendChild(b);e.m.appendChild(d2)}
+if(mm&&c>0&&c!==R.n){e.m.appendChild(el('div','w',sl.label+'は'+c+'件、'+mm.mx.label+'は'+R.n+'件です。行がずれていないか確認してください'))}
+else if(mm&&sl===mm.mx){e.m.appendChild(el('div','w',sl.label+'は'+c+'件、'+mm.mn.label+'は'+R.cnt[mm.mn.key]+'件です。行がずれていないか確認してください'))}})}
+function drawRoster(){var box=$('slots');
+var ns=getSlots(),keys={};ns.forEach(function(s){keys[s.key]=1});
+ns.forEach(function(s){if(texts[s.key]!==undefined)return;for(var i=0;i<lastSlots.length;i++){var o=lastSlots[i];if(o.label===s.label&&!keys[o.key]&&texts[o.key]!==undefined){texts[s.key]=texts[o.key];break}}});
+slots=ns;lastSlots=ns.map(function(s){return {key:s.key,label:s.label}});slotEls={};box.textContent='';
+$('slhint').hidden=!tpl().hasItems;$('cadd').hidden=!tpl().hasItems;
+if(!slots.length)box.appendChild(el('p','note','名簿から値を取る項目がありません。'));
+slots.forEach(function(sl){var d=el('div','sl'),h=el('div','sl-h');var k=el('b','sl-k',sl.label);k.title=sl.label;h.appendChild(k);var n=el('span','sl-n','0件');h.appendChild(n);
+var cb=btn('クリア');h.appendChild(cb);d.appendChild(h);
+var ta=el('textarea');ta.rows=4;ta.wrap='off';ta.spellcheck=false;ta.value=texts[sl.key]||'';ta.setAttribute('data-slot',sl.key);ta.setAttribute('aria-label',sl.label);
+ta.placeholder='ここに'+sl.label+'を1行に1人ずつ貼り付け'+(!tpl().hasItems&&sl.key==='no'?'（空欄なら自動採番）':'');
+ta.oninput=function(){texts[sl.key]=ta.value;delete keepHdr[sl.key];growTa(ta);rosterInput()};
+cb.onclick=function(){var prev=texts[sl.key]||'';if(!prev)return;texts[sl.key]='';ta.value='';delete keepHdr[sl.key];growTa(ta);rosterInput();
+toast('「'+sl.label+'」をクリアしました','元に戻す',function(){texts[sl.key]=prev;ta.value=prev;growTa(ta);rosterInput()})};
+d.appendChild(ta);var m=el('div','sl-m');d.appendChild(m);box.appendChild(d);slotEls[sl.key]={ta:ta,n:n,m:m};growTa(ta)});
+rosterInfo()}
+function rosterInfo(){computeRoster();updRosterUI();var has=rows.length>0;$('loaded').hidden=!has;
+$('cnt').textContent=rows.length+'名';$('rsum').textContent=has?rows.length+'名':'';drawList()}
+var rdT=null;
+function rosterInput(){rosterInfo();clearTimeout(rdT);rdT=setTimeout(render,120)}
+function rosterChanged(){drawRoster();render()}
+function focusSlot(id){var e=slotEls[id];if(!e)return;$('rosterSec').open=true;e.ta.scrollIntoView({behavior:'smooth',block:'center'});e.ta.focus({preventScroll:true})}
+$('cadd').onclick=function(){if(!tpl().hasItems)return;var n=prompt('追加する項目名を入力してください（例：志望学部）','');if(n==null)return;n=n.trim();if(!n)return;
+var it=mkItem(n,'column',{});V.items.push(it);save();drawItems();render();focusSlot(it.id)};
+function clearAll(){var prev=clone(texts);var any=Object.keys(texts).some(function(k){return texts[k]});if(!any)return;texts={};keepHdr={};sel={};navPos=0;rosterChanged();
+toast('名簿をクリアしました','元に戻す',function(){texts=prev;rosterChanged()})}
 function load(table,o){o=o||{};
-table=table.map(function(r){return r.map(function(v){return v==null?'':String(v).trim()})}).filter(function(r){return r.some(function(v){return v!==''})});
-if(table.length<2){if(o.quiet)toast('データ行が見つかりません（1行目は見出しにしてください）');else alert('データ行が見つかりません（1行目は見出しにしてください）。');return false}
-var prev={h:headers,r:rows,s:sel,n:navPos};
-headers=table[0].map(function(h,i){return h||('列'+(i+1))});rows=table.slice(1);
-sel={};rows.forEach(function(_,i){sel[i]=true});navPos=0;
-var rs=$('rosterSec');rs.open=true;rosterChanged();
-toast('名簿を読み込みました（'+rows.length+'名）','元に戻す',function(){headers=prev.h;rows=prev.r;sel=prev.s;navPos=prev.n;rosterChanged()});return true}
-$('rclr').onclick=function(){if(!rows.length)return;var prev={h:headers,r:rows,s:sel,n:navPos};headers=[];rows=[];sel={};navPos=0;rosterChanged();
-toast('名簿をクリアしました','元に戻す',function(){headers=prev.h;rows=prev.r;sel=prev.s;navPos=prev.n;rosterChanged()})};
+table=table.map(function(r){return r.map(function(v){return v==null?'':String(v).replace(/[\r\n]+/g,' ').trim()})}).filter(function(r){return r.some(function(v){return v!==''})});
+if(table.length<2){alert('データ行が見つかりません（1行目は見出しにしてください）。');return false}
+headers=table[0].map(function(h,i){return h||('列'+(i+1))});var data=table.slice(1),prev=clone(texts),got=[],miss=[];
+slots.forEach(function(sl){var ix=colIdx(sl.col);if(ix<0){miss.push(sl.label);return}texts[sl.key]=data.map(function(r){return r[ix]||''}).join('\n');got.push(sl.label)});
+if(!got.length){texts=prev;alert('見出しが項目名と一致する列がありませんでした。\n表の見出し：'+headers.join('、')+'\n項目：'+slots.map(function(s){return s.label}).join('、'));return false}
+keepHdr={};sel={};navPos=0;$('rosterSec').open=true;rosterChanged();
+toast('「'+got.join('・')+'」に'+data.length+'名分を入れました'+(miss.length?'（未入力：'+miss.join('・')+'）':''),'元に戻す',function(){texts=prev;keepHdr={};rosterChanged()},12000);return true}
+$('rclr').onclick=clearAll;
 function listLabel(r,i){var st={idx:i,row:r};
 if(tpl().hasItems){var its=V.items,no=null,nm=null,kn=/カナ|ｶﾅ|フリガナ|ふりがな/;
 its.forEach(function(x){if(!no&&/受験番号/.test(x.label))no=x;if(!nm&&/氏名|名前/.test(x.label)&&!kn.test(x.label))nm=x});
@@ -725,7 +775,7 @@ var dz=$('drop');
 ['dragenter','dragover'].forEach(function(t){dz.addEventListener(t,function(e){e.preventDefault();dz.classList.add('over')})});
 ['dragleave','drop'].forEach(function(t){dz.addEventListener(t,function(e){e.preventDefault();dz.classList.remove('over')})});
 dz.addEventListener('drop',function(e){var f=e.dataTransfer.files[0];if(f)readFile(f)});
-$('pbtn').onclick=function(){var t=$('paste').value;if(!t.trim())return;load(parseDelim(t,'\t'))};
+$('pbtn').onclick=function(){var t=$('paste').value;if(!t.trim())return;if(load(parseDelim(t,'\t')))$('paste').value=''};
 var SAMPLE_CSV=['受験番号,氏名,カナ氏名,学校名,学年,志望学部,教室,備考','001,坂東 慶次,バンドウケイジ,藤沢高等学校,高3,文学部,レクチャールーム,','002,湘南 花子,ショウナンハナコ,湘南高等学校,高2,政治経済学部,第2教室,','003,江ノ島 次郎,エノシマジロウ,江ノ島高等学校,高1,商学部,,'].join('\r\n')+'\r\n';
 $('trysample').onclick=function(){load(parseDelim(SAMPLE_CSV,','))};
 $('sample').onclick=function(){var csv='\ufeff'+SAMPLE_CSV;
@@ -786,39 +836,16 @@ $('dirty').hidden=!(base&&snap()!==base)}
 
 /* ---------- ステップバー ---------- */
 function setSt(i,cls,txt){var b=document.querySelector('#steps [data-st="'+i+'"]');b.className=cls;$('s'+i).textContent=txt;b.title=txt}
-function missingCols(){return rows.length&&tpl().hasItems?V.items.filter(function(i){return i.source==='column'&&!i.hidden&&colIdx(i.column)<0}).length:0}
-function drawSteps(){var n=current().length,has=rows.length>0,bad=missingCols(),cur=S.cur&&byId(S.cur),dn=!!(cur||importName);
-setSt(1,has?'ok':'',has?'✓ '+rows.length+'名':'未読込');
+function drawSteps(){var n=current().length,has=rows.length>0,mm=has&&mismatch(),bad=emptyReq(),cur=S.cur&&byId(S.cur),dn=!!(cur||importName);
+setSt(1,!has?'':mm?'ng':'ok',!has?'未入力':mm?'⚠ '+rows.length+'名・件数ずれ':'✓ '+rows.length+'名');
 setSt(2,dn?'ok':'',dn?'✓ '+(cur?cur.name:importName):tpl().name);
-setSt(3,!has?'':bad?'ng':'ok',!has?'サンプル表示':bad?'⚠ 未割当 '+bad+'項目':'✓ 割当OK');
+setSt(3,!has?'':(mm||bad)?'ng':'ok',!has?'サンプル表示':mm?'⚠ 件数ずれ':bad?'⚠ 未入力 '+bad+'項目':'✓ 入力OK');
 setSt(4,has&&!n?'ng':'',has?(n?n+'枚':'選択なし'):'—')}
 function openSec(id){var d=$(id);if(d.hidden)return;d.open=true;d.scrollIntoView({behavior:'smooth',block:'start'})}
 $('steps').onclick=function(e){var b=e.target.closest('button');if(!b)return;var k=b.getAttribute('data-st');
 if(k==='1')openSec('rosterSec');
 else if(k==='2')openSec(tpl().hasItems?'itemsSec':'fieldsSec');
 else{if(innerWidth<1024)$('pane').scrollIntoView({behavior:'smooth',block:'start'});if(k==='3')$('pane').focus({preventScroll:true});else $('print').focus({preventScroll:true})}};
-
-/* ---------- 名簿の対応表 ---------- */
-function colCtl(it){if(headers.length){var s=el('select');var o0=el('option',null,'（未割当）');o0.value='';s.appendChild(o0);
-headers.forEach(function(h,i){var o=el('option',null,h);o.value=String(i);s.appendChild(o)});var ix=colIdx(it.column);
-if(ix<0&&it.column){var o1=el('option',null,it.column+'（名簿に無い列）');o1.value='x';s.appendChild(o1);s.value='x'}else s.value=ix>=0?String(ix):'';
-s.onchange=function(){it.column=s.value===''?'':(s.value==='x'?it.column:headers[+s.value]);save();drawItems();render()};return s}
-var i=el('input');i.type='text';i.setAttribute('list','hdrs');i.value=it.column;i.placeholder='名簿の見出し名（例：氏名）';
-i.oninput=function(){it.column=i.value;save();render()};return i}
-function drawMap(){var box=$('map'),un=$('unused');box.textContent='';un.textContent='';if(!rows.length)return;
-var first=rows[0],used={},wrap=el('div','mp');wrap.appendChild(el('div','mp-h','項目 ← 名簿の列（1人目の値）'));
-if(tpl().hasItems){
-V.items.forEach(function(it){if(it.source!=='column')return;var ix=colIdx(it.column);if(ix>=0)used[ix]=1;
-var r=el('div','mp-r'+(ix<0&&!it.hidden?' bad':''));var k=el('span','mp-k',it.label||'（無題）');k.title=it.label;r.appendChild(k);r.appendChild(colCtl(it));
-var v=el('span','mp-v',ix>=0?(first[ix]||'（空）'):(it.fallback?'代替：'+it.fallback:'⚠ 未割当'));v.title=v.textContent;r.appendChild(v);wrap.appendChild(r)});
-if(wrap.children.length>1)box.appendChild(wrap);else box.appendChild(el('p','note','名簿の列から値を取る項目がありません。'));
-var free=[];headers.forEach(function(h,i){if(!used[i])free.push(i)});
-if(free.length){var u=el('div','mp');u.appendChild(el('div','mp-h','使われていない列（'+free.length+'）'));var ul=el('div','un');
-free.forEach(function(i){var r=el('div','un-r');var a=el('span',null,headers[i]);a.title=headers[i];r.appendChild(a);var b2=el('span',null,first[i]||'（空）');r.appendChild(b2);
-var ab=btn('＋項目に追加');ab.onclick=function(){addColItem(headers[i])};r.appendChild(ab);ul.appendChild(r)});u.appendChild(ul);un.appendChild(u)}}
-else{[['no','受験番号'],['name','氏名'],['kana','カナ'],['school','学校'],['grade','学年']].forEach(function(g){var ix=groupIdx(g[0]);
-var r=el('div','mp-r'+(ix<0&&g[0]==='name'?' bad':''));r.appendChild(el('span','mp-k',g[1]));r.appendChild(el('span',null,ix>=0?headers[ix]:(g[0]==='no'?'自動採番':'—')));
-r.appendChild(el('span','mp-v',ix>=0?(first[ix]||'（空）'):''));wrap.appendChild(r)});box.appendChild(wrap)}}
 
 /* ---------- プレビュー：生徒ナビ・ズーム ---------- */
 function applyView(){var list=current(),pages=$('pages').children,n=list.length,has=rows.length>0;
@@ -859,7 +886,7 @@ h.appendChild(bu);h.appendChild(bd);h.appendChild(bx);h.appendChild(bc);pop.appe
 var lb=el('input');lb.type='text';lb.value=it.label;lb.placeholder='項目名';lb.oninput=function(){it.label=lb.value;t.textContent=lb.value||'（無題）';save();drawItems();render()};pop.appendChild(fld('項目名',lb));
 var ss=opt(el('select'),SRC,it.source);ss.onchange=function(){it.source=ss.value;if(it.source==='schedule'&&!it.rows.length)it.rows=[{t:'',c:''}];save();drawItems();render();buildPop()};pop.appendChild(fld('値の取得元',ss));
 var vc,vl;
-if(it.source==='column'){vl='名簿の列';vc=colCtl(it);var oc=vc.onchange;if(oc)vc.onchange=function(){oc();buildPop()}}
+if(it.source==='column'){vl='名簿の列';vc=btn('貼り付け欄へ');vc.style.width='auto';vc.style.padding='2px 8px';vc.onclick=function(){focusSlot(it.id)}}
 else if(it.source==='fixed'){vl='固定文字';vc=el('input');vc.type='text';vc.value=it.value;vc.oninput=function(){it.value=vc.value;save();drawItems();render()}}
 else if(it.source==='date'){vl='日付';vc=el('input');vc.type='date';vc.value=it.value;vc.oninput=function(){it.value=vc.value;save();drawItems();render()}}
 else if(it.source==='autonumber'){vl='自動採番（接頭辞／開始／桁数）';vc=el('div','pg');[['prefix','text'],['start','number'],['digits','number']].forEach(function(k){var i=el('input');i.type=k[1];i.value=it.auto[k[0]];
@@ -897,16 +924,13 @@ function applyEdit(key,txt){if(key.indexOf('item:')===0){var it=findItem(key.sli
 else{if(V[key]===txt)return;V[key]=txt}
 save();drawFields();drawItems();render()}
 
-/* ---------- どこでも貼り付け（名簿／デザインJSON） ---------- */
+/* ---------- どこでも貼り付け（デザインJSONのみ。名簿は項目ごとの欄に貼り付け） ---------- */
 function isTextual(t){if(!t||!t.tagName)return false;if(t.isContentEditable)return true;var n=t.tagName;if(n==='TEXTAREA'||n==='SELECT')return true;
 if(n==='INPUT')return !/^(checkbox|radio|button|submit|color|range|file|reset|image)$/i.test(t.type);return false}
-function tryTable(text){var ls=text.split(/\r?\n/).filter(function(x){return x.trim()!==''});if(ls.length<2)return null;
-var d=ls[0].indexOf('\t')>=0?'\t':(ls[0].indexOf(',')>=0?',':'');if(!d||ls[1].indexOf(d)<0)return null;
-return parseDelim(text.replace(/[\r\n]+$/,''),d)}
 document.addEventListener('paste',function(e){if(!booted||isTextual(e.target)||isTextual(document.activeElement))return;
 var cd=e.clipboardData;if(!cd)return;var text=cd.getData('text/plain')||'';if(!text.trim())return;
 if(/^\s*\{[\s\S]*"format"\s*:\s*"juken-design"/.test(text)){e.preventDefault();toast('デザインファイル（JSON）が貼り付けられました。読み込みますか？','デザインを読み込む',function(){importDesign(text)},12000);return}
-var tb=tryTable(text);if(!tb)return;e.preventDefault();load(tb,{quiet:true})});
+});
 
 /* ---------- キーボード ---------- */
 document.addEventListener('keydown',function(e){if(!booted)return;var k=e.key;

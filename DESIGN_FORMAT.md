@@ -91,7 +91,7 @@ A4縦1枚。上半分に枠線付きの項目表、折り線、下半分に注�
 | `id` | string | 自動 | 識別子。省略してよい（読み込み時に自動採番）。編集UI内部用 |
 | `label` | string | `""` | 項目名（枠の左上／左に表示）。名簿の一覧表示では「受験番号」「氏名」を含む項目名が識別に使われる |
 | `source` | `"column"` \| `"fixed"` \| `"date"` \| `"schedule"` \| `"autonumber"` | `"fixed"` | 値の取得方法（§3.3）。不明な値は `fixed` |
-| `column` | string | `""` | `source:"column"` のとき、名簿の見出し名 |
+| `column` | string | `""` | `source:"column"` のとき、Excel/CSVファイルや表ごと貼り付けで読み込む際に対応させる見出し名（空なら `label`）。通常の名簿入力は「項目ごとの貼り付け欄」（項目 `id` に紐づく）で行い、この値は書き換えられません |
 | `value` | string | `""` | `fixed` のときの表示文字／`date` のときの日付（`"YYYY-MM-DD"`） |
 | `fallback` | string | `""` | `column` で名簿の値が空のとき表示する文字 |
 | `rows` | array of `{t,c}` | `[]` | `schedule` の行（§3.3） |
