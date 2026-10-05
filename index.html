@@ -103,6 +103,10 @@ ol.t-list{padding-left:6mm}
 .tw .w-sch div{white-space:nowrap}
 .tw .w-sch b{display:inline-block;width:15mm;font-weight:400}
 .tw .w-sch i{font-style:normal;letter-spacing:.22em}
+.tw .w-wm{position:absolute;left:105mm;white-space:nowrap;line-height:1;pointer-events:none;-webkit-print-color-adjust:exact;print-color-adjust:exact;-webkit-user-select:none;user-select:none}
+.tw .w-wm span{display:inline-block}
+.tw .w-wm.editing{pointer-events:auto;-webkit-user-select:text;user-select:text}
+@media screen{.tw .w-wm span{pointer-events:auto;cursor:pointer}.tw .w-wm.editing span{cursor:text}}
 .tw .w-fold{position:absolute;left:0;top:148.5mm;width:210mm;height:0;display:flex;align-items:center;gap:5mm;font-size:13pt;white-space:nowrap}
 .tw .w-fold span{display:block;flex:1;border-top:1.2pt dashed #000;height:0}
 .tw .w-fold em{font-style:normal;flex:none}
@@ -281,6 +285,7 @@ html,body{background:#fff}
 <details open id="designSec" data-sec="save"><summary>保存・テンプレート</summary><div class="sec">
 <label for="tpl">デザイン（テンプレート）</label><select id="tpl"></select>
 <label for="pre">保存済みデザイン</label><div class="prow"><select id="pre"></select><button id="preload" type="button" title="共有デザインを再読み込み" aria-label="再読み込み">↻</button></div>
+<label for="bundled">同梱デザイン（このアプリに入っているもの）</label><select id="bundled"><option value="">（選んで読み込み）</option><option value="default-sodai-pre">早大プレ（標準）</option><option value="example-navy">早大プレ（紺・明朝）</option><option value="sodai-pre-2027">早大プレ2027（透かし付き）</option></select>
 <p class="note" id="pstat"></p>
 <div id="mig" hidden><div id="migt"></div><div class="row"><button id="migup" class="pri" type="button">共有にアップロード</button><button id="migclr" type="button">ローカルのコピーを削除</button></div></div>
 <div class="pgrid"><button id="psave" type="button">デザインを保存</button><button id="pover" type="button">上書き保存</button><button id="pren" type="button">名前を変更</button><button id="pdel" type="button">削除</button></div>
@@ -408,9 +413,10 @@ t.style.setProperty('--wac',V.accent);t.style.fontFamily=V.font==='mincho'?'"Yu 
 var hd=el('div','w-hd');hd.appendChild(ed(el('span','w-hd-t',V.hdr),'hdr'));if(V.badgeOn&&V.badge)hd.appendChild(ed(el('span','w-badge',V.badge),'badge'));t.appendChild(hd);
 if(V.markOn&&V.mark)t.appendChild(ed(el('div','w-mark',V.mark),'mark'));
 var tb=el('div','w-tbl');t.appendChild(tb);
+var tbH=0;
 function addRow(its){var half=its.length>1||its[0].width==='half';var sch=its.some(function(i){return i.source==='schedule'});
 var h=half&&!sch?20.8:17.8;if(sch){var n=Math.max.apply(null,its.map(function(i){return i.source==='schedule'?i.rows.filter(function(x){return x.t||x.c}).length:0}));h=Math.max(20.4,n*ITSZ.sch[its[0].size]*0.46+2)}
-var r=el('div','w-row');r.style.height=h+'mm';tb.appendChild(r);
+tbH+=h;var r=el('div','w-row');r.style.height=h+'mm';tb.appendChild(r);
 its.forEach(function(it){var wide=it.width!=='half';var c=el('div','w-c'+(wide?' wide':''));c.setAttribute('data-item',it.id);c.appendChild(el('div','w-l',it.label));
 var v=el('div','w-v');
 if(it.source==='schedule'){v.className+=' w-sch';v.style.fontSize=ITSZ.sch[it.size]+'pt';v.style.lineHeight='1.3';
@@ -421,6 +427,11 @@ if(it.color==='accent')v.className+=' ac';fits.push(v)}
 c.appendChild(v);r.appendChild(c)})}
 var vis=V.items.filter(function(i){return !i.hidden}),q=0;
 while(q<vis.length){var a=vis[q],b=vis[q+1];if(a.width==='half'&&b&&b.width==='half'){addRow([a,b]);q+=2}else{addRow([a]);q++}}
+if(V.wmOn&&V.wmText){var wm=el('div','w-wm');var wy=V.wmAnchor==='top'?22.3:V.wmAnchor==='mid'?22.3+tbH/2:V.wmAnchor==='bot'?22.3+tbH:0;wy+=V.wmY;
+wm.style.top=wy+'mm';wm.style.fontSize=V.wmSize+'mm';wm.style.fontWeight=V.wmBold?'700':'400';wm.style.color=V.wmAcc?V.accent:V.wmColor;wm.style.opacity=Math.max(0,Math.min(100,V.wmOp))/100;
+wm.style.transform='translate(calc(-50% + '+V.wmX+'mm),-50%) rotate('+V.wmRot+'deg)';
+Array.from(V.wmText).forEach(function(ch,i,a){var sp=el('span',null,ch);if(i<a.length-1)sp.style.marginRight=V.wmSp+'em';wm.appendChild(sp)});
+t.appendChild(ed(wm,'wmText'))}
 if(V.foldOn){var fo=el('div','w-fold');fo.style.top=V.foldPos+'mm';fo.appendChild(el('span'));if(V.foldLabel)fo.appendChild(ed(el('em',null,V.foldLabel),'foldLabel'));fo.appendChild(el('span'));t.appendChild(fo)}
 var lo=el('div','w-lo');if(V.noteTitle)lo.appendChild(ed(el('div','w-nh',V.noteTitle),'noteTitle'));
 lines(V.notes).forEach(function(x){var red=/^[!！]/.test(x);if(red)x=x.replace(/^[!！]\s*/,'');lo.appendChild(el('div','w-n'+(red?' r':''),'・'+x))});
@@ -442,6 +453,19 @@ fields:[
 {type:'h',label:'色・書体'},
 {k:'accent',label:'アクセント色',type:'color',def:'#C00000',half:1},
 {k:'font',label:'基本フォント',type:'select',opts:[['gothic','ゴシック'],['mincho','明朝']],def:'gothic',half:1},
+{type:'h',label:'透かし文字'},
+{k:'wmOn',label:'透かしを表示',type:'check',def:false,half:1},
+{k:'wmBold',label:'太字',type:'check',def:true,half:1},
+{k:'wmText',label:'文字（プレビューのダブルクリックでも編集）',type:'text',def:'2027'},
+{k:'wmAcc',label:'色をアクセント色に合わせる',type:'check',def:true,half:1},
+{k:'wmColor',label:'色（上をオフのとき）',type:'color',def:'#C00000',half:1},
+{k:'wmOp',label:'濃さ（不透明度 %）',type:'number',def:18,half:1},
+{k:'wmSize',label:'文字の大きさ（mm）',type:'number',def:26,half:1},
+{k:'wmSp',label:'字間（em）',type:'number',def:0.6,half:1},
+{k:'wmRot',label:'回転（度）',type:'number',def:0,half:1},
+{k:'wmAnchor',label:'縦位置の基準',type:'select',opts:[['top','表の上端'],['mid','表の中央'],['bot','表の下端'],['page','用紙の上端']],def:'mid',half:1},
+{k:'wmY',label:'縦位置（mm・文字の中心）',type:'number',def:0,half:1},
+{k:'wmX',label:'横のずれ（mm）',type:'number',def:0},
 {type:'h',label:'折り線'},
 {k:'foldOn',label:'折り線を表示',type:'check',def:true,half:1},
 {k:'foldPos',label:'位置（mm）',type:'number',def:148.5,half:1},
@@ -638,6 +662,9 @@ S.tpl=o.template;V=nv;S.cur='';importName=typeof o.name==='string'?o.name.trim()
 pstat('読み込みました'+(importName?'（'+importName+'）':'')+'。内容を確認し、共有するなら「デザインを保存」を押してください。'+(notes.length?'［'+notes.join(' / ')+'］':''));return true}
 function importFile(f){if(!f)return;var fr=new FileReader();fr.onerror=function(){pstat('ファイルを読み込めませんでした。',true)};fr.onload=function(){importDesign(fr.result)};fr.readAsText(f)}
 $('fimp').onclick=function(){$('fimpf').click()};
+$('bundled').onchange=function(){var sel=this,f=sel.value;if(!f)return;sel.value='';
+if(location.protocol==='file:'){pstat('ファイルを直接開いている場合は同梱デザインを読み込めません。「ファイルから読み込み」で designs フォルダのファイルを選んでください。',true);return}
+pstat('読み込み中…');fetch('designs/'+f+'.juken.json',{cache:'no-cache'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.text()}).then(function(t){importDesign(t)}).catch(function(e){pstat('同梱デザインを読み込めませんでした（'+e.message+'）',true)})};
 $('fimpf').onchange=function(){importFile(this.files[0]);this.value=''};
 $('jgo').onclick=function(){var t=$('jtxt').value;if(!t.trim()){pstat('JSONを貼り付けてください。',true);return}if(importDesign(t)){$('jtxt').value='';$('jpaste').open=false}};
 var ds=$('designSec');
@@ -903,7 +930,10 @@ pop.appendChild(g);
 var ol=btn('項目欄で詳細を開く');ol.className='pl';ol.onclick=function(){openRow(it.id)};pop.appendChild(ol);
 $('pane').appendChild(pop);positionPop()}
 function openRow(id){openIt[id]=true;$('itemsSec').open=true;drawItems();var r=$('items').querySelector('.it[data-id="'+id+'"]');if(r)r.scrollIntoView({behavior:'smooth',block:'nearest'})}
-$('pages').addEventListener('click',function(e){if(editing&&editing.contains(e.target))return;var c=e.target.closest('[data-item]');
+function openWm(){clearSel();$('fieldsSec').open=true;var hs=$('fields').querySelectorAll('.sub'),h=null;Array.prototype.forEach.call(hs,function(x){if(x.textContent==='透かし文字')h=x});
+if(h)h.scrollIntoView({block:'start',behavior:'smooth'});
+var ins=h&&h.parentNode.querySelectorAll('input[type=text]');for(var q=0;ins&&q<ins.length;q++){if(h.compareDocumentPosition(ins[q])&4){ins[q].focus({preventScroll:true});break}}}
+$('pages').addEventListener('click',function(e){if(editing&&editing.contains(e.target))return;if(e.target.closest('.w-wm')){if(e.detail<2)openWm();return}var c=e.target.closest('[data-item]');
 if(!c){if(selId)clearSel();return}var id=c.getAttribute('data-item');selectItem(id,true);
 if(innerWidth>=1024){var r=$('items').querySelector('.it[data-id="'+id+'"]');if(r)r.scrollIntoView({block:'nearest'})}});
 document.addEventListener('mousedown',function(e){if(!pop||pop.contains(e.target))return;if(e.target.closest&&e.target.closest('[data-item]'))return;closePop()},true);
@@ -915,7 +945,7 @@ function startEdit(t){closePop();editing=t;var orig=t.textContent,done=false;t.s
 var rg=document.createRange();rg.selectNodeContents(t);var sn=window.getSelection();sn.removeAllRanges();sn.addRange(rg);
 function fin(ok){if(done)return;done=true;t.removeEventListener('keydown',kd);t.removeEventListener('blur',bl);t.removeEventListener('paste',pa);
 var txt=t.textContent.replace(/[\r\n]+/g,' ').trim();editing=null;t.removeAttribute('contenteditable');t.classList.remove('editing');
-if(ok)applyEdit(t.getAttribute('data-edit'),txt);else t.textContent=orig}
+if(ok)applyEdit(t.getAttribute('data-edit'),txt);else{t.textContent=orig;if(t.classList.contains('w-wm'))render()}}
 function kd(e){if(e.key==='Enter'){e.preventDefault();e.stopPropagation();fin(true)}else if(e.key==='Escape'){e.preventDefault();e.stopPropagation();fin(false)}}
 function bl(){fin(true)}
 function pa(e){e.preventDefault();var x=(e.clipboardData||window.clipboardData).getData('text/plain').replace(/[\r\n]+/g,' ');document.execCommand('insertText',false,x)}

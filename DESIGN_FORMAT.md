@@ -80,6 +80,25 @@ A4縦1枚。上半分に枠線付きの項目表、折り線、下半分に注�
 | `map` | image | 既定画像 | 地図画像（§2）。右側の上 |
 | `logo` | image | 既定画像 | ロゴ画像（§2）。mapの下に縦に並ぶ |
 
+**透かし文字**（すべて省略可。`wmOn` が無い／`false` なら透かしなし＝既存ファイルは変わりません）:
+
+| キー | 型 | 既定値 | 説明 |
+|---|---|---|---|
+| `wmOn` | boolean | `false` | 透かし文字を表示 |
+| `wmText` | string | `"2027"` | 透かしの文字（空なら非表示） |
+| `wmAcc` | boolean | `true` | `true`で色をアクセント色に合わせる |
+| `wmColor` | string | `"#C00000"` | 色（`wmAcc:false`のとき有効。`#RRGGBB`） |
+| `wmOp` | number | `18` | 不透明度（0〜100 %） |
+| `wmSize` | number | `26` | 文字の大きさ（mm） |
+| `wmSp` | number | `0.6` | 字間（em） |
+| `wmRot` | number | `0` | 回転（度） |
+| `wmBold` | boolean | `true` | 太字 |
+| `wmAnchor` | `"top"` \| `"mid"` \| `"bot"` \| `"page"` | `"mid"` | 縦位置の基準（表の上端／中央／下端／用紙の上端） |
+| `wmY` | number | `0` | 縦位置（mm）。基準からのずれ（`page`のときは用紙上端からの位置）。文字の中心の位置 |
+| `wmX` | number | `0` | 横のずれ（mm）。基本は用紙の左右中央 |
+
+透かしは表の上に重なって描画されます（印刷でも色が出ます）。例: `designs/sodai-pre-2027.juken.json`（`wmAnchor:"bot"`, `wmY:-20` で「志望学部」〜「試験時間」あたり）。プレビューでは透かしをダブルクリックで文字編集、クリックで設定欄が開きます。`simple` テンプレートでは未対応です。
+
 読み込み時のみ許容される旧形式キー（`items`未指定のときだけ有効）: `venue`, `room`, `date`, `system`, `faculty`, `sched`。新規作成では使わないでください。また `badgeOn` 未指定で `badge` が空文字なら `badgeOn:false` になります。
 
 ### 3.2 項目（item）モデル
