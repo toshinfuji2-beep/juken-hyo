@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>受験票ジェネレーター</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{--bg:#f3f4f6;--panel:#fff;--fg:#1f2937;--mut:#6b7280;--bd:#d1d5db;--ac:#1d4ed8;--acfg:#fff;--inp:#fff;--pv:#e5e7eb}
@@ -134,24 +135,54 @@ html,body{background:#fff}
 .pw{width:210mm!important;height:297mm!important;box-shadow:none;overflow:hidden;page-break-after:always;break-after:page}
 .pw .ticket{position:static;transform:none!important}
 @page{size:A4;margin:0}}
+
+#login{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:16px}
+#login[hidden]{display:none}
+.lcard{width:100%;max-width:360px;background:var(--panel);border:1px solid var(--bd);border-radius:10px;padding:24px 22px;box-shadow:0 4px 20px rgba(0,0,0,.08)}
+.lcard h2{margin:0 0 4px;font-size:18px}.lcard .sub{color:var(--mut);font-size:12px;margin:0 0 14px}
+.lcard label{display:block;margin:10px 0 3px;font-size:12px;color:var(--mut)}
+.lcard input{width:100%;padding:6px 8px;border:1px solid var(--bd);border-radius:4px;background:var(--inp);color:var(--fg);font:inherit}
+.lcard button{width:100%;margin-top:16px;padding:9px}
+#lerr{color:#dc2626;font-size:12.5px;margin:10px 0 0;min-height:1em}
+.app.off{display:none}
+#ubar{display:flex;align-items:center;gap:8px;margin:-4px 0 8px;font-size:12px;color:var(--mut)}
+#ubar span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#ubar button{padding:3px 8px;font-size:12px}
+#mig{margin:8px 0;padding:8px;border:1px solid var(--ac);border-radius:6px;font-size:12px}
+#mig[hidden]{display:none}
+#mig .row{margin-top:6px;display:flex;gap:6px;flex-wrap:wrap}
+#pstat{min-height:1.4em}#pstat.err{color:#dc2626}
+.prow{display:flex;gap:6px}.prow select{flex:1;min-width:0}.prow button{padding:6px 10px}
+@media print{#login,#ubar{display:none!important}}
 </style>
 </head>
 <body>
-<div class="app">
+<div id="login" hidden><form class="lcard" id="lform" autocomplete="on">
+<h2>受験票ジェネレーター</h2><p class="sub">WAVEと同じアカウントでログインできます</p>
+<label for="lem">メールアドレス</label><input type="text" id="lem" inputmode="email" autocomplete="username">
+<label for="lpw">パスワード</label><input type="password" id="lpw" autocomplete="current-password">
+<div id="lerr" role="alert"></div>
+<button type="submit" class="pri" id="lbtn">ログイン</button>
+<p class="note" style="margin-top:12px">名簿はこの端末の中だけで処理され、送信されません。</p>
+</form></div>
+<div class="app off" id="appRoot">
 <div id="editor">
 <h1>受験票ジェネレーター</h1>
+<div id="ubar"><span id="uem"></span><button id="lout" type="button">ログアウト</button></div>
 <details open><summary>1. テンプレート・保存</summary><div class="sec">
 <label for="tpl">デザイン（テンプレート）</label><select id="tpl"></select>
-<label for="pre">保存済みデザイン</label><select id="pre"></select>
+<label for="pre">保存済みデザイン</label><div class="prow"><select id="pre"></select><button id="preload" type="button" title="共有デザインを再読み込み" aria-label="再読み込み">↻</button></div>
+<p class="note" id="pstat"></p>
+<div id="mig" hidden><div id="migt"></div><div class="row"><button id="migup" class="pri" type="button">共有にアップロード</button><button id="migclr" type="button">ローカルのコピーを削除</button></div></div>
 <div class="pgrid"><button id="psave" type="button">デザインを保存</button><button id="pover" type="button">上書き保存</button><button id="pren" type="button">名前を変更</button><button id="pdel" type="button">削除</button></div>
-<p class="note">※項目・デザイン設定を名前を付けて保存できます（このブラウザ内のみ）。</p>
+<p class="note">※項目・デザイン設定を名前を付けて保存すると、ログインしているスタッフ全員で共有されます。<br>※名簿はこの端末の中だけで処理され、送信されません。</p>
 </div></details>
 <details open><summary>2. 名簿読み込み</summary><div class="sec">
 <div id="drop">ここにCSV / Excelをドロップ<br><button id="fbtn" type="button">ファイルを選択</button><input id="file" type="file" accept=".csv,.xlsx,.xls" hidden></div>
 <label for="paste">貼り付け（Excelからコピーしたタブ区切り・1行目は見出し）</label>
 <textarea id="paste" rows="3"></textarea>
 <div class="row" style="margin-top:6px"><button id="pbtn" type="button">貼り付けを読み込む</button><button id="sample" type="button">サンプルCSVをダウンロード</button></div>
-<p class="note">※名簿（個人情報）は保存されません。ページを閉じる・再読込で消えます。</p>
+<p class="note">※名簿（個人情報）はこの端末の中だけで処理され、送信されません。保存もされません。ページを閉じる・再読込で消えます。</p>
 <div id="loaded" hidden>
 <div id="cnt" style="font-weight:700"></div>
 <div class="row" style="margin-top:8px"><button id="sall" type="button">全選択</button><button id="snone" type="button">全解除</button><span id="selcnt" class="note"></span></div>
@@ -327,6 +358,7 @@ fields:[
 render:renderWaseda});
 
 /* ---------- 状態・保存 ---------- */
+var SUPABASE_URL='https://qaovkxpyquedvfhiacek.supabase.co',SUPABASE_ANON_KEY='sb_publishable_xJ-VtOx2-5Z6we-ar1iKYQ_n_J6sNx7',uid=null;
 var KEY='juken-hyo-v2',KEY1='juken-hyo-v1',PKEY='juken-hyo-presets-v1';
 function mkVals(tpl,saved){if(tpl.migrate)saved=tpl.migrate(saved);var v={};tpl.fields.forEach(function(f){if(!f.k)return;
 if(f.type==='items'){v[f.k]=saved&&Array.isArray(saved[f.k])?normItems(saved[f.k]):defItems();return}
@@ -342,17 +374,16 @@ try{var raw=localStorage.getItem(KEY);
 if(raw){var o0=JSON.parse(raw);if(o0&&typeof o0==='object'){if(TEMPLATES[o0.tpl])S.tpl=o0.tpl;if(o0.byTpl&&typeof o0.byTpl==='object')S.byTpl=o0.byTpl;if(typeof o0.cur==='string')S.cur=o0.cur}}
 else{var r1=localStorage.getItem(KEY1);if(r1){var o1=JSON.parse(r1);if(o1&&typeof o1==='object'){S.tpl='simple';S.byTpl.simple=o1}}}}catch(e){}
 var V=mkVals(TEMPLATES[S.tpl],S.byTpl[S.tpl]);
-var presets=[];
-try{var pr=JSON.parse(localStorage.getItem(PKEY)||'[]');if(Array.isArray(pr))presets=pr.filter(function(p){return p&&typeof p.id==='string'&&typeof p.name==='string'&&TEMPLATES[p.tpl]})}catch(e){}
+var presets=[],localPresets=[];
+try{var pr=JSON.parse(localStorage.getItem(PKEY)||'[]');if(Array.isArray(pr))localPresets=pr.filter(function(p){return p&&typeof p.id==='string'&&typeof p.name==='string'&&TEMPLATES[p.tpl]})}catch(e){}
 function save(){S.byTpl[S.tpl]=V;try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
-function savePresets(){try{localStorage.setItem(PKEY,JSON.stringify(presets));return true}catch(e){alert('保存できませんでした（保存容量の上限の可能性があります。画像を小さくするか不要な保存済みデザインを削除してください）。');return false}}
 function tpl(){return TEMPLATES[S.tpl]}
 
 /* ---------- 共通設定フォーム（テンプレートのfieldsから生成） ---------- */
 function resizeImage(file,cb){var fr=new FileReader();fr.onload=function(){var im=new Image();im.onload=function(){
 var sc=Math.min(1,1200/Math.max(im.width,im.height));var c=document.createElement('canvas');c.width=Math.round(im.width*sc);c.height=Math.round(im.height*sc);
 var x=c.getContext('2d');var png=/png|gif|svg/.test(file.type);if(!png){x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height)}
-x.drawImage(im,0,0,c.width,c.height);cb(png?c.toDataURL('image/png'):c.toDataURL('image/jpeg',.88))};
+x.drawImage(im,0,0,c.width,c.height);var du=png?c.toDataURL('image/png'):c.toDataURL('image/jpeg',.85);if(png&&du.length>350000){var c2=document.createElement('canvas');c2.width=c.width;c2.height=c.height;var x2=c2.getContext('2d');x2.fillStyle='#fff';x2.fillRect(0,0,c.width,c.height);x2.drawImage(c,0,0);du=c2.toDataURL('image/jpeg',.85)}cb(du)};
 im.onerror=function(){alert('画像を読み込めませんでした。')};im.src=fr.result};fr.readAsDataURL(file)}
 function drawFields(){var w=$('fields');w.textContent='';var g=null;
 $('itemsSec').hidden=!tpl().hasItems;$('fsum').textContent=tpl().hasItems?'4. デザイン':'3. 試験情報';
@@ -433,23 +464,54 @@ var ls=$('items').querySelectorAll('.it-h input[type=text]');if(ls.length){var l
 
 /* ---------- デザイン選択・保存済み ---------- */
 function drawTplSel(){var s=$('tpl');s.textContent='';TPL_ORDER.forEach(function(id){var o=el('option',null,TEMPLATES[id].name);o.value=id;s.appendChild(o)});s.value=S.tpl}
+var TBL='juken_presets',busy=false,PMAX=1500000;
+function pRow(r){return {id:r.id,name:r.name,tpl:r.template,vals:r.data||{},at:r.updated_at}}
+function fmtAt(t){if(!t)return '';var d=new Date(t);if(isNaN(d))return '';var z=function(n){return n<10?'0'+n:n};return (d.getMonth()+1)+'/'+d.getDate()+' '+d.getHours()+':'+z(d.getMinutes())}
+function pErr(e){var m=(e&&e.message)||'',c=e&&e.code;
+if(c==='42P01'||c==='PGRST205'||/does not exist|schema cache/i.test(m))return '共有デザインの表がまだ作成されていません（supabase.sql を実行してください）';
+if(c==='42501'||/row-level security|permission denied|JWT/i.test(m))return '権限がありません。いったんログアウトして、もう一度ログインしてください。';
+if(/fetch|network|failed|timeout/i.test(m))return 'サーバーに接続できませんでした。通信状況を確認してください。';
+return '共有デザインの処理に失敗しました（'+(m||'不明なエラー')+'）';}
+function pstat(t,err){var e=$('pstat');e.textContent=t||'';e.className='note'+(err?' err':'')}
+function setBusy(b){busy=b;$('psave').disabled=$('preload').disabled=b;if(b)$('pover').disabled=$('pren').disabled=$('pdel').disabled=true;else drawPreSel()}
 function drawPreSel(){var s=$('pre');s.textContent='';var o=el('option',null,'（保存済みを選択）');o.value='';s.appendChild(o);
-presets.forEach(function(p){var op=el('option',null,p.name+'（'+TEMPLATES[p.tpl].name+'）');op.value=p.id;s.appendChild(op)});
+presets.forEach(function(p){var op=el('option',null,p.name+'（'+TEMPLATES[p.tpl].name+'） '+fmtAt(p.at));op.value=p.id;s.appendChild(op)});
 if(!presets.some(function(p){return p.id===S.cur}))S.cur='';s.value=S.cur;
-$('pover').disabled=$('pren').disabled=$('pdel').disabled=!S.cur}
+$('pover').disabled=$('pren').disabled=$('pdel').disabled=!S.cur||busy;drawMig()}
 function byId(id){for(var i=0;i<presets.length;i++)if(presets[i].id===id)return presets[i]}
+function drawMig(){var m=$('mig');m.hidden=!localPresets.length;if(localPresets.length)$('migt').textContent='このブラウザに保存されたデザインが'+localPresets.length+'件あります → 共有にアップロード'}
+async function loadPresetsQuiet(){var r=chk(await sb.from(TBL).select('id,name,template,data,updated_at').order('name',{ascending:true}));presets=(r.data||[]).filter(function(x){return TEMPLATES[x.template]}).map(pRow)}
+async function loadPresets(){if(!sb||busy)return;setBusy(true);pstat('共有デザインを読み込み中…');
+try{await loadPresetsQuiet();pstat(presets.length?'':'共有デザインはまだありません。')}catch(e){pstat(pErr(e&&e.message?e:{message:'network'}),true)}setBusy(false)}
+function sizeOk(vals){var n=JSON.stringify(vals).length;if(n>PMAX)return confirm('このデザインのデータが大きめです（約'+(n/1e6).toFixed(1)+'MB）。画像を小さくすることをおすすめします。それでも保存しますか？');return true}
 function afterDesignChange(){save();drawTplSel();drawPreSel();drawFields();drawItems();render()}
+$('preload').onclick=loadPresets;
 $('tpl').onchange=function(){S.byTpl[S.tpl]=V;S.tpl=this.value;S.cur='';V=mkVals(tpl(),S.byTpl[S.tpl]);afterDesignChange()};
 $('pre').onchange=function(){var p=byId(this.value);if(!p){S.cur='';drawPreSel();save();return}
 S.tpl=p.tpl;V=mkVals(tpl(),p.vals);S.cur=p.id;afterDesignChange()};
-$('psave').onclick=function(){var n=prompt('保存名を入力してください（例：第1回早大プレ）',S.cur&&byId(S.cur)?byId(S.cur).name:'');if(n==null)return;n=n.trim();if(!n)return;
-var ex=presets.filter(function(p){return p.name===n})[0];
-if(ex){if(!confirm('「'+n+'」は既に保存されています。上書きしますか？'))return;ex.tpl=S.tpl;ex.vals=clone(V);S.cur=ex.id}
-else{var p={id:'p'+Date.now().toString(36),name:n,tpl:S.tpl,vals:clone(V)};presets.push(p);S.cur=p.id}
-savePresets();save();drawPreSel()};
-$('pover').onclick=function(){var p=byId(S.cur);if(!p)return;if(!confirm('「'+p.name+'」を現在の内容で上書きしますか？'))return;p.tpl=S.tpl;p.vals=clone(V);savePresets();drawPreSel()};
-$('pren').onclick=function(){var p=byId(S.cur);if(!p)return;var n=prompt('新しい名前',p.name);if(n==null)return;n=n.trim();if(!n)return;p.name=n;savePresets();drawPreSel()};
-$('pdel').onclick=function(){var p=byId(S.cur);if(!p)return;if(!confirm('「'+p.name+'」を削除しますか？'))return;presets=presets.filter(function(x){return x!==p});S.cur='';savePresets();save();drawPreSel()};
+async function pdo(fn){if(busy)return;setBusy(true);pstat('通信中…');try{await fn()}catch(e){pstat(pErr(e&&e.message?e:{message:String(e)}),true)}setBusy(false)}
+function chk(r){if(r.error)throw r.error;return r}
+$('psave').onclick=function(){var cp=S.cur&&byId(S.cur);var n=prompt('保存名を入力してください（例：第1回早大プレ）',cp?cp.name:'');if(n==null)return;n=n.trim();if(!n)return;if(!sizeOk(V))return;
+pdo(async function(){var vals=clone(V),r=await sb.from(TBL).insert({name:n,template:S.tpl,data:vals}).select('id').single();
+if(r.error&&(r.error.code==='23505'||/duplicate/i.test(r.error.message||''))){
+if(!confirm('「'+n+'」は既に共有されています。上書きしますか？'))return pstat('');
+r=chk(await sb.from(TBL).update({template:S.tpl,data:vals,updated_at:new Date().toISOString(),updated_by:uid}).eq('name',n).select('id').single())}
+else chk(r);
+S.cur=r.data.id;await loadPresetsQuiet();save();pstat('保存しました（'+n+'）')})};
+$('pover').onclick=function(){var p=byId(S.cur);if(!p)return;if(!confirm('「'+p.name+'」を現在の内容で上書きしますか？（共有デザインが更新されます）'))return;if(!sizeOk(V))return;
+pdo(async function(){chk(await sb.from(TBL).update({template:S.tpl,data:clone(V),updated_at:new Date().toISOString(),updated_by:uid}).eq('id',p.id));await loadPresetsQuiet();pstat('上書き保存しました（'+p.name+'）')})};
+$('pren').onclick=function(){var p=byId(S.cur);if(!p)return;var n=prompt('新しい名前',p.name);if(n==null)return;n=n.trim();if(!n||n===p.name)return;
+pdo(async function(){var r=await sb.from(TBL).update({name:n,updated_at:new Date().toISOString(),updated_by:uid}).eq('id',p.id);
+if(r.error&&r.error.code==='23505'){pstat('その名前は既に使われています。',true);return}chk(r);await loadPresetsQuiet();pstat('名前を変更しました')})};
+$('pdel').onclick=function(){var p=byId(S.cur);if(!p)return;if(!confirm('「'+p.name+'」を共有から削除しますか？（全員から見えなくなります）'))return;
+pdo(async function(){chk(await sb.from(TBL).delete().eq('id',p.id));S.cur='';await loadPresetsQuiet();save();pstat('削除しました')})};
+$('migup').onclick=function(){if(!localPresets.length)return;
+pdo(async function(){var ex=chk(await sb.from(TBL).select('name')).data.map(function(x){return x.name}),ok=0,skip=0,big=0,fail=0,fe=null;
+for(var i=0;i<localPresets.length;i++){var p=localPresets[i];if(ex.indexOf(p.name)>=0){skip++;continue}
+if(JSON.stringify(p.vals).length>PMAX*1.3){big++;continue}
+var r=await sb.from(TBL).insert({name:p.name,template:p.tpl,data:p.vals});if(r.error){if(r.error.code==='23505')skip++;else{fail++;fe=r.error}}else{ok++;ex.push(p.name)}}
+await loadPresetsQuiet();var msg='アップロード '+ok+'件 / 同名のためスキップ '+skip+'件'+(big?' / サイズ超過 '+big+'件':'')+(fail?' / 失敗 '+fail+'件':'');pstat(fail?pErr(fe):msg,fail>0);alert(msg+'\n\n不要になったら「ローカルのコピーを削除」を押してください。')})};
+$('migclr').onclick=function(){if(!confirm('このブラウザに保存されたデザイン'+localPresets.length+'件を削除します。共有にアップロード済みか確認しましたか？'))return;try{localStorage.removeItem(PKEY)}catch(e){}localPresets=[];drawMig()};
 
 /* ---------- 名簿 ---------- */
 function parseDelim(text,delim){var out=[],row=[],f='',q=false,i=0,n=text.length,c;
@@ -544,7 +606,25 @@ $('print').onclick=function(){
 if(rows.length&&!current().length){alert('印刷する生徒が選択されていません。');return}
 window.print()};
 var rt;window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(render,100)});
-drawTplSel();drawPreSel();drawFields();drawItems();render();
+var booted=false;
+function boot(){if(booted)return;booted=true;drawTplSel();drawPreSel();drawFields();drawItems();render()}
+/* ---------- ログイン ---------- */
+var sb=null;
+try{sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{storageKey:'juken-hyo-auth',persistSession:true,autoRefreshToken:true}})}catch(e){sb=null}
+function showLogin(msg){$('login').hidden=false;$('appRoot').classList.add('off');$('lerr').textContent=msg||''}
+function showApp(sess){$('login').hidden=true;$('appRoot').classList.remove('off');var em=(sess&&sess.user&&sess.user.email)||'';$('uem').textContent=em;$('uem').title=em;uid=sess&&sess.user?sess.user.id:null;boot();render();loadPresets()}
+$('lform').onsubmit=async function(ev){ev.preventDefault();var em=$('lem').value.trim(),pw=$('lpw').value,er=$('lerr'),b=$('lbtn');er.textContent='';
+if(!sb){er.textContent='ログイン機能を読み込めませんでした。通信状況を確認してページを再読み込みしてください。';return}
+if(!em||!pw){er.textContent='メールアドレスとパスワードを入力してください。';return}
+b.disabled=true;b.textContent='ログイン中…';var r;
+try{r=await sb.auth.signInWithPassword({email:em,password:pw})}catch(e){r={error:{message:'network'}}}
+b.disabled=false;b.textContent='ログイン';
+if(r.error){var net=/fetch|network|failed|timeout/i.test(r.error.message||'');er.textContent=net?'サーバーに接続できませんでした。通信状況を確認してもう一度お試しください。':'メールアドレスまたはパスワードが違います。';return}
+$('lpw').value='';showApp(r.data.session)};
+$('lout').onclick=async function(){try{await sb.auth.signOut()}catch(e){}presets=[];showLogin('')};
+if(sb){sb.auth.getSession().then(function(r){if(r.data&&r.data.session)showApp(r.data.session);else showLogin('')}).catch(function(){showLogin('')});
+sb.auth.onAuthStateChange(function(ev){if(ev==='SIGNED_OUT')showLogin('')})}
+else showLogin('ログイン機能を読み込めませんでした。通信状況を確認してページを再読み込みしてください。');
 })();
 </script>
 </body>
