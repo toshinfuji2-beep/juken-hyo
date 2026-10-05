@@ -10,6 +10,14 @@
 <script src="templates/api.js"></script>
 <script src="templates/waseda.js"></script>
 <script src="templates/simple.js"></script>
+<script src="templates/sumi.js"></script>
+<script src="templates/navy-exec.js"></script>
+<script src="templates/wa-modern.js"></script>
+<script src="templates/minimal.js"></script>
+<script src="templates/modern-grid.js"></script>
+<script src="templates/ticket.js"></script>
+<script src="templates/pop-candy.js"></script>
+<script src="templates/natural.js"></script>
 <style>
 :root{--bg:#f3f4f6;--panel:#fff;--fg:#1f2937;--mut:#6b7280;--bd:#d1d5db;--ac:#1d4ed8;--acfg:#fff;--inp:#fff;--pv:#e5e7eb;--warn:#b45309;--warnbg:#fef3c7;--ok:#15803d;--err:#dc2626}
 @media(prefers-color-scheme:dark){:root{--bg:#111827;--panel:#1f2937;--fg:#e5e7eb;--mut:#9ca3af;--bd:#374151;--ac:#3b82f6;--inp:#111827;--pv:#0b1220;--warn:#fbbf24;--warnbg:#3b2f0a;--ok:#4ade80;--err:#f87171}}
@@ -480,7 +488,7 @@ button.dg,.dg{color:var(--err)}
 <div class="tp" id="tp-io" hidden>
 <p class="note" style="margin-top:0">デザインの保存・共有は上の「保存」、保存済みの整理は「デザイン」から。ここではファイルとして書き出し・読み込みできます。</p>
 <div id="mig" hidden><div id="migt"></div><div class="row"><button id="migup" class="pri" type="button">共有にアップロード</button><button id="migclr" type="button">ローカルのコピーを削除</button></div></div>
-<label for="bundled">同梱デザイン（このアプリに入っているもの）</label><select id="bundled"><option value="">（選んで読み込み）</option><option value="default-sodai-pre">早大プレ（標準）</option><option value="example-navy">早大プレ（紺・明朝）</option><option value="sodai-pre-2027">早大プレ2027（透かし付き）</option></select>
+<label for="bundled">同梱デザイン（このアプリに入っているもの）</label><select id="bundled"><option value="">（選んで読み込み）</option><option value="default-sodai-pre">早大プレ（標準）</option><option value="example-navy">早大プレ（紺・明朝）</option><option value="sodai-pre-2027">早大プレ2027（透かし付き）</option><option value="sumi">墨（見本）</option><option value="navy-exec">ネイビー・エグゼクティブ（見本）</option><option value="wa-modern">和モダン（見本）</option><option value="minimal">ミニマル（見本）</option><option value="modern-grid">モダン・グリッド（見本）</option><option value="ticket">チケット（見本）</option><option value="pop-candy">ポップ・キャンディ（見本）</option><option value="natural">ナチュラル（見本）</option></select>
 <div class="pgrid"><button id="fexp" type="button">ファイルに書き出し</button><button id="fimp" type="button">ファイルから読み込み</button></div><input id="fimpf" type="file" accept=".json,application/json" hidden>
 <details id="jpaste" style="margin:6px 0 0"><summary style="font-weight:400;font-size:12px">JSONを貼り付けて読み込み</summary><div class="sec"><textarea id="jtxt" rows="5" placeholder='{"format":"juken-design","version":1,"template":"waseda","data":{…}}' spellcheck="false"></textarea><div class="row" style="margin-top:6px"><button id="jgo" type="button">読み込み</button></div></div></details>
 <p class="note" id="pstat"></p>

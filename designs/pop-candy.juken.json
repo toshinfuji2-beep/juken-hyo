@@ -1,0 +1,189 @@
+{
+  "format": "juken-design",
+  "version": 1,
+  "name": "ポップ・キャンディ（早大プレ）",
+  "template": "pop-candy",
+  "data": {
+    "hdr": "2024年度　早稲田大学受験票",
+    "badge": "折って試験当日持参",
+    "badgeOn": true,
+    "mark": "24早",
+    "markOn": true,
+    "items": [
+      {
+        "label": "受験番号",
+        "source": "column",
+        "column": "受験番号",
+        "value": "",
+        "rows": [],
+        "auto": {
+          "prefix": "",
+          "start": 1,
+          "digits": 3
+        },
+        "fallback": "",
+        "width": "half",
+        "size": "L",
+        "color": "black",
+        "align": "",
+        "hidden": false
+      },
+      {
+        "label": "試験場",
+        "source": "fixed",
+        "column": "",
+        "value": "東進HS 藤沢校",
+        "rows": [],
+        "auto": {
+          "prefix": "",
+          "start": 1,
+          "digits": 3
+        },
+        "fallback": "",
+        "width": "half",
+        "size": "XL",
+        "color": "accent",
+        "align": "",
+        "hidden": false
+      },
+      {
+        "label": "カナ氏名",
+        "source": "column",
+        "column": "カナ氏名",
+        "value": "",
+        "rows": [],
+        "auto": {
+          "prefix": "",
+          "start": 1,
+          "digits": 3
+        },
+        "fallback": "",
+        "width": "half",
+        "size": "M",
+        "color": "black",
+        "align": "",
+        "hidden": false
+      },
+      {
+        "label": "教室",
+        "source": "fixed",
+        "column": "",
+        "value": "レクチャールーム",
+        "rows": [],
+        "auto": {
+          "prefix": "",
+          "start": 1,
+          "digits": 3
+        },
+        "fallback": "",
+        "width": "half",
+        "size": "M",
+        "color": "black",
+        "align": "",
+        "hidden": false
+      },
+      {
+        "label": "試験日",
+        "source": "date",
+        "column": "",
+        "value": "2023-07-02",
+        "rows": [],
+        "auto": {
+          "prefix": "",
+          "start": 1,
+          "digits": 3
+        },
+        "fallback": "",
+        "width": "full",
+        "size": "L",
+        "color": "black",
+        "align": "",
+        "hidden": false
+      },
+      {
+        "label": "入試制度",
+        "source": "fixed",
+        "column": "",
+        "value": "第一回早大プレ",
+        "rows": [],
+        "auto": {
+          "prefix": "",
+          "start": 1,
+          "digits": 3
+        },
+        "fallback": "",
+        "width": "full",
+        "size": "L",
+        "color": "black",
+        "align": "",
+        "hidden": false
+      },
+      {
+        "label": "志望学部",
+        "source": "column",
+        "column": "志望学部",
+        "value": "",
+        "rows": [],
+        "auto": {
+          "prefix": "",
+          "start": 1,
+          "digits": 3
+        },
+        "fallback": "",
+        "width": "full",
+        "size": "L",
+        "color": "black",
+        "align": "",
+        "hidden": false
+      },
+      {
+        "label": "試験時間",
+        "source": "schedule",
+        "column": "",
+        "value": "",
+        "rows": [
+          {
+            "t": "10:00〜11:30",
+            "c": "英語"
+          },
+          {
+            "t": "13:00〜14:30",
+            "c": "国語"
+          },
+          {
+            "t": "15:30〜16:30",
+            "c": "社会"
+          }
+        ],
+        "auto": {
+          "prefix": "",
+          "start": 1,
+          "digits": 3
+        },
+        "fallback": "",
+        "width": "full",
+        "size": "M",
+        "color": "black",
+        "align": "",
+        "hidden": false
+      }
+    ],
+    "accent": "#FF6FA8",
+    "font": "gothic",
+    "foldOn": true,
+    "foldPos": 148.5,
+    "foldLabel": "＜山折り＞",
+    "noteTitle": "注意事項",
+    "notes": "!こちらの受験票を折って試験当日に持参してください。\n入場の際、受験票の提示が必要です。\n!試験教室は8:30から開いています。試験時間の30分前までに試験教室に入場してください。\n試験教室の座席に着席する際に、机に貼られている受験番号と一致していることを確認してください。\n受験票は試験時間中机上に置きますので、何も書き込まないでください。（書き込みを発見した場合、不正行為となる可能性があります。）\n受験票は入学後の学生証交付の際に必要になりますので、大切に保管してください。",
+    "swap": false,
+    "map": {
+      "d": "assets/map-fujisawa.png",
+      "hide": false
+    },
+    "logo": {
+      "d": "assets/logo-fujisawa.png",
+      "hide": false
+    },
+    "secondary": "#4CC9F0"
+  }
+}
