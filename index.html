@@ -33,8 +33,6 @@ button.pri{background:var(--ac);color:var(--acfg);border-color:var(--ac)}
 #drop{border:2px dashed var(--bd);border-radius:6px;padding:14px;text-align:center;color:var(--mut)}
 #drop.over{border-color:var(--ac);color:var(--ac)}
 .note{font-size:11px;color:var(--mut);margin:6px 0}
-.map{display:grid;grid-template-columns:90px 1fr;gap:4px 8px;align-items:center;margin-top:8px}
-.map span{white-space:nowrap}
 #list{max-height:180px;overflow:auto;border:1px solid var(--bd);border-radius:4px;margin-top:8px}
 #list label{display:flex;gap:6px;margin:0;padding:2px 8px;font-size:12px;color:var(--fg);align-items:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sch{display:grid;grid-template-columns:110px 1fr auto;gap:4px;margin-bottom:4px}
@@ -75,23 +73,23 @@ ol.t-list{padding-left:6mm}
 .t-stub .t-name{font-size:20pt}
 .t-stub .t-no{font-size:24pt}
 /* template: waseda */
-.tw{padding:0;display:block;position:relative;font-family:"Yu Gothic","Meiryo","Hiragino Sans",sans-serif;line-height:1.3}
+.tw{padding:0;display:block;position:relative;font-family:"Yu Gothic","Meiryo","Hiragino Sans",sans-serif;line-height:1.3;--wac:#C00000}
 .tw .w-hd{position:absolute;left:8mm;top:6.5mm;display:flex;align-items:center;gap:6mm;white-space:nowrap}
 .tw .w-hd-t{font-size:13pt}
-.tw .w-badge{background:#C00000;color:#fff;font-size:13pt;height:8.6mm;line-height:8.6mm;padding:0 4.5mm}
+.tw .w-badge{background:var(--wac);color:#fff;font-size:13pt;height:8.6mm;line-height:8.6mm;padding:0 4.5mm}
 .tw .w-mark{position:absolute;right:19mm;top:4mm;font-size:38pt;font-weight:700;letter-spacing:.25em;margin-right:-.25em;line-height:1.2;white-space:nowrap}
-.tw .w-tbl{position:absolute;left:19.5mm;top:22.3mm;width:171mm;border:1.5pt solid #C00000;border-bottom:0}
-.tw .w-row{display:flex;border-bottom:1.5pt solid #C00000}
+.tw .w-tbl{position:absolute;left:19.5mm;top:22.3mm;width:171mm;border:1.5pt solid var(--wac);border-bottom:0}
+.tw .w-row{display:flex;border-bottom:1.5pt solid var(--wac)}
 .tw .w-c{position:relative;flex:1;min-width:0;height:100%}
-.tw .w-c+.w-c{border-left:1.5pt solid #C00000}
+.tw .w-c+.w-c{border-left:1.5pt solid var(--wac)}
 .tw .w-l{position:absolute;left:2mm;top:1mm;font-size:10pt;white-space:nowrap}
 .tw .w-v{position:absolute;left:3mm;right:3mm;top:0;bottom:0;padding-top:5.5mm;white-space:nowrap;overflow:hidden;text-align:center;font-size:26pt;line-height:1.25}
 .tw .wide .w-l{top:50%;transform:translateY(-50%)}
 .tw .wide .w-v{left:25mm;text-align:left;padding-top:0;font-size:28pt}
-.tw .w-no{font-size:30pt}
-.tw .w-red{color:#C00000;font-weight:700;font-size:30pt}
+.tw .w-v.al-l{text-align:left}.tw .w-v.al-c{text-align:center}
+.tw .w-v.ac{color:var(--wac);font-weight:700}
 .tw .w-sub{font-size:.4em;line-height:1.1}
-.tw .w-sch{display:flex;flex-direction:column;justify-content:center;overflow:hidden}
+.tw .w-sch{display:flex;flex-direction:column;justify-content:center;overflow:hidden;padding-top:0}
 .tw .w-sch div{white-space:nowrap}
 .tw .w-sch b{display:inline-block;width:15mm;font-weight:400}
 .tw .w-sch i{font-style:normal;letter-spacing:.22em}
@@ -99,12 +97,32 @@ ol.t-list{padding-left:6mm}
 .tw .w-fold span{display:block;flex:1;border-top:1.2pt dashed #000;height:0}
 .tw .w-fold em{font-style:normal;flex:none}
 .tw .w-lo{position:absolute;left:20mm;top:158.5mm;width:85mm}
-.tw .w-nh{display:inline-block;background:#C00000;color:#fff;font-size:13pt;padding:1mm 3.5mm;margin-bottom:4mm}
+.tw .w-nh{display:inline-block;background:var(--wac);color:#fff;font-size:13pt;padding:1mm 3.5mm;margin-bottom:4mm}
 .tw .w-n{font-size:11.5pt;line-height:1.4;padding-left:1.3em;text-indent:-1.3em;margin:0 0 .5mm 1mm;line-break:strict}
-.tw .w-n.r{color:#C00000}
+.tw .w-n.r{color:var(--wac)}
 .tw .w-ri{position:absolute;left:115mm;top:160mm;width:78mm}
+.tw.sw .w-lo{left:108mm}.tw.sw .w-ri{left:20mm}
 .tw .w-ri img{display:block;width:100%;height:auto}
 .tw .w-ri img+img{margin-top:5mm}
+/* item editor */
+input[type=color]{width:100%;height:32px;padding:2px;border:1px solid var(--bd);border-radius:4px;background:var(--inp)}
+.sub{font-weight:700;font-size:12px;margin:12px 0 0;padding-top:8px;border-top:1px solid var(--bd)}
+.sub:first-child{border-top:0;margin-top:0;padding-top:0}
+.it{border:1px solid var(--bd);border-radius:6px;padding:4px;margin-bottom:5px;background:var(--bg)}
+.it-h{display:flex;gap:3px;align-items:center}
+.it-h input[type=text]{flex:1 1 0;min-width:0;padding:4px 6px}
+.it-h select{flex:none;width:92px;padding:4px 2px}
+.it-h button,.it-mv button{padding:2px 0;width:26px;line-height:1.4;flex:none}
+.it-mv{display:flex;flex-direction:column;gap:1px}
+.it-mv button{height:15px;line-height:1;font-size:9px;padding:0}
+.it-v{margin-top:4px}
+.it-v .sch{grid-template-columns:96px 1fr auto}
+.it-v .sch button{padding:2px 8px}
+.it-d{display:grid;grid-template-columns:1fr 1fr;gap:2px 8px;margin-top:4px;padding-top:4px;border-top:1px dashed var(--bd)}
+.it-d label{margin:4px 0 1px}
+.it-d .wd{grid-column:1/-1}
+.it.hid{opacity:.55}
+.warn{color:#b45309;font-size:11px;margin:2px 0 0}
 .pgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
 .img-f{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .img-f img{max-height:44px;max-width:80px;border:1px solid var(--bd);background:#fff}
@@ -122,11 +140,11 @@ html,body{background:#fff}
 <div class="app">
 <div id="editor">
 <h1>受験票ジェネレーター</h1>
-<details open><summary>1. デザイン</summary><div class="sec">
+<details open><summary>1. テンプレート・保存</summary><div class="sec">
 <label for="tpl">デザイン（テンプレート）</label><select id="tpl"></select>
 <label for="pre">保存済みデザイン</label><select id="pre"></select>
 <div class="pgrid"><button id="psave" type="button">デザインを保存</button><button id="pover" type="button">上書き保存</button><button id="pren" type="button">名前を変更</button><button id="pdel" type="button">削除</button></div>
-<p class="note">※現在のデザインと共通設定を名前を付けて保存できます（このブラウザ内のみ）。</p>
+<p class="note">※項目・デザイン設定を名前を付けて保存できます（このブラウザ内のみ）。</p>
 </div></details>
 <details open><summary>2. 名簿読み込み</summary><div class="sec">
 <div id="drop">ここにCSV / Excelをドロップ<br><button id="fbtn" type="button">ファイルを選択</button><input id="file" type="file" accept=".csv,.xlsx,.xls" hidden></div>
@@ -136,15 +154,15 @@ html,body{background:#fff}
 <p class="note">※名簿（個人情報）は保存されません。ページを閉じる・再読込で消えます。</p>
 <div id="loaded" hidden>
 <div id="cnt" style="font-weight:700"></div>
-<div class="map" id="map"></div>
-<div id="auto" class="grid3" hidden>
-<div><label>受験番号 接頭辞</label><input type="text" id="apre"></div>
-<div><label>開始番号</label><input type="number" id="astart" value="1" min="0"></div>
-<div><label>桁数</label><input type="number" id="adig" value="3" min="1" max="10"></div></div>
 <div class="row" style="margin-top:8px"><button id="sall" type="button">全選択</button><button id="snone" type="button">全解除</button><span id="selcnt" class="note"></span></div>
 <div id="list"></div>
 </div></div></details>
-<details open><summary>3. 試験情報</summary><div class="sec" id="fields"></div></details>
+<details open id="itemsSec"><summary>3. 項目</summary><div class="sec">
+<p class="note" style="margin-top:0">各項目の値は「名簿の列」から自動で入れるか、固定文字・日付などを直接指定できます。</p>
+<div id="items"></div>
+<button id="iadd" type="button">＋項目を追加</button>
+</div></details>
+<details open><summary id="fsum">4. デザイン</summary><div class="sec" id="fields"></div></details>
 </div>
 <div id="pane">
 <div id="bar"><span id="pcount"></span><span class="row"><button class="pri" id="print" type="button">印刷 / PDF保存</button></span></div>
@@ -163,18 +181,6 @@ var d=new Date(+m[1],+m[2]-1,+m[3]);return m[1]+'年'+(+m[2])+'月'+(+m[3])+'日
 function fit(e,min){var fs=parseFloat(getComputedStyle(e).fontSize),g=0;
 e.style.fontSize=fs+'px';while(e.scrollWidth>e.clientWidth+0.5&&fs>(min||6)&&g++<200){fs-=0.5;e.style.fontSize=fs+'px'}}
 
-/* ---------- 名簿の項目定義（key,ラベル,見出し候補） ---------- */
-var SF={
-name:['氏名','氏名',['氏名','名前','生徒名','name','お名前']],
-kana:['ふりがな／カナ氏名','',['カナ氏名','カナ','フリガナ','ふりがな','よみ','読み','ヨミ']],
-no:['受験番号','',['受験番号','番号','id','生徒番号','no','no.']],
-school:['学校名','',['学校名','学校','高校','在籍校']],
-grade:['学年','',['学年名','学年']],
-faculty:['志望学部','',['志望学部','学部','志望']],
-room:['教室','',['教室','会場','部屋']],
-note:['備考','',['備考','メモ']]};
-var SF_ORDER=['name','kana','no','school','grade','faculty','room','note'];
-
 /* ---------- テンプレート ---------- */
 var SCH_W=[{t:'10:00〜11:30',c:'英語'},{t:'13:00〜14:30',c:'国語'},{t:'15:30〜16:30',c:'社会'}];
 var NOTES_W='!こちらの受験票を折って試験当日に持参してください。\n入場の際、受験票の提示が必要です。\n!試験教室は8:30から開いています。試験時間の30分前までに試験教室に入場してください。\n試験教室の座席に着席する際に、机に貼られている受験番号と一致していることを確認してください。\n受験票は試験時間中机上に置きますので、何も書き込まないでください。（書き込みを発見した場合、不正行為となる可能性があります。）\n受験票は入学後の学生証交付の際に必要になりますので、大切に保管してください。';
@@ -182,7 +188,7 @@ var TEMPLATES={};var TPL_ORDER=[];
 function addTemplate(t){TEMPLATES[t.id]=t;TPL_ORDER.push(t.id)}
 
 /* シンプル */
-function renderSimple(st,V){var t=el('div','ticket'),fits=[];var m=el('div','t-main');
+function renderSimple(S0,V){var st={no:groupVal(S0,'no'),name:groupVal(S0,'name'),kana:groupVal(S0,'kana'),school:groupVal(S0,'school'),grade:groupVal(S0,'grade')};var t=el('div','ticket'),fits=[];var m=el('div','t-main');
 function cell(k,v,cls){var c=el('div','t-cell');c.appendChild(el('div','t-k',k));var d=el('div','t-v '+(cls||''));if(v instanceof Node)d.appendChild(v);else d.textContent=v;c.appendChild(d);return c}
 var h=el('div','t-head');h.appendChild(el('div','t-lab','受験票'));
 var ti=el('div','t-title',V.title||'');h.appendChild(ti);fits.push(ti);
@@ -226,34 +232,69 @@ fields:[
 {k:'notes',label:'注意事項（1行1項目）',type:'lines',def:'この受験票は試験当日必ず持参してください。\n集合時刻に遅れないように来場してください。\n試験中は携帯電話・スマートフォンの電源を切ってください。'},
 {k:'contact',label:'問い合わせ先（1行）',type:'text',def:''},
 {k:'photo',label:'写真貼付欄を表示',type:'check',def:false},
-{k:'stub',label:'切り取り線＋控え（試験官用）',type:'check',def:false}],
-studentFields:['no','name','kana','school','grade','note'],
+{k:'stub',label:'切り取り線＋控え（試験官用）',type:'check',def:false},
+{k:'apre',label:'番号の自動採番：接頭辞',type:'text',def:'',half:1},
+{k:'astart',label:'開始番号',type:'number',def:1,half:1},
+{k:'adig',label:'桁数',type:'number',def:3,half:1}],
 render:renderSimple});
 
 /* 早大プレ型 */
 function imgSrc(v,def){if(!v||v.hide)return '';return v.d||def}
-function renderWaseda(st,V){var t=el('div','ticket tw'),fits=[];
-var hd=el('div','w-hd');hd.appendChild(el('span','w-hd-t',V.hdr));if(V.badge)hd.appendChild(el('span','w-badge',V.badge));t.appendChild(hd);
-if(V.mark)t.appendChild(el('div','w-mark',V.mark));
+var ITSZ={half:{S:20,M:26,L:30,XL:34},full:{S:20,M:24,L:28,XL:34},sch:{S:11,M:14,L:17,XL:20}};
+var itSeq=0;function newId(){return 'i'+Date.now().toString(36)+(itSeq++)}
+function mkItem(label,source,o){var it={id:newId(),label:label,source:source,column:'',value:'',rows:[],auto:{prefix:'',start:1,digits:3},fallback:'',width:'full',size:'M',color:'black',align:'',hidden:false};
+for(var k in o)it[k]=o[k];return it}
+function defItems(){return [
+mkItem('受験番号','column',{column:'受験番号',width:'half',size:'L'}),
+mkItem('試験場','fixed',{value:'東進HS 藤沢校',width:'half',size:'XL',color:'accent'}),
+mkItem('カナ氏名','column',{column:'カナ氏名',width:'half'}),
+mkItem('教室','fixed',{value:'レクチャールーム',width:'half'}),
+mkItem('試験日','date',{value:'2023-07-02',size:'L'}),
+mkItem('入試制度','fixed',{value:'第一回早大プレ',size:'L'}),
+mkItem('志望学部','column',{column:'志望学部',size:'L'}),
+mkItem('試験時間','schedule',{rows:clone(SCH_W)})]}
+function normItems(arr){var oks=['column','fixed','date','schedule','autonumber'];
+return arr.filter(function(x){return x&&typeof x==='object'}).map(function(x){var it=mkItem(String(x.label||''),oks.indexOf(x.source)>=0?x.source:'fixed',{});
+if(typeof x.id==='string'&&x.id)it.id=x.id;
+['column','value','fallback'].forEach(function(k){if(typeof x[k]==='string')it[k]=x[k]});
+if(Array.isArray(x.rows))it.rows=x.rows.filter(function(r){return r&&typeof r==='object'}).map(function(r){return {t:String(r.t||''),c:String(r.c||'')}});
+if(x.auto&&typeof x.auto==='object'){it.auto={prefix:String(x.auto.prefix||''),start:+x.auto.start||0,digits:Math.max(1,+x.auto.digits||3)}}
+if(x.width==='half'||x.width==='full')it.width=x.width;
+if(['S','M','L','XL'].indexOf(x.size)>=0)it.size=x.size;
+if(x.color==='accent'||x.color==='black')it.color=x.color;
+if(x.align==='left'||x.align==='center')it.align=x.align;
+it.hidden=!!x.hidden;return it})}
+/* 旧形式（固定項目）→ 項目モデル */
+function migrateWaseda(sv){if(!sv||typeof sv!=='object')return sv;var o=clone(sv);
+if(!Array.isArray(o.items)){var its=defItems(),by={};its.forEach(function(i){by[i.label]=i});
+if(typeof o.venue==='string')by['試験場'].value=o.venue;
+if(typeof o.room==='string')by['教室'].value=o.room;
+if(typeof o.date==='string')by['試験日'].value=o.date;
+if(typeof o.system==='string')by['入試制度'].value=o.system;
+if(typeof o.faculty==='string')by['志望学部'].fallback=o.faculty;
+if(Array.isArray(o.sched))by['試験時間'].rows=o.sched;
+o.items=its}
+if(o.badgeOn===undefined&&o.badge==='')o.badgeOn=false;return o}
+function renderWaseda(S0,V){var t=el('div','ticket tw'+(V.swap?' sw':'')),fits=[];
+t.style.setProperty('--wac',V.accent);t.style.fontFamily=V.font==='mincho'?'"Yu Mincho","Hiragino Mincho ProN","MS PMincho",serif':'"Yu Gothic","Meiryo","Hiragino Sans",sans-serif';
+var hd=el('div','w-hd');hd.appendChild(el('span','w-hd-t',V.hdr));if(V.badgeOn&&V.badge)hd.appendChild(el('span','w-badge',V.badge));t.appendChild(hd);
+if(V.markOn&&V.mark)t.appendChild(el('div','w-mark',V.mark));
 var tb=el('div','w-tbl');t.appendChild(tb);
-function row(h){var r=el('div','w-row');r.style.height=h+'mm';tb.appendChild(r);return r}
-function cell(r,cls,label,content,vcls,fitit){var c=el('div','w-c '+(cls||''));c.appendChild(el('div','w-l',label));
-var v=el('div','w-v '+(vcls||''));if(content instanceof Node)v.appendChild(content);else v.textContent=content;
-c.appendChild(v);r.appendChild(c);if(fitit)fits.push(v);return v}
-var r1=row(20.8);cell(r1,'','受験番号',st.no,'w-no',1);cell(r1,'','試験場',V.venue,'w-red',1);
-var r2=row(20.8);var kn=el('div');
-if(V.showKanji&&st.name&&st.kana){kn.appendChild(el('div','w-sub',st.name));kn.appendChild(el('div',null,st.kana))}else kn.textContent=st.kana||st.name||'';
-var kv=cell(r2,'','カナ氏名',kn,'',1);kv.style.letterSpacing='.08em';
-var rv=cell(r2,'','教室',st.room||V.room,'',1);rv.style.letterSpacing='.1em';
-function wide(h,label,text){var r=row(h);var v=cell(r,'wide',label,text,'',1);v.style.lineHeight=h+'mm';return v}
-wide(18.6,'試験日',fmtDate(V.date)).style.letterSpacing='.2em';
-wide(17,'入試制度',V.system).style.letterSpacing='.05em';
-wide(17.8,'志望学部',st.faculty||V.faculty).style.letterSpacing='.05em';
-var r6=row(20.4);var sc=el('div');sc.className='';
-var sv=cell(r6,'wide','試験時間','','w-sch');sv.style.fontSize='14pt';sv.style.lineHeight='1.3';
-V.sched.filter(function(x){return x.t||x.c}).forEach(function(x){var d=el('div');d.appendChild(el('b',null,x.c));d.appendChild(el('i',null,x.t));sv.appendChild(d)});
-var fo=el('div','w-fold');fo.appendChild(el('span'));fo.appendChild(el('em',null,'＜山折り＞'));fo.appendChild(el('span'));t.appendChild(fo);
-var lo=el('div','w-lo');lo.appendChild(el('div','w-nh','注意事項'));
+function addRow(its){var half=its.length>1||its[0].width==='half';var sch=its.some(function(i){return i.source==='schedule'});
+var h=half&&!sch?20.8:17.8;if(sch){var n=Math.max.apply(null,its.map(function(i){return i.source==='schedule'?i.rows.filter(function(x){return x.t||x.c}).length:0}));h=Math.max(20.4,n*ITSZ.sch[its[0].size]*0.46+2)}
+var r=el('div','w-row');r.style.height=h+'mm';tb.appendChild(r);
+its.forEach(function(it){var wide=it.width!=='half';var c=el('div','w-c'+(wide?' wide':''));c.appendChild(el('div','w-l',it.label));
+var v=el('div','w-v');
+if(it.source==='schedule'){v.className+=' w-sch';v.style.fontSize=ITSZ.sch[it.size]+'pt';v.style.lineHeight='1.3';
+it.rows.filter(function(x){return x.t||x.c}).forEach(function(x){var d=el('div');d.appendChild(el('b',null,x.c));d.appendChild(el('i',null,x.t));v.appendChild(d)})}
+else{v.textContent=itemVal(it,S0);v.style.fontSize=ITSZ[wide?'full':'half'][it.size]+'pt';if(wide){v.style.lineHeight=h+'mm';if(it.source==='date')v.style.letterSpacing='.2em';else v.style.letterSpacing='.05em'}else v.style.letterSpacing='.08em';
+if(it.align==='left')v.className+=' al-l';else if(it.align==='center')v.className+=' al-c';
+if(it.color==='accent')v.className+=' ac';fits.push(v)}
+c.appendChild(v);r.appendChild(c)})}
+var vis=V.items.filter(function(i){return !i.hidden}),q=0;
+while(q<vis.length){var a=vis[q],b=vis[q+1];if(a.width==='half'&&b&&b.width==='half'){addRow([a,b]);q+=2}else{addRow([a]);q++}}
+if(V.foldOn){var fo=el('div','w-fold');fo.style.top=V.foldPos+'mm';fo.appendChild(el('span'));if(V.foldLabel)fo.appendChild(el('em',null,V.foldLabel));fo.appendChild(el('span'));t.appendChild(fo)}
+var lo=el('div','w-lo');if(V.noteTitle)lo.appendChild(el('div','w-nh',V.noteTitle));
 lines(V.notes).forEach(function(x){var red=/^[!！]/.test(x);if(red)x=x.replace(/^[!！]\s*/,'');lo.appendChild(el('div','w-n'+(red?' r':''),'・'+x))});
 t.appendChild(lo);
 var ri=el('div','w-ri');var ms=imgSrc(V.map,'assets/map-fujisawa.png'),ls=imgSrc(V.logo,'assets/logo-fujisawa.png');
@@ -261,28 +302,38 @@ if(ms){var i1=el('img');i1.src=ms;i1.alt='';ri.appendChild(i1)}
 if(ls){var i2=el('img');i2.src=ls;i2.alt='';ri.appendChild(i2)}
 t.appendChild(ri);
 t._fits=fits;return t}
-addTemplate({id:'waseda',name:'早大プレ型',
+addTemplate({id:'waseda',name:'早大プレ型',hasItems:true,migrate:migrateWaseda,
 fields:[
+{type:'h',label:'ヘッダー'},
 {k:'hdr',label:'ヘッダー文字',type:'text',def:'2024年度　早稲田大学受験票'},
-{k:'badge',label:'バッジ文字（空欄で非表示）',type:'text',def:'折って試験当日持参'},
-{k:'mark',label:'右上マーク',type:'text',def:'24早'},
-{k:'venue',label:'試験場',type:'text',def:'東進HS 藤沢校'},
-{k:'room',label:'教室（名簿の教室列があればそちらを優先）',type:'text',def:'レクチャールーム'},
-{k:'date',label:'試験日',type:'date',def:'2023-07-02'},
-{k:'system',label:'入試制度',type:'text',def:'第一回早大プレ'},
-{k:'faculty',label:'志望学部（名簿に列がなければ全員共通）',type:'text',def:''},
-{k:'sched',label:'試験時間（左：時間／右：科目）',type:'sched',def:SCH_W},
-{k:'showKanji',label:'漢字氏名も表示',type:'check',def:false},
-{k:'notes',label:'注意事項（1行1項目・先頭「!」で赤字）',type:'lines',def:NOTES_W},
+{k:'badge',label:'バッジ文字',type:'text',def:'折って試験当日持参',half:1},
+{k:'badgeOn',label:'バッジを表示',type:'check',def:true,half:1},
+{k:'mark',label:'右上マーク',type:'text',def:'24早',half:1},
+{k:'markOn',label:'マークを表示',type:'check',def:true,half:1},
+{k:'items',type:'items'},
+{type:'h',label:'色・書体'},
+{k:'accent',label:'アクセント色',type:'color',def:'#C00000',half:1},
+{k:'font',label:'基本フォント',type:'select',opts:[['gothic','ゴシック'],['mincho','明朝']],def:'gothic',half:1},
+{type:'h',label:'折り線'},
+{k:'foldOn',label:'折り線を表示',type:'check',def:true,half:1},
+{k:'foldPos',label:'位置（mm）',type:'number',def:148.5,half:1},
+{k:'foldLabel',label:'折り線の文字',type:'text',def:'＜山折り＞'},
+{type:'h',label:'下半分'},
+{k:'noteTitle',label:'注意事項の見出し',type:'text',def:'注意事項'},
+{k:'notes',label:'注意事項（1行1項目・先頭「!」でアクセント色）',type:'lines',def:NOTES_W},
+{k:'swap',label:'注意事項と画像の左右を入れ替える',type:'check',def:false},
 {k:'map',label:'地図画像',type:'image',def:{d:'',hide:false}},
 {k:'logo',label:'ロゴ画像',type:'image',def:{d:'',hide:false}}],
-studentFields:['no','kana','name','room','faculty'],
 render:renderWaseda});
 
 /* ---------- 状態・保存 ---------- */
 var KEY='juken-hyo-v2',KEY1='juken-hyo-v1',PKEY='juken-hyo-presets-v1';
-function mkVals(tpl,saved){var v={};tpl.fields.forEach(function(f){var x=clone(f.def);var s=saved&&saved[f.k];
-if(s!==undefined&&s!==null){var ok=f.type==='sched'?Array.isArray(s):f.type==='image'?(typeof s==='object'&&!Array.isArray(s)):f.type==='check'?typeof s==='boolean':typeof s==='string';
+function mkVals(tpl,saved){if(tpl.migrate)saved=tpl.migrate(saved);var v={};tpl.fields.forEach(function(f){if(!f.k)return;
+if(f.type==='items'){v[f.k]=saved&&Array.isArray(saved[f.k])?normItems(saved[f.k]):defItems();return}
+var x=clone(f.def);var s=saved&&saved[f.k];
+if(s!==undefined&&s!==null){var ok=f.type==='sched'?Array.isArray(s):f.type==='image'?(typeof s==='object'&&!Array.isArray(s)):f.type==='check'?typeof s==='boolean':f.type==='number'?(typeof s==='number'&&isFinite(s)):typeof s==='string';
+if(f.type==='color'&&ok)ok=/^#[0-9a-fA-F]{6}$/.test(s);
+if(f.type==='select'&&ok)ok=f.opts.some(function(o){return o[0]===s});
 if(ok){x=clone(s);if(f.type==='image'){x.d=typeof x.d==='string'?x.d:'';x.hide=!!x.hide}
 if(f.type==='sched')x=x.filter(function(r){return r&&typeof r==='object'}).map(function(r){return {t:String(r.t||''),c:String(r.c||'')}})}}
 v[f.k]=x});return v}
@@ -303,17 +354,21 @@ var sc=Math.min(1,1200/Math.max(im.width,im.height));var c=document.createElemen
 var x=c.getContext('2d');var png=/png|gif|svg/.test(file.type);if(!png){x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height)}
 x.drawImage(im,0,0,c.width,c.height);cb(png?c.toDataURL('image/png'):c.toDataURL('image/jpeg',.88))};
 im.onerror=function(){alert('画像を読み込めませんでした。')};im.src=fr.result};fr.readAsDataURL(file)}
-function drawFields(){var w=$('fields');w.textContent='';
+function drawFields(){var w=$('fields');w.textContent='';var g=null;
+$('itemsSec').hidden=!tpl().hasItems;$('fsum').textContent=tpl().hasItems?'4. デザイン':'3. 試験情報';
 tpl().fields.forEach(function(f){var k=f.k;
-if(f.type==='check'){var lb=el('label','chk');var c=el('input');c.type='checkbox';c.checked=!!V[k];c.onchange=function(){V[k]=c.checked;save();render()};lb.appendChild(c);lb.appendChild(document.createTextNode(f.label));w.appendChild(lb);return}
-w.appendChild(el('label',null,f.label));
-if(f.type==='sched'){var box=el('div');w.appendChild(box);
+if(f.type==='items')return;
+if(f.type==='h'){g=null;w.appendChild(el('div','sub',f.label));return}
+var P=w;if(f.half){if(!g){g=el('div','grid2');g.style.alignItems='end';w.appendChild(g)}P=el('div');g.appendChild(P)}else g=null;
+if(f.type==='check'){var lb=el('label','chk');var c=el('input');c.type='checkbox';c.checked=!!V[k];c.onchange=function(){V[k]=c.checked;save();render()};lb.appendChild(c);lb.appendChild(document.createTextNode(f.label));P.appendChild(lb);return}
+P.appendChild(el('label',null,f.label));
+if(f.type==='sched'){var box=el('div');P.appendChild(box);
 var draw=function(){box.textContent='';V[k].forEach(function(r,idx){var d=el('div','sch');var a=el('input');a.type='text';a.value=r.t;a.placeholder='時間';
 var b=el('input');b.type='text';b.value=r.c;b.placeholder='科目・内容';var x=el('button',null,'削除');x.type='button';
 a.oninput=function(){r.t=a.value;save();render()};b.oninput=function(){r.c=b.value;save();render()};
 x.onclick=function(){V[k].splice(idx,1);save();draw();render()};d.appendChild(a);d.appendChild(b);d.appendChild(x);box.appendChild(d)})};
-draw();var ad=el('button',null,'＋ 行を追加');ad.type='button';ad.onclick=function(){V[k].push({t:'',c:''});save();draw();render()};w.appendChild(ad);return}
-if(f.type==='image'){var d2=el('div','img-f');w.appendChild(d2);
+draw();var ad=el('button',null,'＋ 行を追加');ad.type='button';ad.onclick=function(){V[k].push({t:'',c:''});save();draw();render()};P.appendChild(ad);return}
+if(f.type==='image'){var d2=el('div','img-f');P.appendChild(d2);
 var pv=el('img');pv.alt='';var fi=el('input');fi.type='file';fi.accept='image/*';fi.hidden=true;
 var up=el('button',null,'画像を変更');up.type='button';var rs=el('button',null,'既定に戻す');rs.type='button';
 var hl=el('label','chk');var hc=el('input');hc.type='checkbox';hc.checked=!!V[k].hide;hl.appendChild(hc);hl.appendChild(document.createTextNode('非表示'));hl.style.margin='0';
@@ -323,9 +378,58 @@ fi.onchange=function(){var fl=this.files[0];this.value='';if(!fl)return;resizeIm
 rs.onclick=function(){V[k]={d:'',hide:false};hc.checked=false;save();upd();render()};
 hc.onchange=function(){V[k].hide=hc.checked;save();render()};
 d2.appendChild(pv);d2.appendChild(up);d2.appendChild(rs);d2.appendChild(hl);d2.appendChild(fi);upd();return}
+if(f.type==='select'){var sl=el('select');f.opts.forEach(function(o){var op=el('option',null,o[1]);op.value=o[0];sl.appendChild(op)});sl.value=V[k];sl.onchange=function(){V[k]=sl.value;save();render()};P.appendChild(sl);return}
+if(f.type==='number'){var ni=el('input');ni.type='number';ni.step=f.step||'any';ni.value=V[k];ni.oninput=function(){var n=parseFloat(ni.value);V[k]=isFinite(n)?n:f.def;save();render()};P.appendChild(ni);return}
+if(f.type==='color'){var ci=el('input');ci.type='color';ci.value=V[k];ci.oninput=function(){V[k]=ci.value;save();render()};P.appendChild(ci);return}
 var i;if(f.type==='textarea'||f.type==='lines'){i=el('textarea');i.rows=f.type==='lines'?6:2}
 else{i=el('input');i.type=f.type==='date'?'date':f.type==='time'?'time':'text'}
-i.value=V[k]||'';i.oninput=function(){V[k]=i.value;save();render()};w.appendChild(i)})}
+i.value=V[k]||'';i.oninput=function(){V[k]=i.value;save();render()};P.appendChild(i)})}
+
+/* ---------- 項目エディタ ---------- */
+var openIt={};
+var COMMON_COLS=['受験番号','氏名','カナ氏名','学校名','学年','志望学部','教室'];
+var SRC=[['column','名簿の列'],['fixed','固定文字'],['date','日付'],['schedule','時間割'],['autonumber','自動採番']];
+function btn(t,title){var b=el('button',null,t);b.type='button';if(title)b.title=title;return b}
+function opt(sel,list,cur){list.forEach(function(o){var op=el('option',null,o[1]);op.value=o[0];sel.appendChild(op)});sel.value=cur;return sel}
+function fld(label,ctl,cls){var d=el('div',cls||'');d.appendChild(el('label',null,label));d.appendChild(ctl);return d}
+function drawItems(){var box=$('items');box.textContent='';if(!tpl().hasItems)return;
+var dl=el('datalist');dl.id='hdrs';(headers.length?headers:COMMON_COLS).forEach(function(h){var o=el('option');o.value=h;dl.appendChild(o)});box.appendChild(dl);
+function mvI(i,dd){var a=V.items,j=i+dd;if(j<0||j>=a.length)return;var x=a[i];a[i]=a[j];a[j]=x;save();drawItems();render()}
+V.items.forEach(function(it,idx){var d=el('div','it'+(it.hidden?' hid':''));var h=el('div','it-h');
+var mv=el('div','it-mv');var up=btn('▲','上へ'),dn=btn('▼','下へ');up.disabled=idx===0;dn.disabled=idx===V.items.length-1;
+up.onclick=function(){mvI(idx,-1)};dn.onclick=function(){mvI(idx,1)};mv.appendChild(up);mv.appendChild(dn);h.appendChild(mv);
+var lb=el('input');lb.type='text';lb.value=it.label;lb.placeholder='項目名';lb.oninput=function(){it.label=lb.value;save();render()};h.appendChild(lb);
+var ss=opt(el('select'),SRC,it.source);ss.onchange=function(){it.source=ss.value;if(it.source==='schedule'&&!it.rows.length)it.rows=[{t:'',c:''}];save();drawItems();render()};h.appendChild(ss);
+var gb=btn('⚙','詳細設定');gb.onclick=function(){openIt[it.id]=!openIt[it.id];drawItems()};h.appendChild(gb);
+var db=btn('🗑','削除');db.onclick=function(){if(!confirm('「'+(it.label||'項目')+'」を削除しますか？'))return;V.items.splice(idx,1);save();drawItems();render()};h.appendChild(db);
+d.appendChild(h);
+var vb=el('div','it-v');
+if(it.source==='column'){var ci=el('input');ci.type='text';ci.setAttribute('list','hdrs');ci.value=it.column;ci.placeholder='名簿の見出し名（例：氏名）';
+var wn=el('div','note');var updW=function(){wn.textContent='';wn.className='note';if(!headers.length)return;var n=colIdx(it.column);
+if(n<0){wn.className='warn';wn.textContent='名簿に該当する列がありません（代替文字を使用）'}else if(headers[n]!==it.column){wn.textContent='→ 列「'+headers[n]+'」を使用'}};
+ci.oninput=function(){it.column=ci.value;updW();save();render()};vb.appendChild(ci);updW();vb.appendChild(wn)}
+else if(it.source==='fixed'){var fi=el('input');fi.type='text';fi.value=it.value;fi.placeholder='表示する文字';fi.oninput=function(){it.value=fi.value;save();render()};vb.appendChild(fi)}
+else if(it.source==='date'){var di=el('input');di.type='date';di.value=it.value;di.oninput=function(){it.value=di.value;save();render()};vb.appendChild(di)}
+else if(it.source==='autonumber'){var gr=el('div','grid3');var mk=function(lab,key,type){var i=el('input');i.type=type;i.value=it.auto[key];
+i.oninput=function(){it.auto[key]=type==='number'?(parseInt(i.value,10)||(key==='digits'?1:0)):i.value;save();render()};gr.appendChild(fld(lab,i))};
+mk('接頭辞','prefix','text');mk('開始番号','start','number');mk('桁数','digits','number');vb.appendChild(gr)}
+else{var sb=el('div');var drs=function(){sb.textContent='';it.rows.forEach(function(r,ri){var s=el('div','sch');var a=el('input');a.type='text';a.value=r.t;a.placeholder='時間';
+var b=el('input');b.type='text';b.value=r.c;b.placeholder='科目';var x=btn('削除');
+a.oninput=function(){r.t=a.value;save();render()};b.oninput=function(){r.c=b.value;save();render()};
+x.onclick=function(){it.rows.splice(ri,1);save();drs();render()};s.appendChild(a);s.appendChild(b);s.appendChild(x);sb.appendChild(s)});
+var ad=btn('＋ 行を追加');ad.onclick=function(){it.rows.push({t:'',c:''});save();drs();render()};sb.appendChild(ad)};drs();vb.appendChild(sb)}
+d.appendChild(vb);
+if(openIt[it.id]){var dt=el('div','it-d');
+var wsel=opt(el('select'),[['full','全幅'],['half','半幅（連続する半幅は横並び）']],it.width);wsel.onchange=function(){it.width=wsel.value;save();render()};dt.appendChild(fld('幅',wsel,'wd'));
+var zs=opt(el('select'),[['S','S 小'],['M','M 標準'],['L','L 大'],['XL','XL 特大']],it.size);zs.onchange=function(){it.size=zs.value;save();render()};dt.appendChild(fld('文字サイズ',zs));
+var cs=opt(el('select'),[['black','黒'],['accent','アクセント色（太字）']],it.color);cs.onchange=function(){it.color=cs.value;save();render()};dt.appendChild(fld('文字色',cs));
+var as=opt(el('select'),[['','自動'],['left','左揃え'],['center','中央']],it.align);as.onchange=function(){it.align=as.value;save();render()};dt.appendChild(fld('揃え',as));
+var hl=el('label','chk');var hk=el('input');hk.type='checkbox';hk.checked=it.hidden;hk.onchange=function(){it.hidden=hk.checked;save();drawItems();render()};hl.appendChild(hk);hl.appendChild(document.createTextNode('非表示'));dt.appendChild(hl);
+if(it.source==='column'){var fb=el('input');fb.type='text';fb.value=it.fallback;fb.placeholder='列の値が空のとき表示';fb.oninput=function(){it.fallback=fb.value;save();render()};dt.appendChild(fld('代替文字（空欄時）',fb,'wd'))}
+d.appendChild(dt)}
+box.appendChild(d)})}
+$('iadd').onclick=function(){if(!tpl().hasItems)return;var it=mkItem('新しい項目','fixed',{});V.items.push(it);openIt[it.id]=true;save();drawItems();render();
+var ls=$('items').querySelectorAll('.it-h input[type=text]');if(ls.length){var l=ls[ls.length-1];l.focus();l.select()}};
 
 /* ---------- デザイン選択・保存済み ---------- */
 function drawTplSel(){var s=$('tpl');s.textContent='';TPL_ORDER.forEach(function(id){var o=el('option',null,TEMPLATES[id].name);o.value=id;s.appendChild(o)});s.value=S.tpl}
@@ -334,7 +438,7 @@ presets.forEach(function(p){var op=el('option',null,p.name+'（'+TEMPLATES[p.tpl
 if(!presets.some(function(p){return p.id===S.cur}))S.cur='';s.value=S.cur;
 $('pover').disabled=$('pren').disabled=$('pdel').disabled=!S.cur}
 function byId(id){for(var i=0;i<presets.length;i++)if(presets[i].id===id)return presets[i]}
-function afterDesignChange(){save();drawTplSel();drawPreSel();drawFields();drawMap();render()}
+function afterDesignChange(){save();drawTplSel();drawPreSel();drawFields();drawItems();render()}
 $('tpl').onchange=function(){S.byTpl[S.tpl]=V;S.tpl=this.value;S.cur='';V=mkVals(tpl(),S.byTpl[S.tpl]);afterDesignChange()};
 $('pre').onchange=function(){var p=byId(this.value);if(!p){S.cur='';drawPreSel();save();return}
 S.tpl=p.tpl;V=mkVals(tpl(),p.vals);S.cur=p.id;afterDesignChange()};
@@ -348,8 +452,6 @@ $('pren').onclick=function(){var p=byId(S.cur);if(!p)return;var n=prompt('新し
 $('pdel').onclick=function(){var p=byId(S.cur);if(!p)return;if(!confirm('「'+p.name+'」を削除しますか？'))return;presets=presets.filter(function(x){return x!==p});S.cur='';savePresets();save();drawPreSel()};
 
 /* ---------- 名簿 ---------- */
-var headers=[],rows=[],map={},sel={};
-SF_ORDER.forEach(function(k){map[k]=-1});
 function parseDelim(text,delim){var out=[],row=[],f='',q=false,i=0,n=text.length,c;
 for(;i<n;i++){c=text[i];
 if(q){if(c==='"'){if(text[i+1]==='"'){f+='"';i++}else q=false}else f+=c}
@@ -361,30 +463,50 @@ if(f!==''||row.length){row.push(f);out.push(row)}
 return out}
 function decode(buf){var t;try{t=new TextDecoder('utf-8',{fatal:true}).decode(buf)}catch(e){t=new TextDecoder('shift_jis').decode(buf)}
 return t.replace(/^﻿/,'')}
+var headers=[],rows=[],sel={};
+/* 見出しの同義語（列名が見つからないときの自動推測） */
+var SG={name:['氏名','名前','生徒名','お名前','name'],
+kana:['カナ氏名','カナ','フリガナ','ふりがな','よみ','読み','ヨミ','かな'],
+no:['受験番号','番号','id','生徒番号','no','no.'],
+faculty:['志望学部','学部','志望'],
+room:['教室','会場','部屋'],
+school:['学校名','学校','高校','在籍校'],
+grade:['学年','学年名']};
+var SAMPLE={no:'001',name:'坂東 慶次',kana:'バンドウケイジ',school:'藤沢高等学校',grade:'高3',faculty:'文学部',room:'レクチャールーム'};
+function normH(s){return String(s==null?'':s).toLowerCase().replace(/[\s　]/g,'')}
+function groupOf(n){n=normH(n);if(!n)return '';for(var g in SG)if(SG[g].some(function(s){return normH(s)===n}))return g;return ''}
+function groupIdx(g){for(var i=0;i<headers.length;i++){var h=normH(headers[i]);if(SG[g].some(function(s){return normH(s)===h}))return i}
+if(g==='name'){for(var j=0;j<headers.length;j++)if(/氏名|名前|name/i.test(headers[j])&&!/カナ|かな|ふりがな|フリガナ/.test(headers[j]))return j}
+return -1}
+function colIdx(name){var n=normH(name);if(!n)return -1;for(var i=0;i<headers.length;i++)if(normH(headers[i])===n)return i;var g=groupOf(name);return g?groupIdx(g):-1}
+function autoNum(a,idx){var d=Math.max(1,a.digits||3);return (a.prefix||'')+String((+a.start||0)+idx).padStart(d,'0')}
+function colVal(st,name){if(!st.row){var g=groupOf(name);return g?SAMPLE[g]:'〈'+name+'〉'}
+var ix=colIdx(name);return ix>=0?(st.row[ix]||''):''}
+function groupVal(st,g){if(!st.row)return SAMPLE[g]||'';var ix=groupIdx(g);if(ix>=0)return st.row[ix]||'';
+return g==='no'?autoNum({prefix:V.apre,start:V.astart,digits:V.adig},st.idx):''}
+function itemVal(it,st){var s=it.source;
+if(s==='fixed')return it.value||'';
+if(s==='date')return fmtDate(it.value);
+if(s==='autonumber')return autoNum(it.auto,st.idx);
+if(s==='column'){var v=colVal(st,it.column);if(v)return v;
+if(it.fallback)return it.fallback;return ''}
+return ''}
 function load(table){
 table=table.map(function(r){return r.map(function(v){return v==null?'':String(v).trim()})}).filter(function(r){return r.some(function(v){return v!==''})});
 if(table.length<2){alert('データ行が見つかりません（1行目は見出しにしてください）。');return false}
 headers=table[0].map(function(h,i){return h||('列'+(i+1))});rows=table.slice(1);
-map={};var norm=function(s){return s.toLowerCase().replace(/\s/g,'')};
-SF_ORDER.forEach(function(k){map[k]=-1;
-for(var i=0;i<headers.length;i++){if(SF[k][2].some(function(s){return norm(s)===norm(headers[i])})){map[k]=i;break}}});
-if(map.name<0){var j=headers.findIndex(function(h){return /氏名|名前|name/i.test(h)&&!/カナ|かな|ふりがな|フリガナ/.test(h)});if(j>=0)map.name=j}
 sel={};rows.forEach(function(_,i){sel[i]=true});
-$('loaded').hidden=false;$('cnt').textContent=rows.length+'名読み込み';drawMap();drawList();render();return true}
-function drawMap(){var m=$('map');m.textContent='';var used=tpl().studentFields;
-used.forEach(function(k){m.appendChild(el('span',null,SF[k][0]));var s=el('select');
-var o=el('option',null,'（使わない）');o.value=-1;s.appendChild(o);
-headers.forEach(function(h,i){var op=el('option',null,h);op.value=i;s.appendChild(op)});
-s.value=map[k];s.onchange=function(){map[k]=+s.value;$('auto').hidden=map.no>=0;drawList();render()};m.appendChild(s)});
-$('auto').hidden=map.no>=0||used.indexOf('no')<0;}
-function val(r,k){return map[k]>=0?(r[map[k]]||''):''}
-function numOf(r,i){if(map.no>=0)return val(r,'no');
-var d=Math.max(1,+$('adig').value||3);return $('apre').value+String((+$('astart').value||0)+i).padStart(d,'0')}
+$('loaded').hidden=false;$('cnt').textContent=rows.length+'名読み込み';drawItems();drawList();render();return true}
+function listLabel(r,i){var st={idx:i,row:r};
+if(tpl().hasItems){var its=V.items,no=null,nm=null,kn=/カナ|ｶﾅ|フリガナ|ふりがな/;
+its.forEach(function(x){if(!no&&/受験番号/.test(x.label))no=x;if(!nm&&/氏名|名前/.test(x.label)&&!kn.test(x.label))nm=x});
+if(!nm)nm=its.filter(function(x){return /氏名|名前/.test(x.label)})[0]||its.filter(function(x){return x.source==='column'})[0];
+return (no?itemVal(no,st):String(i+1))+' '+((nm&&itemVal(nm,st))||'（氏名なし）')}
+return groupVal(st,'no')+' '+(groupVal(st,'name')||groupVal(st,'kana')||'（氏名なし）')}
 function drawList(){var l=$('list');l.textContent='';
 rows.forEach(function(r,i){var lb=el('label');var c=el('input');c.type='checkbox';c.checked=!!sel[i];
 c.onchange=function(){sel[i]=c.checked;render()};lb.appendChild(c);
-lb.appendChild(document.createTextNode(numOf(r,i)+' '+(val(r,'name')||val(r,'kana')||'（氏名なし）')));l.appendChild(lb)});}
-['apre','astart','adig'].forEach(function(id){$(id).oninput=function(){drawList();render()}});
+lb.appendChild(document.createTextNode(listLabel(r,i)));l.appendChild(lb)})}
 $('sall').onclick=function(){rows.forEach(function(_,i){sel[i]=true});drawList();render()};
 $('snone').onclick=function(){rows.forEach(function(_,i){sel[i]=false});drawList();render()};
 function readFile(f){var ext=(f.name.split('.').pop()||'').toLowerCase();var fr=new FileReader();
@@ -407,9 +529,8 @@ $('sample').onclick=function(){var csv='﻿受験番号,氏名,カナ氏名,学�
 var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='sample_meibo.csv';a.click();setTimeout(function(){URL.revokeObjectURL(a.href)},1000)};
 
 /* ---------- プレビュー ---------- */
-var SAMPLE={no:'1',name:'坂東 慶次',kana:'バンドウケイジ',school:'藤沢高等学校',grade:'高3',faculty:'文学部',room:'',note:''};
-function current(){if(!rows.length)return [SAMPLE];var out=[];
-rows.forEach(function(r,i){if(sel[i]){var s={no:numOf(r,i)};SF_ORDER.forEach(function(k){if(k!=='no')s[k]=val(r,k)});out.push(s)}});return out}
+function current(){if(!rows.length)return [{idx:0,row:null}];var out=[];
+rows.forEach(function(r,i){if(sel[i])out.push({idx:i,row:r})});return out}
 var PXMM=96/25.4;
 function render(){var list=current(),box=$('pages');box.textContent='';
 var avail=Math.max(200,$('pane').clientWidth-32);var sc=Math.min(1,avail/(210*PXMM));
@@ -418,12 +539,12 @@ list.forEach(function(st){var w=el('div','pw');w.style.width=(210*PXMM*sc)+'px';
 var t=T.render(st,V);t.style.transform='scale('+sc+')';w.appendChild(t);box.appendChild(w);fl.push(t)});
 fl.forEach(function(t){(t._fits||[]).forEach(function(e){fit(e)})});
 $('pcount').textContent=rows.length?('プレビュー：'+list.length+'枚（A4）'):'プレビュー：サンプル 1枚（A4）';
-$('selcnt').textContent=rows.length?('選択 '+list.length+' / '+rows.length+'名'):''}
+if(rows.length)drawList();$('selcnt').textContent=rows.length?('選択 '+list.length+' / '+rows.length+'名'):''}
 $('print').onclick=function(){
 if(rows.length&&!current().length){alert('印刷する生徒が選択されていません。');return}
 window.print()};
 var rt;window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(render,100)});
-drawTplSel();drawPreSel();drawFields();render();
+drawTplSel();drawPreSel();drawFields();drawItems();render();
 })();
 </script>
 </body>
