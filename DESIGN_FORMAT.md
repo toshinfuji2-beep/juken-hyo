@@ -2,7 +2,7 @@
 
 アプリの「保存済みデザイン」から **書き出し／読み込み** できるデザインファイルの仕様です。
 Claude（チャット）にデザインを作ってもらい、そのJSONを「ファイルから読み込み」「JSONを貼り付けて読み込み」で取り込めます。
-この文書は `index.html` の実装（`TEMPLATES` / `mkVals` / `normItems` / `renderWaseda` / `renderSimple` / `importDesign`）から起こしています。
+この文書は `templates/api.js`（共通スキーマ `JukenTemplates.FIELDS` / `mkVals` / `normItems`）と `templates/*.js`（各テンプレート）、`index.html` の `importDesign` の実装から起こしています。テンプレートの作り方は `templates/README.md` を参照。
 
 ## 1. 外側の形（エンベロープ）
 
@@ -21,7 +21,7 @@ Claude（チャット）にデザインを作ってもらい、そのJSONを「�
 | `format` | string | 必須 | 固定値 `"juken-design"`。違うと「受験票デザインのファイルではありません」エラー |
 | `version` | number | 推奨 | 現在は `1`。`1` より大きいとエラー（アプリ更新を促す） |
 | `name` | string | 任意 | デザイン名。読み込み後に「デザインを保存」するときの保存名の初期値になる |
-| `template` | string | 必須 | テンプレートID。`"waseda"`（早大プレ型）または `"simple"`（シンプル）。それ以外はエラー |
+| `template` | string | 必須 | テンプレートID（`templates/*.js` で登録されたもの。現在は `"waseda"`（早大プレ型）と `"simple"`（シンプル））。未登録のIDはエラー |
 | `data` | object | 任意 | テンプレート設定（下記）。省略・一部だけでもよい |
 
 ### 読み込み時の扱い（重要）
@@ -55,7 +55,9 @@ Claude（チャット）にデザインを作ってもらい、そのJSONを「�
 - 現在 `assets/` にあるのは `map-fujisawa.png` と `logo-fujisawa.png`。新しい画像はdataURLで埋め込むか、リポジトリに追加してから相対パスで指定します。
 - データが大きい（約1.5MB超）と保存時に確認が出ます。画像はなるべく小さく。
 
-## 3. テンプレート `waseda`（早大プレ型）
+## 3. 共通設定（すべてのテンプレートで共通）／テンプレート `waseda`（早大プレ型）
+
+**すべてのテンプレートは同じ設定スキーマ（この§3の `data`）を使います。** テンプレートを切り替えても項目・文字・画像は引き継がれ、テンプレートが使わないキーは無視されるだけです（色 `accent`/`secondary` と `font` だけは切り替え時に新しいテンプレートの既定になります）。テンプレート固有の追加設定は `data.tpl[テンプレートID]` に入ります（§4）。早大プレ型はこの共通スキーマをすべて使います。
 
 A4縦1枚。上半分に枠線付きの項目表、折り線、下半分に注意事項（左）と地図・ロゴ（右）。
 
@@ -70,7 +72,9 @@ A4縦1枚。上半分に枠線付きの項目表、折り線、下半分に注�
 | `markOn` | boolean | `true` | マーク表示 |
 | `items` | array of item | 既定8項目（§3.7） | 項目表。上から順に描画 |
 | `accent` | string | `"#C00000"` | アクセント色（`#RRGGBB`のみ）。表の罫線・バッジ・見出し・`color:"accent"`の文字・「!」注意事項に使用 |
+| `secondary` | string | `"#444444"` | サブカラー（`#RRGGBB`）。テンプレートによって背景色・補助色に使う（早大プレ型では未使用） |
 | `font` | `"gothic"` \| `"mincho"` | `"gothic"` | 全体のフォント（ゴシック／明朝） |
+| `tpl` | object | `{}` | テンプレート固有の設定 `{ "<テンプレートID>": { … } }`。そのテンプレートの `extras` で定義されたキーのみ（§4） |
 | `foldOn` | boolean | `true` | 折り線（破線）を表示 |
 | `foldPos` | number | `148.5` | 折り線の位置（用紙上端からmm） |
 | `foldLabel` | string | `"＜山折り＞"` | 折り線中央の文字（空なら線のみ） |
@@ -119,6 +123,7 @@ A4縦1枚。上半分に枠線付きの項目表、折り線、下半分に注�
 | `size` | `"S"` \| `"M"` \| `"L"` \| `"XL"` | `"M"` | 文字サイズ（§3.6の表） |
 | `color` | `"black"` \| `"accent"` | `"black"` | 文字色。`accent`はアクセント色の太字 |
 | `align` | `""` \| `"left"` \| `"center"` | `""` | 揃え。`""`は自動（半幅＝中央、全幅＝左） |
+| `autoEmpty` | boolean | `false` | `column` で名簿の値が空のとき `auto` の連番を入れる（`fallback` が空のときだけ） |
 | `hidden` | boolean | `false` | `true`で表に出さない（定義だけ残す） |
 
 型が違う値は無視されて既定値になります（例: `size:"XXL"` → `"M"`）。
@@ -194,26 +199,24 @@ A4縦1枚。上半分に枠線付きの項目表、折り線、下半分に注�
 | 志望学部 | column | column=`志望学部` | full | L | black |
 | 試験時間 | schedule | rows=英語 10:00〜11:30 / 国語 13:00〜14:30 / 社会 15:30〜16:30 | full | M | black |
 
-## 4. テンプレート `simple`（シンプル）
+## 4. テンプレート `simple`（シンプル）とテンプレート固有設定
 
-項目エディタを持たない固定レイアウト（名簿から 受験番号・氏名・カナ氏名・学校名・学年 を自動取得）。`data` のキー:
+`simple` も §3 の共通設定（`hdr`=タイトル、`items`、`notes`、`noteTitle`、`accent`、`secondary`、`font`）を使い、項目を上から順に並べる白黒レイアウトです（`badge`/`mark`/画像/折り線/透かしは使いません）。固有設定は `data.tpl.simple`:
 
 | キー | 型 | 既定値 | 説明 |
 |---|---|---|---|
-| `school` | string | `""` | 校舎名・主催（空欄可） |
-| `title` | string | `"校内実力テスト"` | 試験名 |
-| `date` | string | `""` | 実施日 `YYYY-MM-DD` |
-| `time` | string | `"09:00"` | 集合時刻 `HH:MM` |
-| `place` | string | `""` | 会場（改行可） |
-| `sched` | array of `{t,c}` | 国語/数学の2行 | 時間割（`t`=時間, `c`=科目） |
-| `items` | string | `"筆記用具\n消しゴム\n時計（通信機能のないもの）"` | 持ち物（1行1項目）※このテンプレートでは `items` は文字列 |
-| `notes` | string | 3行の注意 | 注意事項（1行1項目・番号付き） |
+| `belongings` | string | `"筆記用具
+消しゴム
+時計（通信機能のないもの）"` | 持ち物（1行1項目） |
 | `contact` | string | `""` | 問い合わせ先（1行） |
 | `photo` | boolean | `false` | 写真貼付欄を表示 |
-| `stub` | boolean | `false` | 切り取り線＋控えを表示 |
-| `apre` | string | `""` | 名簿に受験番号列が無いときの自動採番：接頭辞 |
-| `astart` | number | `1` | 開始番号 |
-| `adig` | number | `3` | 桁数 |
+| `stub` | boolean | `false` | 切り取り線＋控えを表示（ラベルに「受験番号」「氏名」を含む項目を使う） |
+
+固有設定のキーは、各テンプレートの `extras` 定義（型は `text`/`check`/`number`/`color`/`select`/`lines`/`image`）が正で、不正な値は既定値になります。
+
+### 旧形式（`simple` の `school`/`title`/`date`/`time`/`place`/`sched`/`items`(文字列)/`notes`/`contact`/`photo`/`stub`/`apre`/`astart`/`adig`）
+
+読み込み時に自動で共通スキーマへ変換されます（`title`→`hdr`、持ち物→`tpl.simple.belongings`、日付・時刻・会場・時間割・主催→項目、`apre/astart/adig`→「受験番号」項目の `autoEmpty`+`auto`）。旧形式の保存済みデザイン・`.juken.json` もそのまま読めます。新規には使わないでください。
 
 ## 5. 作成のコツ（Claudeがデザインを作るとき）
 
