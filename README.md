@@ -2,7 +2,7 @@
 
 名簿（CSV / Excel）から A4 の受験票を作って印刷・PDF保存するための、ブラウザだけで動くツールです。
 
-- 公開URL: （GitHub Pages のURLをここに記入）
+- 公開URL: https://toshinfuji2-beep.github.io/juken-hyo/
 - ログイン: WAVE と同じアカウント（メールアドレス・パスワード）
 
 ## 使い方
