@@ -74,6 +74,40 @@ ol.t-list{padding-left:6mm}
 .t-cut{position:absolute;top:-3.6mm;left:6mm;background:#fff;padding:0 2mm;font-size:12pt;line-height:1}
 .t-stub .t-name{font-size:20pt}
 .t-stub .t-no{font-size:24pt}
+/* template: waseda */
+.tw{padding:0;display:block;position:relative;font-family:"Yu Gothic","Meiryo","Hiragino Sans",sans-serif;line-height:1.3}
+.tw .w-hd{position:absolute;left:8mm;top:6.5mm;display:flex;align-items:center;gap:6mm;white-space:nowrap}
+.tw .w-hd-t{font-size:13pt}
+.tw .w-badge{background:#C00000;color:#fff;font-size:13pt;height:8.6mm;line-height:8.6mm;padding:0 4.5mm}
+.tw .w-mark{position:absolute;right:19mm;top:4mm;font-size:38pt;font-weight:700;letter-spacing:.25em;margin-right:-.25em;line-height:1.2;white-space:nowrap}
+.tw .w-tbl{position:absolute;left:19.5mm;top:22.3mm;width:171mm;border:1.5pt solid #C00000;border-bottom:0}
+.tw .w-row{display:flex;border-bottom:1.5pt solid #C00000}
+.tw .w-c{position:relative;flex:1;min-width:0;height:100%}
+.tw .w-c+.w-c{border-left:1.5pt solid #C00000}
+.tw .w-l{position:absolute;left:2mm;top:1mm;font-size:10pt;white-space:nowrap}
+.tw .w-v{position:absolute;left:3mm;right:3mm;top:0;bottom:0;padding-top:5.5mm;white-space:nowrap;overflow:hidden;text-align:center;font-size:26pt;line-height:1.25}
+.tw .wide .w-l{top:50%;transform:translateY(-50%)}
+.tw .wide .w-v{left:25mm;text-align:left;padding-top:0;font-size:28pt}
+.tw .w-no{font-size:30pt}
+.tw .w-red{color:#C00000;font-weight:700;font-size:30pt}
+.tw .w-sub{font-size:.4em;line-height:1.1}
+.tw .w-sch{display:flex;flex-direction:column;justify-content:center;overflow:hidden}
+.tw .w-sch div{white-space:nowrap}
+.tw .w-sch b{display:inline-block;width:15mm;font-weight:400}
+.tw .w-sch i{font-style:normal;letter-spacing:.22em}
+.tw .w-fold{position:absolute;left:0;top:148.5mm;width:210mm;height:0;display:flex;align-items:center;gap:5mm;font-size:13pt;white-space:nowrap}
+.tw .w-fold span{display:block;flex:1;border-top:1.2pt dashed #000;height:0}
+.tw .w-fold em{font-style:normal;flex:none}
+.tw .w-lo{position:absolute;left:20mm;top:158.5mm;width:85mm}
+.tw .w-nh{display:inline-block;background:#C00000;color:#fff;font-size:13pt;padding:1mm 3.5mm;margin-bottom:4mm}
+.tw .w-n{font-size:11.5pt;line-height:1.4;padding-left:1.3em;text-indent:-1.3em;margin:0 0 .5mm 1mm;line-break:strict}
+.tw .w-n.r{color:#C00000}
+.tw .w-ri{position:absolute;left:115mm;top:160mm;width:78mm}
+.tw .w-ri img{display:block;width:100%;height:auto}
+.tw .w-ri img+img{margin-top:5mm}
+.pgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px}
+.img-f{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.img-f img{max-height:44px;max-width:80px;border:1px solid var(--bd);background:#fff}
 @media print{
 html,body{background:#fff}
 #editor,#bar,.noprint{display:none!important}
@@ -88,7 +122,13 @@ html,body{background:#fff}
 <div class="app">
 <div id="editor">
 <h1>受験票ジェネレーター</h1>
-<details open><summary>1. 名簿読み込み</summary><div class="sec">
+<details open><summary>1. デザイン</summary><div class="sec">
+<label for="tpl">デザイン（テンプレート）</label><select id="tpl"></select>
+<label for="pre">保存済みデザイン</label><select id="pre"></select>
+<div class="pgrid"><button id="psave" type="button">デザインを保存</button><button id="pover" type="button">上書き保存</button><button id="pren" type="button">名前を変更</button><button id="pdel" type="button">削除</button></div>
+<p class="note">※現在のデザインと共通設定を名前を付けて保存できます（このブラウザ内のみ）。</p>
+</div></details>
+<details open><summary>2. 名簿読み込み</summary><div class="sec">
 <div id="drop">ここにCSV / Excelをドロップ<br><button id="fbtn" type="button">ファイルを選択</button><input id="file" type="file" accept=".csv,.xlsx,.xls" hidden></div>
 <label for="paste">貼り付け（Excelからコピーしたタブ区切り・1行目は見出し）</label>
 <textarea id="paste" rows="3"></textarea>
@@ -104,18 +144,7 @@ html,body{background:#fff}
 <div class="row" style="margin-top:8px"><button id="sall" type="button">全選択</button><button id="snone" type="button">全解除</button><span id="selcnt" class="note"></span></div>
 <div id="list"></div>
 </div></div></details>
-<details open><summary>2. 試験情報</summary><div class="sec">
-<label>校舎名・主催（空欄可）</label><input type="text" id="school" data-k="school">
-<label>試験名</label><input type="text" id="title" data-k="title">
-<div class="grid2"><div><label>実施日</label><input type="date" id="date" data-k="date"></div><div><label>集合時刻</label><input type="time" id="time" data-k="time"></div></div>
-<label>会場（複数行可）</label><textarea id="place" rows="2" data-k="place"></textarea>
-<label>時間割</label><div id="sch"></div><button id="addrow" type="button">＋ 行を追加</button>
-<label>持ち物（1行1項目）</label><textarea id="items" rows="3" data-k="items"></textarea>
-<label>注意事項（1行1項目）</label><textarea id="notes" rows="4" data-k="notes"></textarea>
-<label>問い合わせ先（1行）</label><input type="text" id="contact" data-k="contact">
-<label class="chk"><input type="checkbox" id="photo" data-k="photo">写真貼付欄を表示</label>
-<label class="chk"><input type="checkbox" id="stub" data-k="stub">切り取り線＋控え（試験官用）</label>
-</div></details>
+<details open><summary>3. 試験情報</summary><div class="sec" id="fields"></div></details>
 </div>
 <div id="pane">
 <div id="bar"><span id="pcount"></span><span class="row"><button class="pri" id="print" type="button">印刷 / PDF保存</button></span></div>
@@ -125,29 +154,202 @@ html,body{background:#fff}
 <script>
 (function(){
 'use strict';
-var FIELDS=[['name','氏名（必須）',['氏名','名前','生徒名','name','お名前']],['kana','ふりがな',['ふりがな','フリガナ','カナ','よみ','読み','ヨミ']],['no','受験番号',['受験番号','番号','id','生徒番号','no','no.']],['school','学校名',['学校名','学校','高校','在籍校']],['grade','学年',['学年名','学年']],['note','備考',['備考','メモ']]];
-var KEY='juken-hyo-v1';
-var DEF={school:'',title:'校内実力テスト',date:'',time:'09:00',place:'',items:'筆記用具\n消しゴム\n時計（通信機能のないもの）',notes:'この受験票は試験当日必ず持参してください。\n集合時刻に遅れないように来場してください。\n試験中は携帯電話・スマートフォンの電源を切ってください。',contact:'',photo:false,stub:false,sched:[{t:'09:00〜10:00',c:'国語'},{t:'10:20〜11:20',c:'数学'}]};
-var S=JSON.parse(JSON.stringify(DEF));
-try{var raw=localStorage.getItem(KEY);if(raw){var o0=JSON.parse(raw);for(var k0 in o0)S[k0]=o0[k0];}}catch(e){}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
 var $=function(id){return document.getElementById(id)};
-var headers=[],rows=[],map={},sel={};
 function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e}
+function clone(o){return JSON.parse(JSON.stringify(o))}
+function lines(s){return (s||'').split(/\r?\n/).map(function(x){return x.trim()}).filter(Boolean)}
+function fmtDate(s){if(!s)return '';var m=/^(\d+)-(\d+)-(\d+)$/.exec(s);if(!m)return s;
+var d=new Date(+m[1],+m[2]-1,+m[3]);return m[1]+'年'+(+m[2])+'月'+(+m[3])+'日（'+'日月火水木金土'[d.getDay()]+'）'}
+function fit(e,min){var fs=parseFloat(getComputedStyle(e).fontSize),g=0;
+e.style.fontSize=fs+'px';while(e.scrollWidth>e.clientWidth+0.5&&fs>(min||6)&&g++<200){fs-=0.5;e.style.fontSize=fs+'px'}}
 
-document.querySelectorAll('[data-k]').forEach(function(i){
-var k=i.dataset.k;if(i.type==='checkbox')i.checked=!!S[k];else i.value=S[k]||'';
-i.addEventListener('input',function(){S[k]=i.type==='checkbox'?i.checked:i.value;save();render();});});
-function drawSched(){var w=$('sch');w.textContent='';S.sched.forEach(function(r,idx){
-var d=el('div','sch');var a=el('input');a.type='text';a.value=r.t;a.placeholder='時間';
-var b=el('input');b.type='text';b.value=r.c;b.placeholder='内容';
-var x=el('button',null,'削除');x.type='button';
+/* ---------- 名簿の項目定義（key,ラベル,見出し候補） ---------- */
+var SF={
+name:['氏名','氏名',['氏名','名前','生徒名','name','お名前']],
+kana:['ふりがな／カナ氏名','',['カナ氏名','カナ','フリガナ','ふりがな','よみ','読み','ヨミ']],
+no:['受験番号','',['受験番号','番号','id','生徒番号','no','no.']],
+school:['学校名','',['学校名','学校','高校','在籍校']],
+grade:['学年','',['学年名','学年']],
+faculty:['志望学部','',['志望学部','学部','志望']],
+room:['教室','',['教室','会場','部屋']],
+note:['備考','',['備考','メモ']]};
+var SF_ORDER=['name','kana','no','school','grade','faculty','room','note'];
+
+/* ---------- テンプレート ---------- */
+var SCH_W=[{t:'10:00〜11:30',c:'英語'},{t:'13:00〜14:30',c:'国語'},{t:'15:30〜16:30',c:'社会'}];
+var NOTES_W='!こちらの受験票を折って試験当日に持参してください。\n入場の際、受験票の提示が必要です。\n!試験教室は8:30から開いています。試験時間の30分前までに試験教室に入場してください。\n試験教室の座席に着席する際に、机に貼られている受験番号と一致していることを確認してください。\n受験票は試験時間中机上に置きますので、何も書き込まないでください。（書き込みを発見した場合、不正行為となる可能性があります。）\n受験票は入学後の学生証交付の際に必要になりますので、大切に保管してください。';
+var TEMPLATES={};var TPL_ORDER=[];
+function addTemplate(t){TEMPLATES[t.id]=t;TPL_ORDER.push(t.id)}
+
+/* シンプル */
+function renderSimple(st,V){var t=el('div','ticket'),fits=[];var m=el('div','t-main');
+function cell(k,v,cls){var c=el('div','t-cell');c.appendChild(el('div','t-k',k));var d=el('div','t-v '+(cls||''));if(v instanceof Node)d.appendChild(v);else d.textContent=v;c.appendChild(d);return c}
+var h=el('div','t-head');h.appendChild(el('div','t-lab','受験票'));
+var ti=el('div','t-title',V.title||'');h.appendChild(ti);fits.push(ti);
+if(V.school)h.appendChild(el('div','t-org',V.school));m.appendChild(h);
+var box=el('div','t-box'),l=el('div','l');
+l.appendChild(cell('受験番号',st.no,'t-no'));
+var nm=el('div');nm.appendChild(el('span','t-kana',st.kana||''));var nn=el('div','t-name',st.name);nm.appendChild(nn);
+l.appendChild(cell('氏名',nm,''));fits.push(nn);
+var sg=[st.school,st.grade].filter(Boolean).join('　');
+if(sg){var c3=cell('学校・学年',sg,'t-sch');l.appendChild(c3);fits.push(c3.lastChild)}
+box.appendChild(l);
+if(V.photo)box.appendChild(el('div','r','写真\n（縦4cm×横3cm）'));
+m.appendChild(box);
+var tb=el('table','t-info');
+function tr(k,v){var r=document.createElement('tr');r.appendChild(el('th',null,k));r.appendChild(el('td',null,v));tb.appendChild(r)}
+if(V.date)tr('実施日',fmtDate(V.date));if(V.time)tr('集合時刻',V.time);if(V.place)tr('会場',V.place);
+if(tb.rows.length)m.appendChild(tb);
+var sr=V.sched.filter(function(r){return r.t||r.c});
+if(sr.length){var w=el('div');w.appendChild(el('div','t-h','時間割'));var t2=el('table','t-info');
+sr.forEach(function(r){var x=document.createElement('tr');x.appendChild(el('th',null,r.t));x.appendChild(el('td',null,r.c));t2.appendChild(x)});
+t2.querySelectorAll('th').forEach(function(th){th.style.width='42mm'});w.appendChild(t2);m.appendChild(w)}
+var it=lines(V.items);if(it.length){var w2=el('div');w2.appendChild(el('div','t-h','持ち物'));var u=el('ul','t-list');it.forEach(function(x){u.appendChild(el('li',null,x))});w2.appendChild(u);m.appendChild(w2)}
+var nt=lines(V.notes);if(nt.length){var w3=el('div');w3.appendChild(el('div','t-h','注意事項'));var o=el('ol','t-list');nt.forEach(function(x){o.appendChild(el('li',null,x))});w3.appendChild(o);m.appendChild(w3)}
+if(V.contact)m.appendChild(el('div','t-foot','お問い合わせ：'+V.contact));
+t.appendChild(m);
+if(V.stub){var sb=el('div','t-stub');sb.appendChild(el('div','t-cut','✂'));
+var a=el('div','t-lab','受験票（控え）');a.style.textAlign='left';a.style.letterSpacing='.3em';sb.appendChild(a);
+var s1=el('div','t-cell');s1.appendChild(el('div','t-k','受験番号'));s1.appendChild(el('div','t-v t-no',st.no));
+var s2=el('div','t-cell');s2.appendChild(el('div','t-k','氏名'));var sn=el('div','t-v t-name',st.name);s2.appendChild(sn);fits.push(sn);
+sb.appendChild(s1);sb.appendChild(s2);if(V.title)sb.appendChild(el('div',null,V.title+(V.date?'　'+fmtDate(V.date):'')));t.appendChild(sb)}
+t._fits=fits;return t}
+addTemplate({id:'simple',name:'シンプル',
+fields:[
+{k:'school',label:'校舎名・主催（空欄可）',type:'text',def:''},
+{k:'title',label:'試験名',type:'text',def:'校内実力テスト'},
+{k:'date',label:'実施日',type:'date',def:''},
+{k:'time',label:'集合時刻',type:'time',def:'09:00'},
+{k:'place',label:'会場（複数行可）',type:'textarea',def:''},
+{k:'sched',label:'時間割',type:'sched',def:[{t:'09:00〜10:00',c:'国語'},{t:'10:20〜11:20',c:'数学'}]},
+{k:'items',label:'持ち物（1行1項目）',type:'lines',def:'筆記用具\n消しゴム\n時計（通信機能のないもの）'},
+{k:'notes',label:'注意事項（1行1項目）',type:'lines',def:'この受験票は試験当日必ず持参してください。\n集合時刻に遅れないように来場してください。\n試験中は携帯電話・スマートフォンの電源を切ってください。'},
+{k:'contact',label:'問い合わせ先（1行）',type:'text',def:''},
+{k:'photo',label:'写真貼付欄を表示',type:'check',def:false},
+{k:'stub',label:'切り取り線＋控え（試験官用）',type:'check',def:false}],
+studentFields:['no','name','kana','school','grade','note'],
+render:renderSimple});
+
+/* 早大プレ型 */
+function imgSrc(v,def){if(!v||v.hide)return '';return v.d||def}
+function renderWaseda(st,V){var t=el('div','ticket tw'),fits=[];
+var hd=el('div','w-hd');hd.appendChild(el('span','w-hd-t',V.hdr));if(V.badge)hd.appendChild(el('span','w-badge',V.badge));t.appendChild(hd);
+if(V.mark)t.appendChild(el('div','w-mark',V.mark));
+var tb=el('div','w-tbl');t.appendChild(tb);
+function row(h){var r=el('div','w-row');r.style.height=h+'mm';tb.appendChild(r);return r}
+function cell(r,cls,label,content,vcls,fitit){var c=el('div','w-c '+(cls||''));c.appendChild(el('div','w-l',label));
+var v=el('div','w-v '+(vcls||''));if(content instanceof Node)v.appendChild(content);else v.textContent=content;
+c.appendChild(v);r.appendChild(c);if(fitit)fits.push(v);return v}
+var r1=row(20.8);cell(r1,'','受験番号',st.no,'w-no',1);cell(r1,'','試験場',V.venue,'w-red',1);
+var r2=row(20.8);var kn=el('div');
+if(V.showKanji&&st.name&&st.kana){kn.appendChild(el('div','w-sub',st.name));kn.appendChild(el('div',null,st.kana))}else kn.textContent=st.kana||st.name||'';
+var kv=cell(r2,'','カナ氏名',kn,'',1);kv.style.letterSpacing='.08em';
+var rv=cell(r2,'','教室',st.room||V.room,'',1);rv.style.letterSpacing='.1em';
+function wide(h,label,text){var r=row(h);var v=cell(r,'wide',label,text,'',1);v.style.lineHeight=h+'mm';return v}
+wide(18.6,'試験日',fmtDate(V.date)).style.letterSpacing='.2em';
+wide(17,'入試制度',V.system).style.letterSpacing='.05em';
+wide(17.8,'志望学部',st.faculty||V.faculty).style.letterSpacing='.05em';
+var r6=row(20.4);var sc=el('div');sc.className='';
+var sv=cell(r6,'wide','試験時間','','w-sch');sv.style.fontSize='14pt';sv.style.lineHeight='1.3';
+V.sched.filter(function(x){return x.t||x.c}).forEach(function(x){var d=el('div');d.appendChild(el('b',null,x.c));d.appendChild(el('i',null,x.t));sv.appendChild(d)});
+var fo=el('div','w-fold');fo.appendChild(el('span'));fo.appendChild(el('em',null,'＜山折り＞'));fo.appendChild(el('span'));t.appendChild(fo);
+var lo=el('div','w-lo');lo.appendChild(el('div','w-nh','注意事項'));
+lines(V.notes).forEach(function(x){var red=/^[!！]/.test(x);if(red)x=x.replace(/^[!！]\s*/,'');lo.appendChild(el('div','w-n'+(red?' r':''),'・'+x))});
+t.appendChild(lo);
+var ri=el('div','w-ri');var ms=imgSrc(V.map,'assets/map-fujisawa.png'),ls=imgSrc(V.logo,'assets/logo-fujisawa.png');
+if(ms){var i1=el('img');i1.src=ms;i1.alt='';ri.appendChild(i1)}
+if(ls){var i2=el('img');i2.src=ls;i2.alt='';ri.appendChild(i2)}
+t.appendChild(ri);
+t._fits=fits;return t}
+addTemplate({id:'waseda',name:'早大プレ型',
+fields:[
+{k:'hdr',label:'ヘッダー文字',type:'text',def:'2024年度　早稲田大学受験票'},
+{k:'badge',label:'バッジ文字（空欄で非表示）',type:'text',def:'折って試験当日持参'},
+{k:'mark',label:'右上マーク',type:'text',def:'24早'},
+{k:'venue',label:'試験場',type:'text',def:'東進HS 藤沢校'},
+{k:'room',label:'教室（名簿の教室列があればそちらを優先）',type:'text',def:'レクチャールーム'},
+{k:'date',label:'試験日',type:'date',def:'2023-07-02'},
+{k:'system',label:'入試制度',type:'text',def:'第一回早大プレ'},
+{k:'faculty',label:'志望学部（名簿に列がなければ全員共通）',type:'text',def:''},
+{k:'sched',label:'試験時間（左：時間／右：科目）',type:'sched',def:SCH_W},
+{k:'showKanji',label:'漢字氏名も表示',type:'check',def:false},
+{k:'notes',label:'注意事項（1行1項目・先頭「!」で赤字）',type:'lines',def:NOTES_W},
+{k:'map',label:'地図画像',type:'image',def:{d:'',hide:false}},
+{k:'logo',label:'ロゴ画像',type:'image',def:{d:'',hide:false}}],
+studentFields:['no','kana','name','room','faculty'],
+render:renderWaseda});
+
+/* ---------- 状態・保存 ---------- */
+var KEY='juken-hyo-v2',KEY1='juken-hyo-v1',PKEY='juken-hyo-presets-v1';
+function mkVals(tpl,saved){var v={};tpl.fields.forEach(function(f){var x=clone(f.def);var s=saved&&saved[f.k];
+if(s!==undefined&&s!==null){var ok=f.type==='sched'?Array.isArray(s):f.type==='image'?(typeof s==='object'&&!Array.isArray(s)):f.type==='check'?typeof s==='boolean':typeof s==='string';
+if(ok){x=clone(s);if(f.type==='image'){x.d=typeof x.d==='string'?x.d:'';x.hide=!!x.hide}
+if(f.type==='sched')x=x.filter(function(r){return r&&typeof r==='object'}).map(function(r){return {t:String(r.t||''),c:String(r.c||'')}})}}
+v[f.k]=x});return v}
+var S={tpl:'waseda',byTpl:{},cur:''};
+try{var raw=localStorage.getItem(KEY);
+if(raw){var o0=JSON.parse(raw);if(o0&&typeof o0==='object'){if(TEMPLATES[o0.tpl])S.tpl=o0.tpl;if(o0.byTpl&&typeof o0.byTpl==='object')S.byTpl=o0.byTpl;if(typeof o0.cur==='string')S.cur=o0.cur}}
+else{var r1=localStorage.getItem(KEY1);if(r1){var o1=JSON.parse(r1);if(o1&&typeof o1==='object'){S.tpl='simple';S.byTpl.simple=o1}}}}catch(e){}
+var V=mkVals(TEMPLATES[S.tpl],S.byTpl[S.tpl]);
+var presets=[];
+try{var pr=JSON.parse(localStorage.getItem(PKEY)||'[]');if(Array.isArray(pr))presets=pr.filter(function(p){return p&&typeof p.id==='string'&&typeof p.name==='string'&&TEMPLATES[p.tpl]})}catch(e){}
+function save(){S.byTpl[S.tpl]=V;try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function savePresets(){try{localStorage.setItem(PKEY,JSON.stringify(presets));return true}catch(e){alert('保存できませんでした（保存容量の上限の可能性があります。画像を小さくするか不要な保存済みデザインを削除してください）。');return false}}
+function tpl(){return TEMPLATES[S.tpl]}
+
+/* ---------- 共通設定フォーム（テンプレートのfieldsから生成） ---------- */
+function resizeImage(file,cb){var fr=new FileReader();fr.onload=function(){var im=new Image();im.onload=function(){
+var sc=Math.min(1,1200/Math.max(im.width,im.height));var c=document.createElement('canvas');c.width=Math.round(im.width*sc);c.height=Math.round(im.height*sc);
+var x=c.getContext('2d');var png=/png|gif|svg/.test(file.type);if(!png){x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height)}
+x.drawImage(im,0,0,c.width,c.height);cb(png?c.toDataURL('image/png'):c.toDataURL('image/jpeg',.88))};
+im.onerror=function(){alert('画像を読み込めませんでした。')};im.src=fr.result};fr.readAsDataURL(file)}
+function drawFields(){var w=$('fields');w.textContent='';
+tpl().fields.forEach(function(f){var k=f.k;
+if(f.type==='check'){var lb=el('label','chk');var c=el('input');c.type='checkbox';c.checked=!!V[k];c.onchange=function(){V[k]=c.checked;save();render()};lb.appendChild(c);lb.appendChild(document.createTextNode(f.label));w.appendChild(lb);return}
+w.appendChild(el('label',null,f.label));
+if(f.type==='sched'){var box=el('div');w.appendChild(box);
+var draw=function(){box.textContent='';V[k].forEach(function(r,idx){var d=el('div','sch');var a=el('input');a.type='text';a.value=r.t;a.placeholder='時間';
+var b=el('input');b.type='text';b.value=r.c;b.placeholder='科目・内容';var x=el('button',null,'削除');x.type='button';
 a.oninput=function(){r.t=a.value;save();render()};b.oninput=function(){r.c=b.value;save();render()};
-x.onclick=function(){S.sched.splice(idx,1);save();drawSched();render()};
-d.appendChild(a);d.appendChild(b);d.appendChild(x);w.appendChild(d);});}
-$('addrow').onclick=function(){S.sched.push({t:'',c:''});save();drawSched();render();};
-drawSched();
+x.onclick=function(){V[k].splice(idx,1);save();draw();render()};d.appendChild(a);d.appendChild(b);d.appendChild(x);box.appendChild(d)})};
+draw();var ad=el('button',null,'＋ 行を追加');ad.type='button';ad.onclick=function(){V[k].push({t:'',c:''});save();draw();render()};w.appendChild(ad);return}
+if(f.type==='image'){var d2=el('div','img-f');w.appendChild(d2);
+var pv=el('img');pv.alt='';var fi=el('input');fi.type='file';fi.accept='image/*';fi.hidden=true;
+var up=el('button',null,'画像を変更');up.type='button';var rs=el('button',null,'既定に戻す');rs.type='button';
+var hl=el('label','chk');var hc=el('input');hc.type='checkbox';hc.checked=!!V[k].hide;hl.appendChild(hc);hl.appendChild(document.createTextNode('非表示'));hl.style.margin='0';
+var upd=function(){pv.src=V[k].d||(S.tpl==='waseda'?(k==='map'?'assets/map-fujisawa.png':'assets/logo-fujisawa.png'):'');pv.style.display=pv.src?'':'none'};
+up.onclick=function(){fi.click()};
+fi.onchange=function(){var fl=this.files[0];this.value='';if(!fl)return;resizeImage(fl,function(u){V[k].d=u;V[k].hide=false;hc.checked=false;save();upd();render()})};
+rs.onclick=function(){V[k]={d:'',hide:false};hc.checked=false;save();upd();render()};
+hc.onchange=function(){V[k].hide=hc.checked;save();render()};
+d2.appendChild(pv);d2.appendChild(up);d2.appendChild(rs);d2.appendChild(hl);d2.appendChild(fi);upd();return}
+var i;if(f.type==='textarea'||f.type==='lines'){i=el('textarea');i.rows=f.type==='lines'?6:2}
+else{i=el('input');i.type=f.type==='date'?'date':f.type==='time'?'time':'text'}
+i.value=V[k]||'';i.oninput=function(){V[k]=i.value;save();render()};w.appendChild(i)})}
 
+/* ---------- デザイン選択・保存済み ---------- */
+function drawTplSel(){var s=$('tpl');s.textContent='';TPL_ORDER.forEach(function(id){var o=el('option',null,TEMPLATES[id].name);o.value=id;s.appendChild(o)});s.value=S.tpl}
+function drawPreSel(){var s=$('pre');s.textContent='';var o=el('option',null,'（保存済みを選択）');o.value='';s.appendChild(o);
+presets.forEach(function(p){var op=el('option',null,p.name+'（'+TEMPLATES[p.tpl].name+'）');op.value=p.id;s.appendChild(op)});
+if(!presets.some(function(p){return p.id===S.cur}))S.cur='';s.value=S.cur;
+$('pover').disabled=$('pren').disabled=$('pdel').disabled=!S.cur}
+function byId(id){for(var i=0;i<presets.length;i++)if(presets[i].id===id)return presets[i]}
+function afterDesignChange(){save();drawTplSel();drawPreSel();drawFields();drawMap();render()}
+$('tpl').onchange=function(){S.byTpl[S.tpl]=V;S.tpl=this.value;S.cur='';V=mkVals(tpl(),S.byTpl[S.tpl]);afterDesignChange()};
+$('pre').onchange=function(){var p=byId(this.value);if(!p){S.cur='';drawPreSel();save();return}
+S.tpl=p.tpl;V=mkVals(tpl(),p.vals);S.cur=p.id;afterDesignChange()};
+$('psave').onclick=function(){var n=prompt('保存名を入力してください（例：第1回早大プレ）',S.cur&&byId(S.cur)?byId(S.cur).name:'');if(n==null)return;n=n.trim();if(!n)return;
+var ex=presets.filter(function(p){return p.name===n})[0];
+if(ex){if(!confirm('「'+n+'」は既に保存されています。上書きしますか？'))return;ex.tpl=S.tpl;ex.vals=clone(V);S.cur=ex.id}
+else{var p={id:'p'+Date.now().toString(36),name:n,tpl:S.tpl,vals:clone(V)};presets.push(p);S.cur=p.id}
+savePresets();save();drawPreSel()};
+$('pover').onclick=function(){var p=byId(S.cur);if(!p)return;if(!confirm('「'+p.name+'」を現在の内容で上書きしますか？'))return;p.tpl=S.tpl;p.vals=clone(V);savePresets();drawPreSel()};
+$('pren').onclick=function(){var p=byId(S.cur);if(!p)return;var n=prompt('新しい名前',p.name);if(n==null)return;n=n.trim();if(!n)return;p.name=n;savePresets();drawPreSel()};
+$('pdel').onclick=function(){var p=byId(S.cur);if(!p)return;if(!confirm('「'+p.name+'」を削除しますか？'))return;presets=presets.filter(function(x){return x!==p});S.cur='';savePresets();save();drawPreSel()};
+
+/* ---------- 名簿 ---------- */
+var headers=[],rows=[],map={},sel={};
+SF_ORDER.forEach(function(k){map[k]=-1});
 function parseDelim(text,delim){var out=[],row=[],f='',q=false,i=0,n=text.length,c;
 for(;i<n;i++){c=text[i];
 if(q){if(c==='"'){if(text[i+1]==='"'){f+='"';i++}else q=false}else f+=c}
@@ -164,24 +366,24 @@ table=table.map(function(r){return r.map(function(v){return v==null?'':String(v)
 if(table.length<2){alert('データ行が見つかりません（1行目は見出しにしてください）。');return false}
 headers=table[0].map(function(h,i){return h||('列'+(i+1))});rows=table.slice(1);
 map={};var norm=function(s){return s.toLowerCase().replace(/\s/g,'')};
-FIELDS.forEach(function(f){map[f[0]]=-1;
-for(var i=0;i<headers.length;i++){if(f[2].some(function(s){return norm(s)===norm(headers[i])})){map[f[0]]=i;break}}});
-if(map.name<0){var j=headers.findIndex(function(h){return /氏名|名前|name/i.test(h)});if(j>=0)map.name=j}
+SF_ORDER.forEach(function(k){map[k]=-1;
+for(var i=0;i<headers.length;i++){if(SF[k][2].some(function(s){return norm(s)===norm(headers[i])})){map[k]=i;break}}});
+if(map.name<0){var j=headers.findIndex(function(h){return /氏名|名前|name/i.test(h)&&!/カナ|かな|ふりがな|フリガナ/.test(h)});if(j>=0)map.name=j}
 sel={};rows.forEach(function(_,i){sel[i]=true});
 $('loaded').hidden=false;$('cnt').textContent=rows.length+'名読み込み';drawMap();drawList();render();return true}
-function drawMap(){var m=$('map');m.textContent='';
-FIELDS.forEach(function(f){m.appendChild(el('span',null,f[1]));var s=el('select');
+function drawMap(){var m=$('map');m.textContent='';var used=tpl().studentFields;
+used.forEach(function(k){m.appendChild(el('span',null,SF[k][0]));var s=el('select');
 var o=el('option',null,'（使わない）');o.value=-1;s.appendChild(o);
 headers.forEach(function(h,i){var op=el('option',null,h);op.value=i;s.appendChild(op)});
-s.value=map[f[0]];s.onchange=function(){map[f[0]]=+s.value;$('auto').hidden=map.no>=0;drawList();render()};m.appendChild(s)});
-$('auto').hidden=map.no>=0;}
+s.value=map[k];s.onchange=function(){map[k]=+s.value;$('auto').hidden=map.no>=0;drawList();render()};m.appendChild(s)});
+$('auto').hidden=map.no>=0||used.indexOf('no')<0;}
 function val(r,k){return map[k]>=0?(r[map[k]]||''):''}
 function numOf(r,i){if(map.no>=0)return val(r,'no');
 var d=Math.max(1,+$('adig').value||3);return $('apre').value+String((+$('astart').value||0)+i).padStart(d,'0')}
 function drawList(){var l=$('list');l.textContent='';
 rows.forEach(function(r,i){var lb=el('label');var c=el('input');c.type='checkbox';c.checked=!!sel[i];
 c.onchange=function(){sel[i]=c.checked;render()};lb.appendChild(c);
-lb.appendChild(document.createTextNode(numOf(r,i)+' '+(val(r,'name')||'（氏名なし）')));l.appendChild(lb)});}
+lb.appendChild(document.createTextNode(numOf(r,i)+' '+(val(r,'name')||val(r,'kana')||'（氏名なし）')));l.appendChild(lb)});}
 ['apre','astart','adig'].forEach(function(id){$(id).oninput=function(){drawList();render()}});
 $('sall').onclick=function(){rows.forEach(function(_,i){sel[i]=true});drawList();render()};
 $('snone').onclick=function(){rows.forEach(function(_,i){sel[i]=false});drawList();render()};
@@ -201,63 +403,27 @@ var dz=$('drop');
 ['dragleave','drop'].forEach(function(t){dz.addEventListener(t,function(e){e.preventDefault();dz.classList.remove('over')})});
 dz.addEventListener('drop',function(e){var f=e.dataTransfer.files[0];if(f)readFile(f)});
 $('pbtn').onclick=function(){var t=$('paste').value;if(!t.trim())return;load(parseDelim(t,'\t'))};
-$('sample').onclick=function(){var csv='﻿受験番号,氏名,ふりがな,学校名,学年,備考\r\n001,藤沢 太郎,ふじさわ たろう,藤沢高等学校,高3,\r\n002,湘南 花子,しょうなん はなこ,湘南高等学校,高2,\r\n003,江ノ島 次郎,えのしま じろう,江ノ島高等学校,高1,\r\n';
+$('sample').onclick=function(){var csv='﻿受験番号,氏名,カナ氏名,学校名,学年,志望学部,教室,備考\r\n001,坂東 慶次,バンドウケイジ,藤沢高等学校,高3,文学部,レクチャールーム,\r\n002,湘南 花子,ショウナンハナコ,湘南高等学校,高2,政治経済学部,第2教室,\r\n003,江ノ島 次郎,エノシマジロウ,江ノ島高等学校,高1,商学部,,\r\n';
 var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='sample_meibo.csv';a.click();setTimeout(function(){URL.revokeObjectURL(a.href)},1000)};
 
-function fmtDate(s){if(!s)return '';var m=/^(\d+)-(\d+)-(\d+)$/.exec(s);if(!m)return s;
-var d=new Date(+m[1],+m[2]-1,+m[3]);return m[1]+'年'+(+m[2])+'月'+(+m[3])+'日（'+'日月火水木金土'[d.getDay()]+'）'}
-function lines(s){return (s||'').split(/\r?\n/).map(function(x){return x.trim()}).filter(Boolean)}
-function cell(k,v,cls){var c=el('div','t-cell');c.appendChild(el('div','t-k',k));var d=el('div','t-v '+(cls||''));if(v instanceof Node)d.appendChild(v);else d.textContent=v;c.appendChild(d);return c}
-function fit(e,min){var fs=parseFloat(getComputedStyle(e).fontSize),g=0;
-e.style.fontSize=fs+'px';while(e.scrollWidth>e.clientWidth+0.5&&fs>(min||6)&&g++<200){fs-=0.5;e.style.fontSize=fs+'px'}}
-function ticket(st){var t=el('div','ticket'),fits=[];var m=el('div','t-main');
-var h=el('div','t-head');h.appendChild(el('div','t-lab','受験票'));
-var ti=el('div','t-title',S.title||'');h.appendChild(ti);fits.push(ti);
-if(S.school)h.appendChild(el('div','t-org',S.school));m.appendChild(h);
-var box=el('div','t-box'),l=el('div','l');
-l.appendChild(cell('受験番号',st.no,'t-no'));
-var nm=el('div');nm.appendChild(el('span','t-kana',st.kana||''));var nn=el('div','t-name',st.name);nm.appendChild(nn);
-l.appendChild(cell('氏名',nm,''));fits.push(nn);
-var sg=[st.school,st.grade].filter(Boolean).join('　');
-if(sg){var c3=cell('学校・学年',sg,'t-sch');l.appendChild(c3);fits.push(c3.lastChild)}
-box.appendChild(l);
-if(S.photo)box.appendChild(el('div','r','写真\n（縦4cm×横3cm）'));
-m.appendChild(box);
-var tb=el('table','t-info');
-function tr(k,v){var r=document.createElement('tr');r.appendChild(el('th',null,k));r.appendChild(el('td',null,v));tb.appendChild(r)}
-if(S.date)tr('実施日',fmtDate(S.date));if(S.time)tr('集合時刻',S.time);if(S.place)tr('会場',S.place);
-if(tb.rows.length)m.appendChild(tb);
-var sr=S.sched.filter(function(r){return r.t||r.c});
-if(sr.length){var w=el('div');w.appendChild(el('div','t-h','時間割'));var t2=el('table','t-info');
-sr.forEach(function(r){var x=document.createElement('tr');x.appendChild(el('th',null,r.t));x.appendChild(el('td',null,r.c));t2.appendChild(x)});
-t2.querySelectorAll('th').forEach(function(th){th.style.width='42mm'});w.appendChild(t2);m.appendChild(w)}
-var it=lines(S.items);if(it.length){var w2=el('div');w2.appendChild(el('div','t-h','持ち物'));var u=el('ul','t-list');it.forEach(function(x){u.appendChild(el('li',null,x))});w2.appendChild(u);m.appendChild(w2)}
-var nt=lines(S.notes);if(nt.length){var w3=el('div');w3.appendChild(el('div','t-h','注意事項'));var o=el('ol','t-list');nt.forEach(function(x){o.appendChild(el('li',null,x))});w3.appendChild(o);m.appendChild(w3)}
-if(S.contact)m.appendChild(el('div','t-foot','お問い合わせ：'+S.contact));
-t.appendChild(m);
-if(S.stub){var sb=el('div','t-stub');sb.appendChild(el('div','t-cut','✂'));
-var a=el('div','t-lab','受験票（控え）');a.style.textAlign='left';a.style.letterSpacing='.3em';sb.appendChild(a);
-var s1=el('div','t-cell');s1.appendChild(el('div','t-k','受験番号'));s1.appendChild(el('div','t-v t-no',st.no));
-var s2=el('div','t-cell');s2.appendChild(el('div','t-k','氏名'));var sn=el('div','t-v t-name',st.name);s2.appendChild(sn);fits.push(sn);
-sb.appendChild(s1);sb.appendChild(s2);if(S.title)sb.appendChild(el('div',null,S.title+(S.date?'　'+fmtDate(S.date):'')));t.appendChild(sb)}
-t._fits=fits;return t}
-var SAMPLE={no:'001',name:'藤沢 太郎',kana:'ふじさわ たろう',school:'藤沢高等学校',grade:'高3',note:''};
+/* ---------- プレビュー ---------- */
+var SAMPLE={no:'1',name:'坂東 慶次',kana:'バンドウケイジ',school:'藤沢高等学校',grade:'高3',faculty:'文学部',room:'',note:''};
 function current(){if(!rows.length)return [SAMPLE];var out=[];
-rows.forEach(function(r,i){if(sel[i])out.push({no:numOf(r,i),name:val(r,'name'),kana:val(r,'kana'),school:val(r,'school'),grade:val(r,'grade'),note:val(r,'note')})});return out}
+rows.forEach(function(r,i){if(sel[i]){var s={no:numOf(r,i)};SF_ORDER.forEach(function(k){if(k!=='no')s[k]=val(r,k)});out.push(s)}});return out}
 var PXMM=96/25.4;
 function render(){var list=current(),box=$('pages');box.textContent='';
 var avail=Math.max(200,$('pane').clientWidth-32);var sc=Math.min(1,avail/(210*PXMM));
-var fl=[];
+var fl=[],T=tpl();
 list.forEach(function(st){var w=el('div','pw');w.style.width=(210*PXMM*sc)+'px';w.style.height=(297*PXMM*sc)+'px';
-var t=ticket(st);t.style.transform='scale('+sc+')';w.appendChild(t);box.appendChild(w);fl.push(t)});
-fl.forEach(function(t){t._fits.forEach(function(e){fit(e)})});
+var t=T.render(st,V);t.style.transform='scale('+sc+')';w.appendChild(t);box.appendChild(w);fl.push(t)});
+fl.forEach(function(t){(t._fits||[]).forEach(function(e){fit(e)})});
 $('pcount').textContent=rows.length?('プレビュー：'+list.length+'枚（A4）'):'プレビュー：サンプル 1枚（A4）';
 $('selcnt').textContent=rows.length?('選択 '+list.length+' / '+rows.length+'名'):''}
 $('print').onclick=function(){
 if(rows.length&&!current().length){alert('印刷する生徒が選択されていません。');return}
 window.print()};
 var rt;window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(render,100)});
-render();
+drawTplSel();drawPreSel();drawFields();render();
 })();
 </script>
 </body>
