@@ -228,7 +228,7 @@ summary .rs{font-weight:400;font-size:12px;color:var(--mut);margin-left:6px}
 #pop label{margin:5px 0 1px;font-size:11px}
 #pop .pg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
 #pop .pl{width:auto;padding:2px 8px;margin-top:6px;font-size:11px}
-#toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:60;max-width:calc(100vw - 32px);display:flex;align-items:center;gap:10px;background:#111827;color:#f9fafb;border:1px solid #4b5563;border-radius:8px;padding:8px 12px;font-size:13px;box-shadow:0 6px 24px rgba(0,0,0,.35)}
+#toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);z-index:95;max-width:calc(100vw - 32px);display:flex;align-items:center;gap:10px;background:#111827;color:#f9fafb;border:1px solid #4b5563;border-radius:8px;padding:8px 12px;font-size:13px;box-shadow:0 6px 24px rgba(0,0,0,.35)}
 #toast[hidden]{display:none}
 #toast span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 #toast button{background:transparent;color:#93c5fd;border-color:#4b5563;padding:2px 10px;font-size:12px}
@@ -263,6 +263,67 @@ html,body{background:#fff}
 #pstat{min-height:1.4em}#pstat.err{color:#dc2626}
 .prow{display:flex;gap:6px}.prow select{flex:1;min-width:0}.prow button{padding:6px 10px}
 @media print{#login{display:none!important}}
+/* ---------- ファイル保管 ---------- */
+#fp{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:16px}
+.fpc{position:relative;width:100%;max-width:1100px;height:min(780px,100%);background:var(--panel);color:var(--fg);border:1px solid var(--bd);border-radius:10px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,.4)}
+.fph{display:flex;align-items:center;gap:6px;padding:8px 12px;border-bottom:1px solid var(--bd);min-width:0}
+.fph b{font-size:15px;white-space:nowrap}
+.fph .sp{flex:1;min-width:0}
+.fph button{padding:3px 10px;font-size:12px}
+#fppick{padding:6px 12px;background:var(--warnbg);color:var(--warn);font-size:12px;font-weight:700;border-bottom:1px solid var(--bd)}
+.fpb{flex:1;min-height:0;display:flex}
+#fpfold{width:210px;flex:none;overflow-y:auto;border-right:1px solid var(--bd);padding:6px;background:var(--bg)}
+.fpf{display:flex;gap:6px;align-items:center;width:100%;text-align:left;border:0;background:transparent;padding:5px 8px;border-radius:4px;font-size:13px;margin:0 0 1px;min-width:0}
+.fpf span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fpf small{flex:none;font-size:11px;opacity:.7}
+.fpf.on{background:var(--ac);color:var(--acfg)}
+.fpf.add{color:var(--ac);margin-top:4px}
+.fpm{flex:1;min-width:0;display:flex;flex-direction:column}
+.fpt{display:flex;gap:8px;padding:8px 10px;align-items:center;border-bottom:1px solid var(--bd)}
+.fpt .seg{flex:none}.fpt .seg button{padding:3px 10px;font-size:12px}
+#fpq{flex:1;min-width:0;width:auto;padding:4px 8px;font-size:13px}
+#fpst{padding:0 12px;margin:4px 0;min-height:1.2em}
+#fpst.err{color:var(--err)}
+#fplist{flex:1;overflow-y:auto;min-height:0}
+.fr{display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:4px 10px;align-items:center;padding:6px 12px;border-bottom:1px solid var(--bd)}
+.fr:hover{background:var(--bg)}
+.fr .th{width:40px;height:40px;border:1px solid var(--bd);border-radius:4px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--mut);overflow:hidden}
+.fr .th img{width:100%;height:100%;object-fit:cover;display:block}
+.fr .nm{font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px}
+.fr .mt{font-size:11px;color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fr .mn{min-width:0}
+.fr .ac{display:flex;gap:4px}
+.fr .ac button{padding:2px 8px;font-size:12px}
+.fr .ac .dg{color:var(--err)}
+.fe{padding:24px 12px;text-align:center;color:var(--mut);font-size:13px}
+#fpupl{border-top:1px solid var(--bd);max-height:130px;overflow-y:auto;font-size:12px}
+.fu{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(60px,1fr) minmax(0,1.4fr);gap:8px;align-items:center;padding:3px 12px}
+.fu span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fu .e{color:var(--err)}.fu .o{color:var(--ok)}
+.fub{height:6px;border-radius:3px;background:var(--bd);overflow:hidden}
+.fub i{display:block;height:100%;width:0;background:var(--ac)}
+.fub.run i{width:40%;animation:fub 1s linear infinite alternate}
+.fub.ok i{width:100%;background:var(--ok)}.fub.err i{width:100%;background:var(--err)}
+@keyframes fub{from{margin-left:0}to{margin-left:60%}}
+#fpdz{position:absolute;inset:0;z-index:5;background:rgba(29,78,216,.15);border:3px dashed var(--ac);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:var(--ac);pointer-events:none}
+#mdl .mc.wide{max-width:460px}
+#mdl .mc label{margin:8px 0 2px}
+#mdl .mc input[type=text],#mdl .mc textarea{margin:0}
+#mdl .mc .wn{font-size:12px;color:var(--warn);background:var(--warnbg);border-radius:6px;padding:6px 8px;margin:10px 0 0;overflow-wrap:anywhere}
+.pbar{height:8px;border-radius:4px;background:var(--bd);overflow:hidden;margin:6px 0}
+.pbar i{display:block;height:100%;width:0;background:var(--ac);transition:width .15s}
+#spdf{white-space:nowrap}
+@media(max-width:700px){
+#fp{padding:0}.fpc{max-width:none;height:100%;border-radius:0;border:0}
+.fpb{flex-direction:column}
+#fpfold{width:auto;flex:none;display:flex;gap:4px;overflow-x:auto;overflow-y:hidden;border-right:0;border-bottom:1px solid var(--bd)}
+.fpf{width:auto;flex:none;margin:0}
+.fr{grid-template-columns:40px minmax(0,1fr)}
+.fr .ac{grid-column:1/-1;justify-content:flex-end}
+.fpt{flex-wrap:wrap}
+.fu{grid-template-columns:minmax(0,1fr) auto}.fu .fub{display:none}
+}
+@media print{#fp{display:none!important}}
 </style>
 </head>
 <body>
@@ -277,7 +338,7 @@ html,body{background:#fff}
 <div class="app off" id="appRoot">
 <div id="editor">
 <div class="ehead">
-<div class="eh1"><h1>受験票ジェネレーター</h1><button id="undo" type="button" title="元に戻す (Ctrl+Z)" aria-label="元に戻す" disabled>↶</button><button id="redo" type="button" title="やり直し (Ctrl+Shift+Z / Ctrl+Y)" aria-label="やり直し" disabled>↷</button><span class="sv"><button id="save" class="pri" type="button" title="保存 (Ctrl+S)">保存</button><button id="smore" class="pri" type="button" title="その他の保存方法" aria-label="その他の保存方法" aria-haspopup="true" aria-expanded="false">▾</button><div id="smenu" hidden><button id="sas" type="button">名前を付けて保存</button><button id="sfile" type="button">ファイルに書き出し</button></div></span></div>
+<div class="eh1"><h1>受験票ジェネレーター</h1><button id="undo" type="button" title="元に戻す (Ctrl+Z)" aria-label="元に戻す" disabled>↶</button><button id="redo" type="button" title="やり直し (Ctrl+Shift+Z / Ctrl+Y)" aria-label="やり直し" disabled>↷</button><button id="fopen" type="button" title="ファイル保管（受験票PDF・画像素材・資料）">ファイル</button><span class="sv"><button id="save" class="pri" type="button" title="保存 (Ctrl+S)">保存</button><button id="smore" class="pri" type="button" title="その他の保存方法" aria-label="その他の保存方法" aria-haspopup="true" aria-expanded="false">▾</button><div id="smenu" hidden><button id="sas" type="button">名前を付けて保存</button><button id="spdf" type="button">PDFを作成して保存</button><button id="sfile" type="button">ファイルに書き出し</button></div></span></div>
 <div class="eh2"><span id="hname"></span><button id="sst" type="button" data-s=""><i class="sd"></i><span class="stx"></span></button><span id="uem"></span><button id="lout" type="button">ログアウト</button></div>
 <div id="steps" role="navigation" aria-label="作業ステップ"><button type="button" data-st="1"><b>① 名簿</b><small id="s1"></small></button><button type="button" data-st="2"><b>② デザイン</b><small id="s2"></small></button><button type="button" data-st="3"><b>③ 確認</b><small id="s3"></small></button><button type="button" data-st="4"><b>④ 印刷</b><small id="s4"></small></button></div>
 </div>
@@ -319,10 +380,22 @@ html,body{background:#fff}
 </div></details>
 </div>
 <div id="pane" tabindex="0">
-<div id="bar"><span id="pcount"></span><span class="seg" id="nav"><button id="nprev" type="button" title="前の1名 (←)" aria-label="前の1名">◀</button><span id="npos"></span><button id="nnext" type="button" title="次の1名 (→)" aria-label="次の1名">▶</button></span><button id="tall" type="button" title="全員をまとめて表示／1名ずつ表示">全員表示</button><span class="seg"><button id="zfit" type="button" title="画面幅に合わせる">幅に合わせる</button><button id="z100" type="button" title="実寸（A4=100%）">100%</button></span><button class="pri" id="print" type="button">印刷 / PDF保存</button></div>
+<div id="bar"><span id="pcount"></span><span class="seg" id="nav"><button id="nprev" type="button" title="前の1名 (←)" aria-label="前の1名">◀</button><span id="npos"></span><button id="nnext" type="button" title="次の1名 (→)" aria-label="次の1名">▶</button></span><button id="tall" type="button" title="全員をまとめて表示／1名ずつ表示">全員表示</button><span class="seg"><button id="zfit" type="button" title="画面幅に合わせる">幅に合わせる</button><button id="z100" type="button" title="実寸（A4=100%）">100%</button></span><button id="pdfsave" type="button" title="全員分の受験票PDFを作り、ファイル保管に保存します">PDFを保存</button><button class="pri" id="print" type="button">印刷 / PDF保存</button></div>
 <div id="pages"></div>
 </div>
 </div>
+<div id="fp" hidden><div class="fpc" role="dialog" aria-modal="true" aria-label="ファイル">
+<div class="fph"><b>ファイル</b><span class="sp"></span><button id="fpup" class="pri" type="button">＋ アップロード</button><button id="fprf" type="button" title="再読み込み" aria-label="再読み込み">↻</button><button id="fpx" type="button" title="閉じる (Esc)" aria-label="閉じる">✕</button></div>
+<div id="fppick" hidden></div>
+<div class="fpb"><div id="fpfold"></div><div class="fpm">
+<div class="fpt"><span class="seg" id="fptabs"><button type="button" data-t="all">すべて</button><button type="button" data-t="pdf">受験票PDF</button><button type="button" data-t="image">画像</button><button type="button" data-t="doc">資料</button></span><input type="text" id="fpq" placeholder="名前・メモで検索" aria-label="検索"></div>
+<div id="fpst" class="note"></div>
+<div id="fplist"></div>
+<div id="fpupl" hidden></div>
+</div></div>
+<input type="file" id="fpfile" multiple hidden>
+<div id="fpdz" hidden>ここにドロップしてアップロード</div>
+</div></div>
 <div id="toast" class="noprint" role="status" hidden><span id="toastm"></span><button id="toasta" type="button"></button></div>
 <script>
 (function(){
@@ -548,11 +621,17 @@ var pv=el('img');pv.alt='';var fi=el('input');fi.type='file';fi.accept='image/*'
 var up=el('button',null,'画像を変更');up.type='button';var rs=el('button',null,'既定に戻す');rs.type='button';
 var hl=el('label','chk');var hc=el('input');hc.type='checkbox';hc.checked=!!V[k].hide;hl.appendChild(hc);hl.appendChild(document.createTextNode('非表示'));hl.style.margin='0';
 var upd=function(){pv.src=V[k].d||(S.tpl==='waseda'?(k==='map'?'assets/map-fujisawa.png':'assets/logo-fujisawa.png'):'');pv.style.display=pv.src?'':'none'};
+var pk=btn('素材から選ぶ','ファイル保管の画像から選ぶ'),ad=btn('素材に追加','この画像をファイル保管（画像素材）に追加');
 up.onclick=function(){fi.click()};
+pk.onclick=function(){openFiles({pick:true,title:f.label,cb:function(b){resizeImage(b,function(u){V[k].d=u;V[k].hide=false;hc.checked=false;save();upd();render();toast('「'+f.label+'」に素材の画像を設定しました')})}})};
+ad.onclick=async function(){if(!pv.src||pv.style.display==='none'){toast('追加できる画像がありません');return}
+var d=await fdlg({title:'画像素材に追加',text:'現在の画像をファイル保管（フォルダ「画像素材」）に保存します。',fields:[{k:'n',label:'名前',value:f.label,max:80,req:1}],ok:'追加'});if(!d)return;
+try{var x=await fetch(pv.src),b=await x.blob(),ext=/png/.test(b.type)?'.png':/jpe?g/.test(b.type)?'.jpg':/gif/.test(b.type)?'.gif':/webp/.test(b.type)?'.webp':'.png';
+await fPut(b,{name:d.n.replace(/.(png|jpe?g|gif|webp)$/i,'')+ext,kind:'image',mime:b.type||'image/png',folder:'画像素材'});toast('画像素材に追加しました')}catch(e){toast('追加できませんでした：'+fErr(e))}};
 fi.onchange=function(){var fl=this.files[0];this.value='';if(!fl)return;resizeImage(fl,function(u){V[k].d=u;V[k].hide=false;hc.checked=false;save();upd();render()})};
 rs.onclick=function(){V[k]={d:'',hide:false};hc.checked=false;save();upd();render()};
 hc.onchange=function(){V[k].hide=hc.checked;save();render()};
-d2.appendChild(pv);d2.appendChild(up);d2.appendChild(rs);d2.appendChild(hl);d2.appendChild(fi);upd();return}
+d2.appendChild(pv);d2.appendChild(up);d2.appendChild(pk);d2.appendChild(ad);d2.appendChild(rs);d2.appendChild(hl);d2.appendChild(fi);upd();return}
 if(f.type==='select'){var sl=el('select');f.opts.forEach(function(o){var op=el('option',null,o[1]);op.value=o[0];sl.appendChild(op)});sl.value=V[k];sl.onchange=function(){V[k]=sl.value;save();render()};P.appendChild(sl);return}
 if(f.type==='number'){var ni=el('input');ni.type='number';ni.step=f.step||'any';ni.value=V[k];ni.oninput=function(){var n=parseFloat(ni.value);V[k]=isFinite(n)?n:f.def;save();render()};P.appendChild(ni);return}
 if(f.type==='color'){var ci=el('input');ci.type='color';ci.value=V[k];ci.oninput=function(){V[k]=ci.value;save();render()};P.appendChild(ci);return}
@@ -1078,10 +1157,167 @@ if(ok&&!(pop&&pop.contains(t))){e.preventDefault();go(k==='ArrowLeft'?-1:1)}}});
 
 var booted=false;
 function boot(){if(booted)return;booted=true;drawTplSel();drawPreSel();drawFields();drawItems();render();histInit()}
+/* ---------- ファイル保管（Supabase Storage: juken-files / 表: juken_files） ---------- */
+var BUCKET='juken-files',FT='juken_files',FMAX=52428800;
+var FL={rows:[],loaded:false,loading:false,err:'',folder:'*',tab:'all',q:'',extra:[],urls:{},pick:null,q2:[],upBusy:false};
+function pad2(n){return n<10?'0'+n:''+n}
+function stamp(d){return d.getFullYear()+pad2(d.getMonth()+1)+pad2(d.getDate())}
+function fmtSize(n){n=+n||0;if(n<1024)return n+'B';if(n<1048576)return Math.round(n/1024)+'KB';return (n/1048576).toFixed(1)+'MB'}
+function fmtDT(t){var d=new Date(t);if(isNaN(d))return '';return d.getFullYear()+'/'+(d.getMonth()+1)+'/'+d.getDate()+' '+pad2(d.getHours())+':'+pad2(d.getMinutes())}
+function kindOf(mime,name){mime=mime||'';if(mime==='application/pdf'||/\.pdf$/i.test(name||''))return 'pdf';if(/^image\//.test(mime)||/\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(name||''))return 'image';return 'doc'}
+function folderKey(f){f=(f||'').trim();if(!f)return '_';if(/^[A-Za-z0-9_-]{1,30}$/.test(f))return f;var h=5381;for(var i=0;i<f.length;i++)h=((h<<5)+h+f.charCodeAt(i))|0;return 'f'+(h>>>0).toString(36)}
+function safeName(n){n=String(n||'file');var m=/\.([A-Za-z0-9]{1,8})$/.exec(n),ext=m?'.'+m[1].toLowerCase():'',b=m?n.slice(0,n.length-m[0].length):n;
+b=b.normalize('NFKD').replace(/[^A-Za-z0-9._-]+/g,'_').replace(/_+/g,'_').replace(/^[_.]+|[_.]+$/g,'').slice(0,60);if(!b)b='file';return b+ext}
+function rand6(){var s='abcdefghijklmnopqrstuvwxyz0123456789',o='';for(var i=0;i<6;i++)o+=s.charAt(Math.floor(Math.random()*s.length));return o}
+function mkPath(kind,folder,name){var d=new Date();return kind+'/'+folderKey(folder)+'/'+stamp(d)+'-'+pad2(d.getHours())+pad2(d.getMinutes())+pad2(d.getSeconds())+'-'+rand6()+'-'+safeName(name)}
+function fErr(e){var m=String((e&&(e.message||e.error_description))||e||''),c=String((e&&(e.code||e.statusCode||e.status))||'');
+if(/bucket not found/i.test(m)||c==='42P01'||c==='PGRST205'||(/juken_files/.test(m)&&/(does not exist|schema cache|could not find)/i.test(m)))return 'ファイル保管の設定がまだです（supabase-files.sql を実行してください）';
+if(/maximum allowed size|too large|exceeded/i.test(m)||c==='413')return 'ファイルが大きすぎます（1ファイル50MBまで）。';
+if(/row-level security|violates|not allowed|unauthori|permission denied|jwt|forbidden/i.test(m)||c==='42501'||c==='403'||c==='401')return '権限がありません。ログインし直してください（解決しない場合は supabase-files.sql を実行してください）。';
+if(/fetch|network|timeout|failed|load failed/i.test(m))return '通信に失敗しました。通信状況を確認してもう一度お試しください。';
+return 'エラー：'+m}
+function needSb(){if(!sb||!uid)throw {message:'ログインしていません。ログインし直してください。'}}
+function fStat(t,err){var e=$('fpst');e.textContent=t||'';e.className='note'+(err?' err':'')}
+/* 共通ダイアログ（入力欄・チェック・注意書き） */
+function fdlg(o){return new Promise(function(res){modalOpen=true;var w=el('div');w.id='mdl';var c=el('div','mc wide');c.setAttribute('role','dialog');c.setAttribute('aria-modal','true');w.appendChild(c);
+c.appendChild(el('h3',null,o.title));if(o.text)c.appendChild(el('p',null,o.text));var ins={},first=null;
+(o.fields||[]).forEach(function(f){var i2;
+if(f.type==='check'){var lb=el('label','chk');i2=el('input');i2.type='checkbox';i2.checked=!!f.value;lb.appendChild(i2);lb.appendChild(document.createTextNode(f.label));c.appendChild(lb);ins[f.k]=i2;return}
+c.appendChild(el('label',null,f.label));
+if(f.type==='area'){i2=el('textarea');i2.rows=2}else{i2=el('input');i2.type='text';if(f.list){var dl=el('datalist');dl.id='fdl_'+f.k;f.list.forEach(function(x){var op=el('option');op.value=x;dl.appendChild(op)});c.appendChild(dl);i2.setAttribute('list',dl.id)}}
+i2.value=f.value||'';i2.maxLength=f.max||200;if(f.ph)i2.placeholder=f.ph;c.appendChild(i2);ins[f.k]=i2;if(!first)first=i2});
+if(o.warn)c.appendChild(el('div','wn',o.warn));
+var bb=el('div','mb');c.appendChild(bb);
+function done(v){w.remove();modalOpen=!$('fp').hidden;res(v)}
+function ok(){var v={};for(var k in ins)v[k]=ins[k].type==='checkbox'?ins[k].checked:ins[k].value.trim();
+for(var j=0;j<(o.fields||[]).length;j++){var f=o.fields[j];if(f.req&&!v[f.k]){ins[f.k].focus();return}}done(v)}
+var cb=el('button',null,'キャンセル');cb.type='button';cb.onclick=function(){done(null)};var ob=el('button','pri',o.ok||'OK');ob.type='button';ob.onclick=ok;bb.appendChild(cb);bb.appendChild(ob);
+w.addEventListener('keydown',function(e){if(e.key==='Escape'){e.preventDefault();done(null)}else if(e.key==='Enter'&&e.target.tagName==='INPUT'&&e.target.type==='text'){e.preventDefault();ok()}});
+w.addEventListener('mousedown',function(e){if(e.target===w)done(null)});
+document.body.appendChild(w);(first||ob).focus();if(first&&first.select)first.select()})}
+function progDlg(title,onCancel){modalOpen=true;var w=el('div');w.id='mdl';var c=el('div','mc');c.setAttribute('role','dialog');c.setAttribute('aria-modal','true');w.appendChild(c);
+c.appendChild(el('h3',null,title));var t=el('p',null,'準備中…'),bar=el('div','pbar'),bi=el('i');bar.appendChild(bi);c.appendChild(t);c.appendChild(bar);
+var bb=el('div','mb'),x=el('button',null,'キャンセル');x.type='button';x.onclick=function(){x.disabled=true;t.textContent='中止しています…';onCancel()};bb.appendChild(x);c.appendChild(bb);document.body.appendChild(w);
+return {set:function(txt,p){t.textContent=txt;if(p!=null)bi.style.width=Math.round(p*100)+'%'},nocancel:function(){x.disabled=true},close:function(){w.remove();modalOpen=!$('fp').hidden}}}
+/* 署名付きURL（60分）。サムネイル用に50分キャッシュ */
+async function signedUrl(path,dl){needSb();var k=dl?null:path,h=k&&FL.urls[k];if(h&&h.t>Date.now())return h.u;
+var r=await sb.storage.from(BUCKET).createSignedUrl(path,3600,dl?{download:dl}:undefined);if(r.error)throw r.error;var u=r.data&&(r.data.signedUrl||r.data.signedURL);if(!u)throw {message:'URLを取得できませんでした'};
+if(k)FL.urls[k]={u:u,t:Date.now()+50*60000};return u}
+/* アップロード1件（ストレージ→行。行の登録に失敗したらオブジェクトを消す） */
+async function fPut(blob,o){needSb();var name=o.name||'file',kind=o.kind||kindOf(o.mime||blob.type,name),mime=o.mime||blob.type||'application/octet-stream',folder=(o.folder||'').trim();
+if(blob.size>FMAX)throw {message:'maximum allowed size',code:'413'};
+var path=mkPath(kind,folder,name);
+var r=await sb.storage.from(BUCKET).upload(path,blob,{contentType:mime,upsert:false,cacheControl:'3600'});if(r.error)throw r.error;
+var ins=await sb.from(FT).insert({path:path,name:name,kind:kind,folder:folder,mime:mime,size:blob.size,note:o.note||''}).select('*').single();
+if(ins.error||!ins.data){try{await sb.storage.from(BUCKET).remove([path])}catch(e){}throw ins.error||{message:'登録に失敗しました'}}
+if(FL.loaded)FL.rows.unshift(ins.data);return ins.data}
+function fFolders(){var m={};FL.rows.forEach(function(r){var f=r.folder||'';if(f)m[f]=(m[f]||0)+1});FL.extra.forEach(function(f){if(f&&!(f in m))m[f]=0});return Object.keys(m).sort(function(a,b){return a.localeCompare(b,'ja')}).map(function(f){return [f,m[f]]})}
+function fNames(){return fFolders().map(function(x){return x[0]})}
+function fVisible(){var q=FL.q.toLowerCase(),tab=FL.pick?'image':FL.tab;
+return FL.rows.filter(function(r){if(tab!=='all'&&r.kind!==tab)return false;if(FL.folder===''&&r.folder)return false;if(FL.folder!=='*'&&FL.folder!==''&&r.folder!==FL.folder)return false;
+if(q&&((r.name||'')+' '+(r.note||'')+' '+(r.folder||'')).toLowerCase().indexOf(q)<0)return false;return true}).sort(function(a,b){return tsNum(b.created_at)-tsNum(a.created_at)})}
+var fObs=null;
+function fDrawFolders(){var box=$('fpfold');box.textContent='';var n=FL.rows.length,un=FL.rows.filter(function(r){return !r.folder}).length;
+function add(key,label,cnt){var b=el('button','fpf'+(FL.folder===key?' on':''));b.type='button';b.appendChild(el('span',null,label));b.appendChild(el('small',null,String(cnt)));b.title=label;b.onclick=function(){FL.folder=key;fDraw()};box.appendChild(b)}
+add('*','すべて',n);add('','未分類',un);fFolders().forEach(function(x){add(x[0],x[0],x[1])});
+var a=el('button','fpf add');a.type='button';a.appendChild(el('span',null,'＋フォルダ'));a.onclick=async function(){var d=await fdlg({title:'フォルダを追加',text:'アップロード時にこのフォルダ名が使われます（ファイルを入れるまでは一覧にだけ表示されます）。',fields:[{k:'n',label:'フォルダ名',value:'',max:60,req:1}],ok:'追加'});if(!d)return;if(FL.extra.indexOf(d.n)<0)FL.extra.push(d.n);FL.folder=d.n;fDraw()};box.appendChild(a)}
+function fIcon(r){var th=el('div','th');if(r.kind==='image'){th.textContent='画像';th.setAttribute('data-p',r.path)}else if(r.kind==='pdf')th.textContent='PDF';else{var m=/\.([A-Za-z0-9]{1,4})$/.exec(r.name||'');th.textContent=m?m[1].toUpperCase():'資料'}return th}
+function fThumbs(){if(fObs)fObs.disconnect();if(!('IntersectionObserver' in window))return;
+fObs=new IntersectionObserver(function(es){es.forEach(function(en){if(!en.isIntersecting)return;var th=en.target;fObs.unobserve(th);var p=th.getAttribute('data-p');
+signedUrl(p).then(function(u){var im=new Image();im.alt='';im.onload=function(){th.textContent='';th.appendChild(im)};im.src=u}).catch(function(){})})},{root:$('fplist'),rootMargin:'120px'});
+Array.prototype.forEach.call($('fplist').querySelectorAll('.th[data-p]'),function(t){fObs.observe(t)})}
+function fDraw(){if($('fp').hidden)return;fDrawFolders();
+Array.prototype.forEach.call($('fptabs').children,function(b){b.classList.toggle('on',b.getAttribute('data-t')===(FL.pick?'image':FL.tab));b.hidden=!!FL.pick&&b.getAttribute('data-t')!=='image'});
+var L=$('fplist');L.textContent='';
+if(FL.loading&&!FL.loaded){fStat('読み込み中…');return}
+if(FL.err&&!FL.loaded){fStat(FL.err,true);var e0=el('div','fe');e0.appendChild(el('div',null,'ファイル一覧を読み込めませんでした。'));var rb=btn('再読み込み');rb.style.marginTop='8px';rb.onclick=function(){fLoad(true)};e0.appendChild(rb);L.appendChild(e0);return}
+var list=fVisible();fStat(list.length+'件'+(FL.q?'（検索中）':''));
+if(!list.length){L.appendChild(el('div','fe',FL.rows.length?'該当するファイルがありません。':'ファイルはまだありません。「＋ アップロード」またはファイルのドロップで追加できます。'));return}
+list.forEach(function(r){var row=el('div','fr');row.appendChild(fIcon(r));var mn=el('div','mn');var nm=el('div','nm',r.name);nm.title=r.name;mn.appendChild(nm);
+var mt=[r.folder||'未分類',fmtSize(r.size),fmtDT(r.created_at)];if(r.uploaded_by&&r.uploaded_by===uid){var em=$('uem').textContent;if(em)mt.push(em)}if(r.note)mt.push(r.note);
+var m=el('div','mt',mt.join(' ・ '));m.title=mt.join(' ・ ');mn.appendChild(m);row.appendChild(mn);
+var ac=el('div','ac');
+if(FL.pick){var use=btn('これを使う');use.className='pri';use.onclick=function(){fChoose(r)};ac.appendChild(use);row.style.cursor='pointer';row.querySelector('.th').onclick=nm.onclick=function(){fChoose(r)}}
+var op=btn('開く','新しいタブで開く（60分有効のリンク）');op.onclick=function(){fOpen(r)};ac.appendChild(op);
+var dl=btn('ダウンロード');dl.onclick=function(){fDl(r)};ac.appendChild(dl);
+if(!FL.pick){var ed=btn('編集','名前・フォルダ・メモを編集');ed.onclick=function(){fEdit(r)};ac.appendChild(ed);var de=btn('削除');de.className='dg';de.onclick=function(){fDel(r)};ac.appendChild(de)}
+row.appendChild(ac);L.appendChild(row)});fThumbs()}
+async function fLoad(force){if(FL.loading)return;if(FL.loaded&&!force){fDraw();return}FL.loading=true;FL.err='';fStat('読み込み中…');
+try{needSb();var r=await sb.from(FT).select('*').order('created_at',{ascending:false});if(r.error)throw r.error;FL.rows=r.data||[];FL.loaded=true;FL.urls={}}catch(e){FL.err=fErr(e);if(FL.loaded)toast(FL.err)}
+FL.loading=false;fDraw()}
+function fReset(){FL.rows=[];FL.loaded=false;FL.loading=false;FL.err='';FL.urls={};FL.extra=[];FL.folder='*';FL.q='';FL.tab='all';FL.q2=[];closeFiles()}
+function openFiles(o){FL.pick=o&&o.pick?o:null;$('fp').hidden=false;modalOpen=true;
+var pk=$('fppick');pk.hidden=!FL.pick;if(FL.pick)pk.textContent='「'+(FL.pick.title||'画像')+'」に使う画像を選んでください（選ぶとこのデザインに埋め込まれます）';
+$('fpq').value=FL.q;fDraw();if(!FL.loaded)fLoad();$('fpx').focus()}
+function closeFiles(){$('fp').hidden=true;modalOpen=!!document.getElementById('mdl');FL.pick=null;$('fpdz').hidden=true}
+async function fOpen(r){var w=window.open('','_blank');try{var u=await signedUrl(r.path);if(w){w.location.href=u}else location.href=u}catch(e){if(w)w.close();toast(fErr(e))}}
+async function fDl(r){try{var u=await signedUrl(r.path,r.name);var a=document.createElement('a');a.href=u;a.download=r.name;document.body.appendChild(a);a.click();a.remove()}catch(e){toast(fErr(e))}}
+async function fEdit(r){var d=await fdlg({title:'ファイル情報を編集',fields:[{k:'name',label:'名前',value:r.name,max:200,req:1},{k:'folder',label:'フォルダ（空欄で未分類）',value:r.folder||'',list:fNames(),max:60},{k:'note',label:'メモ',type:'area',value:r.note||'',max:500}],ok:'保存'});if(!d)return;
+try{needSb();var x=await sb.from(FT).update({name:d.name,folder:d.folder,note:d.note}).eq('id',r.id).select('*').single();if(x.error)throw x.error;Object.assign(r,x.data);if(FL.folder!=='*'&&FL.folder!==(r.folder||''))FL.folder='*';fDraw();toast('更新しました')}catch(e){toast(fErr(e))}}
+async function fDel(r){if(!confirm('「'+r.name+'」を削除しますか？\n（スタッフ全員から見えなくなり、元に戻せません）'))return;
+try{needSb();var s=await sb.storage.from(BUCKET).remove([r.path]);if(s.error)throw s.error;var x=await sb.from(FT).delete().eq('id',r.id);if(x.error)throw x.error;
+FL.rows=FL.rows.filter(function(y){return y.id!==r.id});delete FL.urls[r.path];fDraw();toast('削除しました')}catch(e){toast('削除できませんでした：'+fErr(e))}}
+async function fChoose(r){if(!FL.pick)return;var cb=FL.pick.cb;fStat('画像を取得中…');
+try{var u=await signedUrl(r.path),x=await fetch(u);if(!x.ok)throw {message:'fetch failed'};var b=await x.blob();if(!/^image\//.test(b.type)&&r.mime)b=b.slice(0,b.size,r.mime);closeFiles();cb(b)}catch(e){fStat(fErr(e),true)}}
+/* アップロード（複数・キュー表示） */
+function fQDraw(){var b=$('fpupl');b.hidden=!FL.q2.length;b.textContent='';FL.q2.forEach(function(q){var d=el('div','fu');var n=el('span',null,q.name);n.title=q.name;d.appendChild(n);var bar=el('div','fub '+q.s);bar.appendChild(el('i'));d.appendChild(bar);var m=el('span','m '+(q.s==='err'?'e':q.s==='ok'?'o':''),q.s==='wait'?'待機中':q.s==='run'?'アップロード中…':q.s==='ok'?'完了':q.msg||'失敗');m.title=m.textContent;d.appendChild(m);b.appendChild(d)})}
+async function fUploadFiles(files,folder){files=Array.prototype.slice.call(files);if(!files.length)return;if(FL.upBusy){toast('アップロード中です。完了してからもう一度お試しください。');return}
+if(folder==null){if(FL.folder==='*'){var d=await fdlg({title:'アップロード先のフォルダ',text:files.length+'件のファイルを追加します。',fields:[{k:'f',label:'フォルダ（空欄で未分類）',value:'',list:fNames(),max:60}],ok:'アップロード'});if(!d)return;folder=d.f}else folder=FL.folder}
+FL.upBusy=true;FL.q2=files.map(function(f){return {name:f.name,s:'wait',msg:''}});fQDraw();var ok=0,ng=0;
+for(var i=0;i<files.length;i++){var q=FL.q2[i];q.s='run';fQDraw();
+try{if(files[i].size>FMAX)throw {message:'maximum allowed size',code:'413'};await fPut(files[i],{name:files[i].name,folder:folder,mime:files[i].type});q.s='ok';ok++;
+if(folder&&FL.extra.indexOf(folder)>=0)FL.extra=FL.extra.filter(function(x){return x!==folder})}
+catch(e){q.s='err';q.msg=fErr(e);ng++}fQDraw();fDraw()}
+FL.upBusy=false;if(ng===0)setTimeout(function(){if(!FL.upBusy&&FL.q2.every(function(q){return q.s==='ok'})){FL.q2=[];fQDraw()}},4000);
+toast('アップロード '+ok+'件完了'+(ng?'／失敗 '+ng+'件':''))}
+$('fopen').onclick=function(){openFiles()};
+$('fpx').onclick=closeFiles;$('fprf').onclick=function(){fLoad(true)};
+$('fpup').onclick=function(){$('fpfile').click()};
+$('fpfile').onchange=function(){var f=Array.prototype.slice.call(this.files);this.value='';fUploadFiles(f)};
+$('fptabs').onclick=function(e){var b=e.target.closest('button');if(!b)return;FL.tab=b.getAttribute('data-t');fDraw()};
+var fqT;$('fpq').oninput=function(){FL.q=this.value.trim();clearTimeout(fqT);fqT=setTimeout(fDraw,120)};
+$('fp').addEventListener('mousedown',function(e){if(e.target===$('fp'))closeFiles()});
+document.addEventListener('keydown',function(e){if($('fp').hidden)return;if(e.key==='Escape'&&!document.getElementById('mdl')){e.preventDefault();closeFiles()}});
+(function(){var fp=$('fp'),n=0;
+fp.addEventListener('dragenter',function(e){if(!hasFiles(e))return;e.preventDefault();n++;$('fpdz').hidden=false});
+fp.addEventListener('dragover',function(e){if(!hasFiles(e))return;e.preventDefault();e.dataTransfer.dropEffect='copy'});
+fp.addEventListener('dragleave',function(e){if(!hasFiles(e))return;n=Math.max(0,n-1);if(!n)$('fpdz').hidden=true});
+fp.addEventListener('drop',function(e){if(!hasFiles(e))return;e.preventDefault();n=0;$('fpdz').hidden=true;fUploadFiles(e.dataTransfer.files)})})();
+/* ---------- 受験票PDFを作って保存 ---------- */
+var H2C='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',JSPDF='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',libP={},pdfBusy=false;
+function loadScript(u){return libP[u]||(libP[u]=new Promise(function(ok,ng){var s=document.createElement('script');s.src=u;s.onload=ok;s.onerror=function(){delete libP[u];ng(new Error('lib'))};document.head.appendChild(s)}))}
+function cleanFn(n){return String(n||'').replace(/[\\\/:*?"<>|\u0000-\u001f]+/g,' ').replace(/\s+/g,' ').trim()}
+function dlBlob(b,name){var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(a.href)},30000)}
+async function makePdf(){if(pdfBusy||modalOpen)return;var list=current();if(rows.length&&!list.length){alert('PDFにする生徒が選択されていません。');return}
+var base=cleanFn(S.curName||importName||V.title||tpl().name)||'受験票',dn=stamp(new Date());
+var d=await fdlg({title:'受験票PDFを作成して保存',text:list.length+'ページ（A4・1名1ページ）のPDFを作り、ファイル保管に保存します。',fields:[{k:'folder',label:'保存先フォルダ（空欄で未分類）',value:base,list:fNames(),max:60},{k:'name',label:'ファイル名',value:base+'_受験票_'+dn+'.pdf',max:120,req:1},{k:'note',label:'メモ',type:'area',value:'',max:500},{k:'dl',type:'check',label:'端末にもダウンロード',value:false}],warn:'このPDFには生徒の氏名などが含まれます。ログインしたスタッフ全員が閲覧できます。',ok:'作成して保存'});
+if(!d)return;var fname=cleanFn(d.name)||base+'_受験票';if(!/\.pdf$/i.test(fname))fname+='.pdf';
+pdfBusy=true;var cancel=false,host=null,pg=progDlg('PDFを作成して保存',function(){cancel=true});
+try{pg.set('ライブラリを読み込み中…');await loadScript(H2C);await loadScript(JSPDF);if(document.fonts&&document.fonts.ready)await document.fonts.ready;
+host=el('div');host.style.cssText='position:fixed;left:0;top:0;width:210mm;height:297mm;z-index:-1;overflow:hidden;pointer-events:none;background:#fff';document.body.appendChild(host);
+var T=tpl(),pdf=null,n=list.length,sc=200/96;
+for(var i=0;i<n;i++){if(cancel)break;pg.set('PDF作成中 '+(i+1)+'/'+n,i/n);
+host.textContent='';var t=T.render(list[i],V);host.appendChild(t);(t._fits||[]).forEach(function(e){fit(e)});
+var ims=Array.prototype.slice.call(t.querySelectorAll('img'));await Promise.all(ims.map(function(m){return m.complete?0:new Promise(function(r){m.onload=m.onerror=r})}));
+await new Promise(function(r){requestAnimationFrame(function(){setTimeout(r,0)})});
+var cv=await window.html2canvas(t,{scale:sc,backgroundColor:'#ffffff',useCORS:true,logging:false});
+var img=cv.toDataURL('image/jpeg',.9);cv.width=cv.height=0;
+if(!pdf)pdf=new window.jspdf.jsPDF({unit:'mm',format:'a4',orientation:'portrait',compress:true});else pdf.addPage('a4','p');
+pdf.addImage(img,'JPEG',0,0,210,297,undefined,'FAST')}
+host.remove();host=null;
+if(cancel||!pdf){pg.close();pdfBusy=false;toast('PDFの作成を中止しました');return}
+var blob=pdf.output('blob');pg.set('保存中…（'+fmtSize(blob.size)+'）',1);pg.nocancel();
+if(d.dl)dlBlob(blob,fname);
+var row=null,err='';try{row=await fPut(blob,{name:fname,kind:'pdf',mime:'application/pdf',folder:d.folder,note:d.note})}catch(e){err=fErr(e)}
+pg.close();pdfBusy=false;
+if(row){toast('PDFを保存しました（'+n+'ページ・'+fmtSize(blob.size)+'）','ファイルを開く',function(){FL.folder=row.folder||'';FL.tab='pdf';openFiles()},9000)}
+else{if(!d.dl)dlBlob(blob,fname);alert('ファイル保管への保存に失敗しました。\n'+err+'\n\nPDFは端末にダウンロードしました。')}
+}catch(e){if(host)host.remove();pg.close();pdfBusy=false;alert('PDFを作成できませんでした。'+(e&&e.message==='lib'?'\n作成に必要なライブラリを読み込めません。通信状況を確認してください。':'\n'+((e&&e.message)||e)))}}
+$('pdfsave').onclick=makePdf;$('spdf').onclick=function(){closeSM();makePdf()};
 /* ---------- ログイン ---------- */
 var sb=null;
 try{sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{storageKey:'juken-hyo-auth',persistSession:true,autoRefreshToken:true}})}catch(e){sb=null}
-function showLogin(msg){$('login').hidden=false;$('appRoot').classList.add('off');$('lerr').textContent=msg||''}
+function showLogin(msg){fReset();$('login').hidden=false;$('appRoot').classList.add('off');$('lerr').textContent=msg||''}
 function showApp(sess){$('login').hidden=true;$('appRoot').classList.remove('off');var em=(sess&&sess.user&&sess.user.email)||'';$('uem').textContent=em;$('uem').title=em;uid=sess&&sess.user?sess.user.id:null;boot();render();loadPresets();if(!S.cur)checkDraft()}
 $('lform').onsubmit=async function(ev){ev.preventDefault();var em=$('lem').value.trim(),pw=$('lpw').value,er=$('lerr'),b=$('lbtn');er.textContent='';
 if(!sb){er.textContent='ログイン機能を読み込めませんでした。通信状況を確認してページを再読み込みしてください。';return}
