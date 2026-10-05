@@ -6,20 +6,16 @@
 <title>受験票ジェネレーター</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- テンプレート：api.js を先頭に、あとは好きな順（カテゴリごとにギャラリーへ並ぶ）。新しいテンプレートはここに1行足す -->
+<script src="templates/api.js"></script>
+<script src="templates/waseda.js"></script>
+<script src="templates/simple.js"></script>
 <style>
 :root{--bg:#f3f4f6;--panel:#fff;--fg:#1f2937;--mut:#6b7280;--bd:#d1d5db;--ac:#1d4ed8;--acfg:#fff;--inp:#fff;--pv:#e5e7eb;--warn:#b45309;--warnbg:#fef3c7;--ok:#15803d;--err:#dc2626}
 @media(prefers-color-scheme:dark){:root{--bg:#111827;--panel:#1f2937;--fg:#e5e7eb;--mut:#9ca3af;--bd:#374151;--ac:#3b82f6;--inp:#111827;--pv:#0b1220;--warn:#fbbf24;--warnbg:#3b2f0a;--ok:#4ade80;--err:#f87171}}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 "Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif}
-.app{display:flex;flex-direction:column;min-height:100vh}
-#editor,#pane{min-width:0}
-#editor{padding:0 16px 12px;background:var(--panel)}
-#pane{position:relative;padding:0 16px 12px;background:var(--pv)}
-@media(min-width:1024px){
-.app{flex-direction:row;height:100vh;overflow:hidden}
-#editor{width:440px;flex:none;overflow-y:auto;border-right:1px solid var(--bd)}
-#pane{flex:1;overflow:auto}#pages{overflow:visible!important}}
 h1{font-size:16px;margin:0 0 8px}
 details{border:1px solid var(--bd);border-radius:6px;margin-bottom:10px}
 summary{cursor:pointer;padding:8px 10px;font-weight:700;background:var(--bg);border-radius:6px}
@@ -51,73 +47,6 @@ button:disabled{opacity:.45;cursor:default}
 .pw{position:relative;overflow:hidden;flex:none;margin:0 auto;box-shadow:0 1px 6px rgba(0,0,0,.3)}
 .pw.off{position:absolute;left:-99999px;top:0;visibility:hidden;pointer-events:none}
 .pw .ticket{position:absolute;left:0;top:0;transform-origin:0 0}
-/* ticket */
-.ticket{width:210mm;height:297mm;padding:15mm;background:#fff;color:#000;font-family:"Hiragino Mincho ProN","Yu Mincho","MS PMincho",serif;font-size:10.5pt;line-height:1.5;display:flex;flex-direction:column;overflow:hidden}
-.ticket *{box-sizing:border-box}
-.t-main{flex:1;min-height:0;display:flex;flex-direction:column;gap:3.5mm}
-.t-head{text-align:center;border-bottom:1.2mm double #000;padding-bottom:3mm}
-.t-lab{font-size:13pt;letter-spacing:.6em;white-space:nowrap;font-weight:700}
-.t-title{font-size:22pt;font-weight:700;margin-top:1mm;white-space:nowrap;overflow:hidden}
-.t-org{font-size:10pt;white-space:nowrap}
-.t-box{border:.6mm solid #000;display:flex;min-height:36mm}
-.t-box .l{flex:1;min-width:0;display:flex;flex-direction:column}
-.t-box .r{width:30mm;margin:2mm;border:.3mm solid #000;display:flex;align-items:center;justify-content:center;font-size:8pt;text-align:center;color:#444;white-space:pre-line}
-.t-cell{padding:2mm 4mm;display:flex;align-items:baseline;gap:4mm;min-width:0}
-.t-cell+.t-cell{border-top:.3mm solid #000}
-.t-k{font-size:9pt;width:20mm;flex:none;white-space:nowrap}
-.t-v{flex:1;min-width:0;white-space:nowrap;overflow:hidden}
-.t-no{font-family:"Consolas","Courier New",monospace;font-size:30pt;font-weight:700;letter-spacing:.1em;line-height:1.2}
-.t-name{font-size:24pt;font-weight:700;line-height:1.2;white-space:nowrap;overflow:hidden}
-.t-kana{font-size:8.5pt;display:block;height:4.5mm;white-space:nowrap}
-.t-sch{font-size:12pt}
-table.t-info{border-collapse:collapse;width:100%}
-table.t-info th,table.t-info td{border:.3mm solid #000;padding:1.5mm 3mm;text-align:left;vertical-align:top}
-table.t-info th{width:26mm;background:#eee;font-weight:400;white-space:nowrap}
-table.t-info td{white-space:pre-line}
-.t-h{font-weight:700;font-size:10.5pt;border-left:1.5mm solid #000;padding-left:2mm;margin-bottom:1mm;white-space:nowrap}
-.t-list{margin:0;padding-left:5mm;font-size:10pt}
-ol.t-list{padding-left:6mm}
-.t-foot{margin-top:auto;border-top:.3mm solid #000;padding-top:2mm;font-size:9.5pt;white-space:pre-line}
-.t-stub{height:72mm;margin-top:3mm;border-top:.4mm dashed #000;position:relative;padding-top:6mm;display:flex;flex-direction:column;gap:2mm;flex:none}
-.t-cut{position:absolute;top:-3.6mm;left:6mm;background:#fff;padding:0 2mm;font-size:12pt;line-height:1}
-.t-stub .t-name{font-size:20pt}
-.t-stub .t-no{font-size:24pt}
-/* template: waseda */
-.tw{padding:0;display:block;position:relative;font-family:"Yu Gothic","Meiryo","Hiragino Sans",sans-serif;line-height:1.3;--wac:#C00000}
-.tw .w-hd{position:absolute;left:8mm;top:6.5mm;display:flex;align-items:center;gap:6mm;white-space:nowrap}
-.tw .w-hd-t{font-size:13pt}
-.tw .w-badge{background:var(--wac);color:#fff;font-size:13pt;height:8.6mm;line-height:8.6mm;padding:0 4.5mm}
-.tw .w-mark{position:absolute;right:19mm;top:4mm;font-size:38pt;font-weight:700;letter-spacing:.25em;margin-right:-.25em;line-height:1.2;white-space:nowrap}
-.tw .w-tbl{position:absolute;left:19.5mm;top:22.3mm;width:171mm;border:1.5pt solid var(--wac);border-bottom:0}
-.tw .w-row{display:flex;border-bottom:1.5pt solid var(--wac)}
-.tw .w-c{position:relative;flex:1;min-width:0;height:100%}
-.tw .w-c+.w-c{border-left:1.5pt solid var(--wac)}
-.tw .w-l{position:absolute;left:2mm;top:1mm;font-size:10pt;white-space:nowrap}
-.tw .w-v{position:absolute;left:3mm;right:3mm;top:0;bottom:0;padding-top:5.5mm;white-space:nowrap;overflow:hidden;text-align:center;font-size:26pt;line-height:1.25}
-.tw .wide .w-l{top:50%;transform:translateY(-50%)}
-.tw .wide .w-v{left:25mm;text-align:left;padding-top:0;font-size:28pt}
-.tw .w-v.al-l{text-align:left}.tw .w-v.al-c{text-align:center}
-.tw .w-v.ac{color:var(--wac);font-weight:700}
-.tw .w-sub{font-size:.4em;line-height:1.1}
-.tw .w-sch{display:flex;flex-direction:column;justify-content:center;overflow:hidden;padding-top:0}
-.tw .w-sch div{white-space:nowrap}
-.tw .w-sch b{display:inline-block;width:15mm;font-weight:400}
-.tw .w-sch i{font-style:normal;letter-spacing:.22em}
-.tw .w-wm{position:absolute;left:105mm;white-space:nowrap;line-height:1;pointer-events:none;-webkit-print-color-adjust:exact;print-color-adjust:exact;-webkit-user-select:none;user-select:none}
-.tw .w-wm span{display:inline-block}
-.tw .w-wm.editing{pointer-events:auto;-webkit-user-select:text;user-select:text}
-@media screen{.tw .w-wm span{pointer-events:auto;cursor:pointer}.tw .w-wm.editing span{cursor:text}}
-.tw .w-fold{position:absolute;left:0;top:148.5mm;width:210mm;height:0;display:flex;align-items:center;gap:5mm;font-size:13pt;white-space:nowrap}
-.tw .w-fold span{display:block;flex:1;border-top:1.2pt dashed #000;height:0}
-.tw .w-fold em{font-style:normal;flex:none}
-.tw .w-lo{position:absolute;left:20mm;top:158.5mm;width:85mm}
-.tw .w-nh{display:inline-block;background:var(--wac);color:#fff;font-size:13pt;padding:1mm 3.5mm;margin-bottom:4mm}
-.tw .w-n{font-size:11.5pt;line-height:1.4;padding-left:1.3em;text-indent:-1.3em;margin:0 0 .5mm 1mm;line-break:strict}
-.tw .w-n.r{color:var(--wac)}
-.tw .w-ri{position:absolute;left:115mm;top:160mm;width:78mm}
-.tw.sw .w-lo{left:108mm}.tw.sw .w-ri{left:20mm}
-.tw .w-ri img{display:block;width:100%;height:auto}
-.tw .w-ri img+img{margin-top:5mm}
 /* item editor */
 input[type=color]{width:100%;height:32px;padding:2px;border:1px solid var(--bd);border-radius:4px;background:var(--inp)}
 .sub{font-weight:700;font-size:12px;margin:12px 0 0;padding-top:8px;border-top:1px solid var(--bd)}
@@ -173,14 +102,6 @@ input[type=color]{width:100%;height:32px;padding:2px;border:1px solid var(--bd);
 @media(max-width:520px){#uem{display:none}#sst .stx{display:none}.eh1 h1{font-size:15px}.eh2{justify-content:flex-start}}
 @media print{#mdl,#draftbar,#smenu{display:none!important}}
 #uem{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right;color:var(--mut)}
-#steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
-#steps button{display:flex;flex-direction:column;align-items:flex-start;gap:0;padding:3px 6px;line-height:1.3;min-width:0;overflow:hidden;text-align:left}
-#steps b,#steps small{display:block;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#steps b{font-size:12px}
-#steps small{font-size:11px;color:var(--mut)}
-#steps .ok small{color:var(--ok)}#steps .ng small{color:var(--warn)}
-#steps .ok{border-color:var(--ok)}#steps .ng{border-color:var(--warn)}
-details[data-sec]{scroll-margin-top:118px}
 .it{scroll-margin-top:118px}
 .it.cur{border-color:var(--ac);box-shadow:0 0 0 1px var(--ac)}
 summary{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -324,6 +245,190 @@ html,body{background:#fff}
 .fu{grid-template-columns:minmax(0,1fr) auto}.fu .fub{display:none}
 }
 @media print{#fp{display:none!important}}
+/* ================= v3: レイアウト・かんたんモード・エクスプローラー ================= */
+:root{--s1:4px;--s2:8px;--s3:12px;--s4:16px;--s5:24px;--s6:32px;--r:10px;--acs:rgba(37,99,235,.14)}
+.app{display:flex;flex-direction:column;min-height:100vh}
+.body{display:flex;flex-direction:column;flex:1;min-height:0}
+#editor{padding:0;background:var(--panel)}
+#pane{padding:0 var(--s4) var(--s3)}
+#bar{top:0}
+@media(min-width:1024px){
+.app{flex-direction:column;height:100vh;overflow:hidden}
+.body{flex-direction:row}
+#editor{width:460px;flex:none;overflow-y:auto;border-right:1px solid var(--bd)}
+.app[data-mode=adv] #editor{width:440px}
+#pane{flex:1;overflow:auto}#pages{overflow:visible!important}}
+.app[data-mode=easy] .adv-only,.app[data-mode=adv] .easy-only{display:none!important}
+button{border-radius:8px}
+button.ghost{background:transparent;border-color:transparent;color:var(--mut)}
+button.ghost:hover{color:var(--fg);background:var(--bg)}
+button.dg,.dg{color:var(--err)}
+/* トップバー */
+#topbar{display:flex;align-items:center;flex-wrap:wrap;gap:var(--s2) var(--s3);padding:var(--s2) var(--s4);background:var(--panel);border-bottom:1px solid var(--bd);min-width:0}
+.brand{font-size:15px;font-weight:700;margin:0;white-space:nowrap}
+.tb-name{display:flex;align-items:center;gap:var(--s2);min-width:0;flex:1 1 120px;font-size:12px}
+.tb-btns{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-left:auto}
+.tb-btns button{padding:4px 10px;font-size:12px}
+#undo,#redo{font-size:16px;line-height:1.2;padding:0 8px!important}
+#modebtn{border-color:var(--bd);color:var(--mut)}
+#topbar #uem{flex:none;max-width:180px;text-align:right}
+#topbar .sv #save{border-radius:8px 0 0 8px;padding:4px 12px;font-weight:700}
+#topbar .sv #smore{border-radius:0 8px 8px 0;border-left:1px solid rgba(255,255,255,.45);padding:4px 7px}
+@media(max-width:700px){#uem{display:none}.tb-btns{margin-left:0;width:100%}#sst .stx{display:none}}
+/* ウィザード */
+#wiz{padding:var(--s5) var(--s5) 0;display:flex;flex-direction:column;min-height:100%}
+@media(max-width:700px){#wiz{padding:var(--s4) var(--s4) 0}}
+.wprog{display:flex;list-style:none;margin:0 0 var(--s5);padding:0}
+.wprog li{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;gap:6px;position:relative;font-size:12px;color:var(--mut);cursor:pointer}
+.wprog li:before{content:"";position:absolute;top:14px;left:-50%;width:100%;height:2px;background:var(--bd)}
+.wprog li:first-child:before{display:none}
+.wprog .n{position:relative;z-index:1;width:30px;height:30px;border-radius:50%;border:2px solid var(--bd);background:var(--panel);display:grid;place-items:center;font-weight:700;font-size:13px}
+.wprog .t{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 2px}
+.wprog li.done .n{background:var(--ac);border-color:var(--ac);color:#fff}
+.wprog li.done:before,.wprog li.cur:before{background:var(--ac)}
+.wprog li.cur .n{border-color:var(--ac);color:var(--ac);box-shadow:0 0 0 4px var(--acs)}
+.wprog li.cur{color:var(--fg);font-weight:700}
+.wh{font-size:21px;margin:0 0 var(--s1);line-height:1.3}
+.wsub{color:var(--mut);margin:0 0 var(--s5);font-size:13px}
+.wstep{flex:1}
+#wfoot{position:sticky;bottom:0;z-index:5;background:var(--panel);display:flex;gap:var(--s3);padding:var(--s4) 0;border-top:1px solid var(--bd);margin-top:var(--s5)}
+#wfoot .pri{flex:1;padding:12px;font-size:15px;font-weight:700;border-radius:10px}
+#wfoot .back{padding:12px 20px;font-size:14px;border-radius:10px}
+.gsec{margin:0 0 var(--s5)}
+.gsec h3{display:flex;align-items:center;gap:var(--s2);font-size:13px;margin:0 0 var(--s2);color:var(--mut);font-weight:700}
+.gsec h3 .gl{flex:1;height:1px;background:var(--bd)}
+.gal{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:var(--s3)}
+.card{display:flex;flex-direction:column;gap:6px;min-width:0;padding:var(--s2);border:2px solid var(--bd);border-radius:12px;background:var(--panel);text-align:left;cursor:pointer;white-space:normal;position:relative}
+.card:hover{border-color:var(--mut)}
+.card.cur{border-color:var(--ac);box-shadow:0 0 0 3px var(--acs)}
+.card.cur:after{content:"\2713";position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;background:var(--ac);color:#fff;font-size:13px;line-height:22px;text-align:center;font-weight:700}
+.card .cn{font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .cm{display:flex;align-items:center;gap:6px;min-width:0}
+.chip{display:inline-block;font-size:11px;padding:0 8px;border-radius:999px;background:var(--bg);border:1px solid var(--bd);color:var(--mut);white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.swt{display:inline-flex;gap:2px;flex:none}.swt i{width:10px;height:10px;border-radius:50%;border:1px solid rgba(0,0,0,.2)}
+.mini{position:relative;width:100%;aspect-ratio:210/297;overflow:hidden;background:#fff;border:1px solid var(--bd);border-radius:4px;pointer-events:none}
+.mini .ticket{position:absolute;left:0;top:0;transform-origin:0 0}
+.mini img.tb{width:100%;height:100%;object-fit:cover;object-position:top;display:block}
+.mini .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--mut);font-size:11px}
+.gmore{margin-top:var(--s2);padding:8px 14px}
+.empty{padding:var(--s4);border:1px dashed var(--bd);border-radius:var(--r);color:var(--mut);font-size:13px;text-align:center}
+.fgrp{margin:0 0 var(--s5)}
+.fgrp>label{font-size:13px;font-weight:700;color:var(--fg);margin:0 0 6px;white-space:normal}
+.fgrp input[type=text],.fgrp input[type=date]{padding:10px 12px;font-size:15px;border-radius:8px}
+.fgrp .sch{grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:var(--s2);margin-bottom:var(--s2)}
+.fgrp .sch input{padding:9px 10px;font-size:14px}
+.fgrp .sch button{padding:0 12px}
+.fgrp .sch-h{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 60px;gap:var(--s2);font-size:11px;color:var(--mut);margin-bottom:2px}
+.fhint{font-size:12px;color:var(--mut);margin:var(--s2) 0 0}
+.hintbox{display:flex;gap:var(--s3);align-items:center;padding:var(--s3);margin:0 0 var(--s4);background:var(--bg);border-radius:var(--r);font-size:12px;color:var(--mut)}
+.hintbox .xl{flex:none;border-collapse:collapse;font-size:10px;color:var(--fg);background:var(--panel)}
+.hintbox .xl td,.hintbox .xl th{border:1px solid var(--bd);padding:1px 6px;white-space:nowrap;font-weight:400}
+.hintbox .xl th{background:var(--bg);color:var(--mut)}
+.hintbox .xl .hl{background:var(--acs);outline:2px solid var(--ac);outline-offset:-2px}
+.hintbox b{color:var(--fg)}
+.sum{display:grid;grid-template-columns:auto minmax(0,1fr);gap:var(--s2) var(--s4);margin:0 0 var(--s4);padding:var(--s4);background:var(--bg);border-radius:var(--r);font-size:13px}
+.sum dt{color:var(--mut);white-space:nowrap}.sum dd{margin:0;font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sum dd.ng{color:var(--warn)}.sum dd.ok{color:var(--ok)}
+.bigbtn{display:block;width:100%;padding:13px;font-size:15px;border-radius:10px;margin:0 0 var(--s2);font-weight:700}
+.wnote{font-size:12px;color:var(--warn);background:var(--warnbg);border-radius:8px;padding:8px 10px;margin:0 0 var(--s3)}
+.wnote a{color:inherit;text-decoration:underline;cursor:pointer}
+#wsst{font-size:12px;color:var(--mut);margin:var(--s2) 0 var(--s4)}
+#s3host .sl{padding:var(--s3) 0}
+#s3host .sl textarea{min-height:92px;font-size:13px}
+/* 詳細編集のタブ */
+#tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:var(--s3) var(--s4);position:sticky;top:0;z-index:6;background:var(--panel);border-bottom:1px solid var(--bd)}
+#tabs button{padding:6px 4px;font-size:12px;border-radius:8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-color:transparent;background:var(--bg)}
+#tabs button.on{background:var(--ac);color:var(--acfg)}
+#tabs .rs{margin-left:4px;font-weight:400;font-size:11px}
+.tp{padding:var(--s4)}
+.tp[hidden]{display:none}
+/* プレビュー（かんたんモードでは編集フックなし） */
+.app[data-mode=easy] .pw [data-item],.app[data-mode=easy] .pw [data-edit]{cursor:default}
+.app[data-mode=easy] .pw [data-item]:hover,.app[data-mode=easy] .pw [data-edit]:hover{outline:0}
+.app[data-mode=easy] .jt-wm span{cursor:default}
+/* エクスプローラー */
+#ex{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.45);display:flex;align-items:center;justify-content:center;padding:var(--s4)}
+.exc{position:relative;width:100%;max-width:1180px;height:min(800px,100%);background:var(--panel);color:var(--fg);border:1px solid var(--bd);border-radius:12px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,.4)}
+.exh{display:flex;align-items:center;gap:var(--s2);padding:var(--s2) var(--s3);border-bottom:1px solid var(--bd);min-width:0}
+.exh b{font-size:15px;white-space:nowrap}
+.exh .sp{flex:1}
+.exh input[type=text]{width:220px;flex:0 1 220px;min-width:0;padding:5px 10px;font-size:13px}
+.exh select{width:auto;padding:5px 6px;font-size:12px}
+.exh button{padding:4px 10px;font-size:12px}
+.exh .seg button{padding:4px 10px}
+#exbanner{padding:var(--s2) var(--s3);background:var(--warnbg);color:var(--warn);font-size:12px;border-bottom:1px solid var(--bd)}
+.exb{flex:1;min-height:0;display:flex}
+#extree{width:230px;flex:none;overflow-y:auto;border-right:1px solid var(--bd);padding:var(--s2);background:var(--bg)}
+.ft{display:flex;align-items:center;gap:6px;padding:5px 8px;border-radius:6px;font-size:13px;cursor:pointer;min-width:0;user-select:none}
+.ft:hover{background:rgba(127,127,127,.14)}
+.ft.on{background:var(--ac);color:var(--acfg)}
+.ft.dt,.exi.dt{outline:2px dashed var(--ac);outline-offset:-2px;background:var(--acs)}
+.ft .tg{width:14px;flex:none;text-align:center;font-size:11px;opacity:.7}
+.ft .ti{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ft small{flex:none;opacity:.65;font-size:11px}
+.fi{flex:none;width:15px;height:11px;border-radius:2px 2px 2px 2px;background:currentColor;opacity:.5;position:relative;margin-top:3px}
+.fi:before{content:"";position:absolute;left:0;top:-3px;width:7px;height:3px;border-radius:2px 2px 0 0;background:currentColor}
+.ft.trash .fi{border-radius:2px 2px 4px 4px}
+.exm{flex:1;min-width:0;display:flex;flex-direction:column}
+.exbar{display:flex;align-items:center;gap:var(--s2);padding:var(--s2) var(--s3);border-bottom:1px solid var(--bd);min-width:0;flex-wrap:wrap}
+.crumbs{display:flex;align-items:center;gap:2px;flex:1 1 200px;min-width:0;font-size:13px;overflow:hidden}
+.crumbs button{border:0;background:transparent;padding:3px 6px;max-width:140px;overflow:hidden;text-overflow:ellipsis;font-size:13px;flex:0 1 auto}
+.crumbs button:last-child{font-weight:700}
+.crumbs button.dt{outline:2px dashed var(--ac)}
+.crumbs span{color:var(--mut);flex:none}
+.exbar .acts{display:flex;gap:6px;flex-wrap:wrap}
+.exbar .acts button{padding:4px 10px;font-size:12px}
+#exlist{flex:1;overflow:auto;min-height:0;outline:0}
+#exst{padding:4px var(--s3);font-size:12px;color:var(--mut);border-top:1px solid var(--bd);min-height:1.8em}
+.exg{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:var(--s2);padding:var(--s3)}
+.exi{position:relative;border:2px solid transparent;border-radius:10px;padding:var(--s2);min-width:0;cursor:default;user-select:none}
+.exi:hover{background:rgba(127,127,127,.1)}
+.exi.sel{background:var(--acs);border-color:var(--ac)}
+.exi .nm{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:6px}
+.exi .mt{font-size:11px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.exi .fb{aspect-ratio:210/297;display:flex;align-items:center;justify-content:center;color:var(--mut)}
+.exi .fb .fi{width:54px;height:40px;border-radius:4px;margin-top:10px}
+.exi .fb .fi:before{width:24px;height:9px;top:-8px;border-radius:4px 4px 0 0}
+.exi .ck{position:absolute;left:10px;top:10px;z-index:2;width:18px;height:18px;margin:0;opacity:0;accent-color:var(--ac)}
+.exi:hover .ck,.exi.sel .ck,.ex-multi .exi .ck{opacity:1}
+.exi .mo{position:absolute;right:8px;top:8px;z-index:2;padding:0 7px;line-height:20px;font-size:14px;opacity:0;background:var(--panel)}
+.exi:hover .mo,.exi.sel .mo{opacity:1}
+@media(hover:none){.exi .mo,.exi .ck{opacity:1}}
+.exl{padding:0 0 var(--s2)}
+.exl .exi{display:grid;grid-template-columns:20px 34px minmax(0,1fr) 120px 110px 30px;gap:var(--s2);align-items:center;border-radius:0;border-width:0 0 1px;border-bottom:1px solid var(--bd);padding:6px var(--s3)}
+.exl .exi .ck,.exl .exi .mo{position:static;opacity:1}
+.exl .exi .nm{margin:0}
+.exl .exi .mini{width:28px;border-radius:2px}
+.exl .exi .fb{width:28px;aspect-ratio:auto;height:24px}
+.exl .exi .fb .fi{width:20px;height:14px;margin-top:4px}
+.exl .exi .fb .fi:before{width:9px;height:4px;top:-4px}
+.exl .exi .c{font-size:12px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.exl .exh2{display:grid;grid-template-columns:20px 34px minmax(0,1fr) 120px 110px 30px;gap:var(--s2);padding:6px var(--s3);font-size:11px;color:var(--mut);border-bottom:1px solid var(--bd);position:sticky;top:0;background:var(--panel);z-index:3}
+.exfl{padding:var(--s6) var(--s4);text-align:center;color:var(--mut);font-size:13px}
+#ctxm{position:fixed;z-index:120;min-width:170px;background:var(--panel);border:1px solid var(--bd);border-radius:8px;box-shadow:0 6px 24px rgba(0,0,0,.3);padding:4px}
+#ctxm button{display:block;width:100%;text-align:left;border:0;background:transparent;padding:7px 12px;font-size:13px}
+#ctxm button:hover{background:var(--bg)}
+#ctxm hr{border:0;border-top:1px solid var(--bd);margin:4px 0}
+#extoggle{display:none}
+@media(max-width:700px){
+#ex{padding:0}.exc{max-width:none;height:100%;border-radius:0;border:0}
+.exh{flex-wrap:wrap}.exh input[type=text]{order:9;flex:1 1 100%;width:auto}
+#extree{display:none;position:absolute;left:0;top:96px;bottom:0;z-index:20;width:80%;max-width:300px;box-shadow:6px 0 24px rgba(0,0,0,.3)}
+.exc.tree-open #extree{display:block}
+#extoggle{display:inline-block}
+.exg{grid-template-columns:repeat(auto-fill,minmax(112px,1fr))}
+.exl .exi,.exl .exh2{grid-template-columns:20px 34px minmax(0,1fr) 30px}
+.exl .exi .c,.exl .exh2 span.c{display:none}
+}
+/* 保存ダイアログ（フォルダ選択） */
+.ftree{max-height:200px;overflow-y:auto;border:1px solid var(--bd);border-radius:8px;padding:4px;background:var(--bg)}
+.nfrow{display:flex;gap:6px;margin-top:6px}.nfrow input{flex:1;min-width:0}
+#mdl .mc.xwide{max-width:520px}
+#mdl .mc .mb button.pri{min-width:96px}
+#mdl .mc .dgb{background:var(--err);border-color:var(--err);color:#fff}
+@media print{#topbar,#ex,#ctxm,#wiz,#adv{display:none!important}
+.body{display:block!important}}
+
 </style>
 </head>
 <body>
@@ -335,55 +440,84 @@ html,body{background:#fff}
 <button type="submit" class="pri" id="lbtn">ログイン</button>
 <p class="note" style="margin-top:12px">名簿はこの端末の中だけで処理され、送信されません。</p>
 </form></div>
-<div class="app off" id="appRoot">
-<div id="editor">
-<div class="ehead">
-<div class="eh1"><h1>受験票ジェネレーター</h1><button id="undo" type="button" title="元に戻す (Ctrl+Z)" aria-label="元に戻す" disabled>↶</button><button id="redo" type="button" title="やり直し (Ctrl+Shift+Z / Ctrl+Y)" aria-label="やり直し" disabled>↷</button><button id="fopen" type="button" title="ファイル保管（受験票PDF・画像素材・資料）">ファイル</button><span class="sv"><button id="save" class="pri" type="button" title="保存 (Ctrl+S)">保存</button><button id="smore" class="pri" type="button" title="その他の保存方法" aria-label="その他の保存方法" aria-haspopup="true" aria-expanded="false">▾</button><div id="smenu" hidden><button id="sas" type="button">名前を付けて保存</button><button id="spdf" type="button">PDFを作成して保存</button><button id="sfile" type="button">ファイルに書き出し</button></div></span></div>
-<div class="eh2"><span id="hname"></span><button id="sst" type="button" data-s=""><i class="sd"></i><span class="stx"></span></button><span id="uem"></span><button id="lout" type="button">ログアウト</button></div>
-<div id="steps" role="navigation" aria-label="作業ステップ"><button type="button" data-st="1"><b>① 名簿</b><small id="s1"></small></button><button type="button" data-st="2"><b>② デザイン</b><small id="s2"></small></button><button type="button" data-st="3"><b>③ 確認</b><small id="s3"></small></button><button type="button" data-st="4"><b>④ 印刷</b><small id="s4"></small></button></div>
+<div class="app off" id="appRoot" data-mode="easy">
+<header id="topbar">
+<h1 class="brand">受験票ジェネレーター</h1>
+<div class="tb-name"><span id="hname"></span><button id="sst" type="button" data-s=""><i class="sd"></i><span class="stx"></span></button></div>
+<div class="tb-btns">
+<button id="undo" class="adv-only" type="button" title="元に戻す (Ctrl+Z)" aria-label="元に戻す" disabled>↶</button><button id="redo" class="adv-only" type="button" title="やり直し (Ctrl+Shift+Z / Ctrl+Y)" aria-label="やり直し" disabled>↷</button>
+<button id="dopen" type="button" title="保存したデザインを開く・整理する">デザイン</button>
+<button id="fopen" type="button" title="ファイル保管（受験票PDF・画像素材・資料）">ファイル</button>
+<span class="sv adv-only"><button id="save" class="pri" type="button" title="保存 (Ctrl+S)">保存</button><button id="smore" class="pri" type="button" title="その他の保存方法" aria-label="その他の保存方法" aria-haspopup="true" aria-expanded="false">▾</button><div id="smenu" hidden><button id="sas" type="button">名前を付けて保存</button><button id="spdf" type="button">PDFを作成して保存</button><button id="sfile" type="button">ファイルに書き出し</button></div></span>
+<button id="modebtn" type="button" class="ghost">詳細編集</button>
+<span id="uem"></span><button id="lout" type="button" class="ghost">ログアウト</button>
 </div>
+</header>
+<div class="body">
+<div id="editor">
 <div id="draftbar" hidden role="alert"><span>前回の未保存の変更があります</span><button id="dfrest" type="button">復元する</button><button id="dfdisc" type="button">破棄</button></div>
-<details open id="rosterSec" data-sec="roster"><summary>名簿<span class="rs" id="rsum"></span></summary><div class="sec">
-<p class="note" style="margin-top:0">項目ごとに、Excelの1列をコピーして貼り付けてください（1行に1人・同じ順番で）。</p>
+<section id="wiz" class="easy-only" aria-label="かんたんモード">
+<ol class="wprog" id="wprog" aria-label="作業ステップ"></ol>
+<div id="wbody">
+<div class="wstep" id="ws1" data-s="1"></div>
+<div class="wstep" id="ws2" data-s="2"></div>
+<div class="wstep" id="ws3" data-s="3" hidden>
+<h2 class="wh">名簿を入れる</h2><p class="wsub">項目ごとにExcelの1列をコピーして、下の欄に貼り付けます。1行が1人分です。</p>
+<div class="hintbox"><table class="xl" aria-hidden="true"><tr><th></th><th>A</th><th>B</th></tr><tr><th>1</th><td class="hl">受験番号</td><td>氏名</td></tr><tr><th>2</th><td class="hl">101</td><td>坂東 慶次</td></tr><tr><th>3</th><td class="hl">102</td><td>湘南 花子</td></tr></table><div><b>Excelの列をまるごとコピー</b>して、同じ項目の欄に貼り付けてください。1行目の見出しは自動で除きます。</div></div>
+<div id="s3host"></div>
+</div>
+<div class="wstep" id="ws4" data-s="4" hidden></div>
+</div>
+<div id="wfoot"><button id="wback" type="button" class="back">戻る</button><button id="wnext" type="button" class="pri">次へ</button></div>
+</section>
+<section id="adv" class="adv-only" aria-label="詳細編集">
+<div id="tabs" role="tablist"><button type="button" data-tab="items">項目</button><button type="button" data-tab="look">見た目</button><button type="button" data-tab="notes">注意事項・画像</button><button type="button" data-tab="wm">透かし</button><button type="button" data-tab="roster">名簿<span id="rsum" class="rs"></span></button><button type="button" data-tab="io">入出力</button></div>
+<div class="tp" id="tp-items"><p class="note" style="margin-top:0">プレビューの項目をクリックして直接編集することもできます。</p><div id="f-hdr"></div><div class="sub">項目</div><div id="items"></div><button id="iadd" type="button">＋項目を追加</button></div>
+<div class="tp" id="tp-look" hidden><label for="tpl" style="margin-top:0">デザイン（テンプレート）</label><select id="tpl"></select><div id="f-look"></div></div>
+<div class="tp" id="tp-notes" hidden><div id="f-notes"></div></div>
+<div class="tp" id="tp-wm" hidden><div id="f-wm"></div></div>
+<div class="tp" id="tp-roster" hidden><div id="r-host"></div><div id="r-host2"></div></div>
+<div class="tp" id="tp-io" hidden>
+<p class="note" style="margin-top:0">デザインの保存・共有は上の「保存」、保存済みの整理は「デザイン」から。ここではファイルとして書き出し・読み込みできます。</p>
+<div id="mig" hidden><div id="migt"></div><div class="row"><button id="migup" class="pri" type="button">共有にアップロード</button><button id="migclr" type="button">ローカルのコピーを削除</button></div></div>
+<label for="bundled">同梱デザイン（このアプリに入っているもの）</label><select id="bundled"><option value="">（選んで読み込み）</option><option value="default-sodai-pre">早大プレ（標準）</option><option value="example-navy">早大プレ（紺・明朝）</option><option value="sodai-pre-2027">早大プレ2027（透かし付き）</option></select>
+<div class="pgrid"><button id="fexp" type="button">ファイルに書き出し</button><button id="fimp" type="button">ファイルから読み込み</button></div><input id="fimpf" type="file" accept=".json,application/json" hidden>
+<details id="jpaste" style="margin:6px 0 0"><summary style="font-weight:400;font-size:12px">JSONを貼り付けて読み込み</summary><div class="sec"><textarea id="jtxt" rows="5" placeholder='{"format":"juken-design","version":1,"template":"waseda","data":{…}}' spellcheck="false"></textarea><div class="row" style="margin-top:6px"><button id="jgo" type="button">読み込み</button></div></div></details>
+<p class="note" id="pstat"></p>
+<p class="note">※ファイルをこの画面にドロップしても読み込めます。形式は DESIGN_FORMAT.md を参照。</p>
+</div>
+</section>
+</div>
+<div id="pane" tabindex="0">
+<div id="bar"><span id="pcount"></span><span class="seg" id="nav"><button id="nprev" type="button" title="前の1名 (←)" aria-label="前の1名">◀</button><span id="npos"></span><button id="nnext" type="button" title="次の1名 (→)" aria-label="次の1名">▶</button></span><button id="tall" type="button" title="全員をまとめて表示／1名ずつ表示">全員表示</button><span class="seg adv-only"><button id="zfit" type="button" title="画面幅に合わせる">幅に合わせる</button><button id="z100" type="button" title="実寸（A4=100%）">100%</button></span><button id="pdfsave" class="adv-only" type="button" title="全員分の受験票PDFを作り、ファイル保管に保存します">PDFを保存</button><button class="pri adv-only" id="print" type="button">印刷 / PDF保存</button></div>
+<div id="pages"></div>
+</div>
+</div>
+</div>
+<div id="store" hidden>
+<div id="rosterBlk">
 <div id="slots"></div>
-<div class="sl-foot"><p class="note" id="slhint" style="margin-top:0">名簿から入れる項目は「項目」で種類を「名簿の列」にすると、ここに欄が増えます。</p><button id="cadd" type="button">＋名簿の項目を追加</button></div>
+<div class="sl-foot adv-only"><p class="note" id="slhint" style="margin-top:0">名簿から入れる項目は「項目」で種類を「名簿の列」にすると、ここに欄が増えます。</p><button id="cadd" type="button">＋名簿の項目を追加</button></div>
 <p class="note">※名簿（個人情報）はこの端末の中だけで処理され、送信されません。保存もされません。ページを閉じる・再読込で消えます。</p>
-<details id="other"><summary>その他の読み込み方法（Excel/CSVファイル・表ごと貼り付け）</summary><div class="sec">
+<details id="other"><summary>ファイルから読み込む（Excel・CSV）／サンプルで試す</summary><div class="sec">
 <p class="note" style="margin-top:0">1行目が見出しの表を読み込むと、見出しが項目名と一致する列が上の各欄に入ります。</p>
 <div id="drop"><div class="dz-t">CSV / Excelファイルをここにドロップ</div><div class="row"><button id="fbtn" type="button">ファイルを選択</button><button id="trysample" type="button">サンプルで試す</button><input id="file" type="file" accept=".csv,.xlsx,.xls" hidden></div></div>
 <details id="pastebox"><summary>表ごと貼り付けて読み込み</summary><textarea id="paste" rows="3" placeholder="Excelからコピーしたタブ区切り・1行目は見出し"></textarea>
 <div class="row" style="margin-top:6px"><button id="pbtn" type="button">貼り付けを読み込む</button></div></details>
 <div class="row" style="margin-top:6px"><button id="sample" type="button">サンプルCSVをダウンロード</button></div>
 </div></details>
+</div>
 <div id="loaded" hidden>
 <div class="row" style="margin-top:6px"><span id="cnt" style="font-weight:700;flex:1;min-width:0"></span><button id="rclr" type="button" style="padding:2px 8px;font-size:12px">全てクリア</button></div>
 <div class="row" style="margin-top:8px"><button id="sall" type="button">全選択</button><button id="snone" type="button">全解除</button><span id="selcnt" class="note"></span></div>
 <div id="list"></div>
-</div></div></details>
-<details open id="itemsSec" data-sec="items"><summary>項目</summary><div class="sec">
-<p class="note" style="margin-top:0">各項目の値は「名簿の列」から自動で入れるか、固定文字・日付などを直接指定できます。プレビューの項目をクリックしても編集できます。</p>
-<div id="items"></div>
-<button id="iadd" type="button">＋項目を追加</button>
-</div></details>
-<details open id="fieldsSec" data-sec="fields"><summary id="fsum">デザイン</summary><div class="sec" id="fields"></div></details>
-<details open id="designSec" data-sec="save"><summary>保存・テンプレート</summary><div class="sec">
-<label for="tpl">デザイン（テンプレート）</label><select id="tpl"></select>
-<label for="pre">保存済みデザイン</label><div class="prow"><select id="pre"></select><button id="preload" type="button" title="共有デザインを再読み込み" aria-label="再読み込み">↻</button></div>
-<label for="bundled">同梱デザイン（このアプリに入っているもの）</label><select id="bundled"><option value="">（選んで読み込み）</option><option value="default-sodai-pre">早大プレ（標準）</option><option value="example-navy">早大プレ（紺・明朝）</option><option value="sodai-pre-2027">早大プレ2027（透かし付き）</option></select>
-<p class="note" id="pstat"></p>
-<div id="mig" hidden><div id="migt"></div><div class="row"><button id="migup" class="pri" type="button">共有にアップロード</button><button id="migclr" type="button">ローカルのコピーを削除</button></div></div>
-<div class="pgrid"><button id="psave" type="button">デザインを保存</button><button id="pover" type="button">上書き保存</button><button id="pren" type="button">名前を変更</button><button id="pdel" type="button">削除</button></div>
-<div class="pgrid"><button id="fexp" type="button">ファイルに書き出し</button><button id="fimp" type="button">ファイルから読み込み</button></div><input id="fimpf" type="file" accept=".json,application/json" hidden>
-<details id="jpaste" style="margin:6px 0 0"><summary style="font-weight:400;font-size:12px">JSONを貼り付けて読み込み</summary><div class="sec"><textarea id="jtxt" rows="5" placeholder='{"format":"juken-design","version":1,"template":"waseda","data":{…}}' spellcheck="false"></textarea><div class="row" style="margin-top:6px"><button id="jgo" type="button">読み込み</button></div></div></details>
-<p class="note">※ファイルをこの枠（「保存・テンプレート」）にドロップしても読み込めます。形式は DESIGN_FORMAT.md を参照。</p>
-<p class="note">※項目・デザイン設定を名前を付けて保存すると、ログインしているスタッフ全員で共有されます。<br>※名簿はこの端末の中だけで処理され、送信されません。</p>
-</div></details>
-</div>
-<div id="pane" tabindex="0">
-<div id="bar"><span id="pcount"></span><span class="seg" id="nav"><button id="nprev" type="button" title="前の1名 (←)" aria-label="前の1名">◀</button><span id="npos"></span><button id="nnext" type="button" title="次の1名 (→)" aria-label="次の1名">▶</button></span><button id="tall" type="button" title="全員をまとめて表示／1名ずつ表示">全員表示</button><span class="seg"><button id="zfit" type="button" title="画面幅に合わせる">幅に合わせる</button><button id="z100" type="button" title="実寸（A4=100%）">100%</button></span><button id="pdfsave" type="button" title="全員分の受験票PDFを作り、ファイル保管に保存します">PDFを保存</button><button class="pri" id="print" type="button">印刷 / PDF保存</button></div>
-<div id="pages"></div>
 </div>
 </div>
+<div id="ex" hidden><div class="exc" role="dialog" aria-modal="true" aria-label="デザイン">
+<div class="exh"><b>デザイン</b><button id="extoggle" type="button">フォルダ</button><span class="sp"></span><span class="seg" id="exview"><button type="button" data-v="grid" title="サムネイル表示">サムネイル</button><button type="button" data-v="list" title="一覧表示">一覧</button></span><select id="exsort" aria-label="並び順"><option value="name-asc">名前（昇順）</option><option value="name-desc">名前（降順）</option><option value="at-desc">更新が新しい順</option><option value="at-asc">更新が古い順</option></select><input type="text" id="exq" placeholder="デザインを検索" aria-label="検索"><button id="exrf" type="button" title="再読み込み" aria-label="再読み込み">↻</button><button id="exx" type="button" title="閉じる (Esc)" aria-label="閉じる">✕</button></div>
+<div id="exbanner" hidden>エクスプローラー機能を使うには supabase-explorer.sql を実行してください（フォルダ・サムネイル・ゴミ箱が使えるようになります）。</div>
+<div class="exb"><div id="extree"></div><div class="exm"><div class="exbar"><div class="crumbs" id="excrumbs"></div><div class="acts" id="exacts"></div></div><div id="exlist" tabindex="0"></div><div id="exst"></div></div></div>
+</div></div>
 <div id="fp" hidden><div class="fpc" role="dialog" aria-modal="true" aria-label="ファイル">
 <div class="fph"><b>ファイル</b><span class="sp"></span><button id="fpup" class="pri" type="button">＋ アップロード</button><button id="fprf" type="button" title="再読み込み" aria-label="再読み込み">↻</button><button id="fpx" type="button" title="閉じる (Esc)" aria-label="閉じる">✕</button></div>
 <div id="fppick" hidden></div>
@@ -400,244 +534,79 @@ html,body{background:#fff}
 <script>
 (function(){
 'use strict';
+var JT=JukenTemplates,C=JT.ctx;
 var $=function(id){return document.getElementById(id)};
-function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e}
+var el=C.el,clone=C.clone,lines=C.lines,fmtDate=C.fmtDate,fit=C.fit;
 function ed(e,k){e.setAttribute('data-edit',k);return e}
-function clone(o){return JSON.parse(JSON.stringify(o))}
-function lines(s){return (s||'').split(/\r?\n/).map(function(x){return x.trim()}).filter(Boolean)}
-function fmtDate(s){if(!s)return '';var m=/^(\d+)-(\d+)-(\d+)$/.exec(s);if(!m)return s;
-var d=new Date(+m[1],+m[2]-1,+m[3]);return m[1]+'年'+(+m[2])+'月'+(+m[3])+'日（'+'日月火水木金土'[d.getDay()]+'）'}
-function fit(e,min){var fs=parseFloat(getComputedStyle(e).fontSize),g=0;
-e.style.fontSize=fs+'px';while(e.scrollWidth>e.clientWidth+0.5&&fs>(min||6)&&g++<200){fs-=0.5;e.style.fontSize=fs+'px'}}
+function fitAll(t){(t._fits||[]).forEach(function(e){fit(e,e._fitMin)})}
+function btn(t,title){var b=el('button',null,t);b.type='button';if(title)b.title=title;return b}
+function opt(sel,list,cur){list.forEach(function(o){var op=el('option',null,o[1]);op.value=o[0];sel.appendChild(op)});sel.value=cur;return sel}
+function fld(label,ctl,cls){var d=el('div',cls||'');d.appendChild(el('label',null,label));d.appendChild(ctl);return d}
 
-/* ---------- テンプレート ---------- */
-var SCH_W=[{t:'10:00〜11:30',c:'英語'},{t:'13:00〜14:30',c:'国語'},{t:'15:30〜16:30',c:'社会'}];
-var NOTES_W='!こちらの受験票を折って試験当日に持参してください。\n入場の際、受験票の提示が必要です。\n!試験教室は8:30から開いています。試験時間の30分前までに試験教室に入場してください。\n試験教室の座席に着席する際に、机に貼られている受験番号と一致していることを確認してください。\n受験票は試験時間中机上に置きますので、何も書き込まないでください。（書き込みを発見した場合、不正行為となる可能性があります。）\n受験票は入学後の学生証交付の際に必要になりますので、大切に保管してください。';
-var TEMPLATES={};var TPL_ORDER=[];
-function addTemplate(t){TEMPLATES[t.id]=t;TPL_ORDER.push(t.id)}
-
-/* シンプル */
-function renderSimple(S0,V){var st={no:groupVal(S0,'no'),name:groupVal(S0,'name'),kana:groupVal(S0,'kana'),school:groupVal(S0,'school'),grade:groupVal(S0,'grade')};var t=el('div','ticket'),fits=[];var m=el('div','t-main');
-function cell(k,v,cls){var c=el('div','t-cell');c.appendChild(el('div','t-k',k));var d=el('div','t-v '+(cls||''));if(v instanceof Node)d.appendChild(v);else d.textContent=v;c.appendChild(d);return c}
-var h=el('div','t-head');h.appendChild(el('div','t-lab','受験票'));
-var ti=ed(el('div','t-title',V.title||''),'title');h.appendChild(ti);fits.push(ti);
-if(V.school)h.appendChild(ed(el('div','t-org',V.school),'school'));m.appendChild(h);
-var box=el('div','t-box'),l=el('div','l');
-l.appendChild(cell('受験番号',st.no,'t-no'));
-var nm=el('div');nm.appendChild(el('span','t-kana',st.kana||''));var nn=el('div','t-name',st.name);nm.appendChild(nn);
-l.appendChild(cell('氏名',nm,''));fits.push(nn);
-var sg=[st.school,st.grade].filter(Boolean).join('　');
-if(sg){var c3=cell('学校・学年',sg,'t-sch');l.appendChild(c3);fits.push(c3.lastChild)}
-box.appendChild(l);
-if(V.photo)box.appendChild(el('div','r','写真\n（縦4cm×横3cm）'));
-m.appendChild(box);
-var tb=el('table','t-info');
-function tr(k,v){var r=document.createElement('tr');r.appendChild(el('th',null,k));r.appendChild(el('td',null,v));tb.appendChild(r)}
-if(V.date)tr('実施日',fmtDate(V.date));if(V.time)tr('集合時刻',V.time);if(V.place)tr('会場',V.place);
-if(tb.rows.length)m.appendChild(tb);
-var sr=V.sched.filter(function(r){return r.t||r.c});
-if(sr.length){var w=el('div');w.appendChild(el('div','t-h','時間割'));var t2=el('table','t-info');
-sr.forEach(function(r){var x=document.createElement('tr');x.appendChild(el('th',null,r.t));x.appendChild(el('td',null,r.c));t2.appendChild(x)});
-t2.querySelectorAll('th').forEach(function(th){th.style.width='42mm'});w.appendChild(t2);m.appendChild(w)}
-var it=lines(V.items);if(it.length){var w2=el('div');w2.appendChild(el('div','t-h','持ち物'));var u=el('ul','t-list');it.forEach(function(x){u.appendChild(el('li',null,x))});w2.appendChild(u);m.appendChild(w2)}
-var nt=lines(V.notes);if(nt.length){var w3=el('div');w3.appendChild(el('div','t-h','注意事項'));var o=el('ol','t-list');nt.forEach(function(x){o.appendChild(el('li',null,x))});w3.appendChild(o);m.appendChild(w3)}
-if(V.contact)m.appendChild(el('div','t-foot','お問い合わせ：'+V.contact));
-t.appendChild(m);
-if(V.stub){var sb=el('div','t-stub');sb.appendChild(el('div','t-cut','✂'));
-var a=el('div','t-lab','受験票（控え）');a.style.textAlign='left';a.style.letterSpacing='.3em';sb.appendChild(a);
-var s1=el('div','t-cell');s1.appendChild(el('div','t-k','受験番号'));s1.appendChild(el('div','t-v t-no',st.no));
-var s2=el('div','t-cell');s2.appendChild(el('div','t-k','氏名'));var sn=el('div','t-v t-name',st.name);s2.appendChild(sn);fits.push(sn);
-sb.appendChild(s1);sb.appendChild(s2);if(V.title)sb.appendChild(el('div',null,V.title+(V.date?'　'+fmtDate(V.date):'')));t.appendChild(sb)}
-t._fits=fits;return t}
-addTemplate({id:'simple',name:'シンプル',
-fields:[
-{k:'school',label:'校舎名・主催（空欄可）',type:'text',def:''},
-{k:'title',label:'試験名',type:'text',def:'校内実力テスト'},
-{k:'date',label:'実施日',type:'date',def:''},
-{k:'time',label:'集合時刻',type:'time',def:'09:00'},
-{k:'place',label:'会場（複数行可）',type:'textarea',def:''},
-{k:'sched',label:'時間割',type:'sched',def:[{t:'09:00〜10:00',c:'国語'},{t:'10:20〜11:20',c:'数学'}]},
-{k:'items',label:'持ち物（1行1項目）',type:'lines',def:'筆記用具\n消しゴム\n時計（通信機能のないもの）'},
-{k:'notes',label:'注意事項（1行1項目）',type:'lines',def:'この受験票は試験当日必ず持参してください。\n集合時刻に遅れないように来場してください。\n試験中は携帯電話・スマートフォンの電源を切ってください。'},
-{k:'contact',label:'問い合わせ先（1行）',type:'text',def:''},
-{k:'photo',label:'写真貼付欄を表示',type:'check',def:false},
-{k:'stub',label:'切り取り線＋控え（試験官用）',type:'check',def:false},
-{k:'apre',label:'番号の自動採番：接頭辞',type:'text',def:'',half:1},
-{k:'astart',label:'開始番号',type:'number',def:1,half:1},
-{k:'adig',label:'桁数',type:'number',def:3,half:1}],
-render:renderSimple});
-
-/* 早大プレ型 */
-function imgSrc(v,def){if(!v||v.hide)return '';return v.d||def}
-var ITSZ={half:{S:20,M:26,L:30,XL:34},full:{S:20,M:24,L:28,XL:34},sch:{S:11,M:14,L:17,XL:20}};
-var itSeq=0;function newId(){return 'i'+Date.now().toString(36)+(itSeq++)}
-function mkItem(label,source,o){var it={id:newId(),label:label,source:source,column:'',value:'',rows:[],auto:{prefix:'',start:1,digits:3},fallback:'',width:'full',size:'M',color:'black',align:'',hidden:false};
-for(var k in o)it[k]=o[k];return it}
-function defItems(){return [
-mkItem('受験番号','column',{column:'受験番号',width:'half',size:'L'}),
-mkItem('試験場','fixed',{value:'東進HS 藤沢校',width:'half',size:'XL',color:'accent'}),
-mkItem('カナ氏名','column',{column:'カナ氏名',width:'half'}),
-mkItem('教室','fixed',{value:'レクチャールーム',width:'half'}),
-mkItem('試験日','date',{value:'2023-07-02',size:'L'}),
-mkItem('入試制度','fixed',{value:'第一回早大プレ',size:'L'}),
-mkItem('志望学部','column',{column:'志望学部',size:'L'}),
-mkItem('試験時間','schedule',{rows:clone(SCH_W)})]}
-function normItems(arr){var oks=['column','fixed','date','schedule','autonumber'];
-return arr.filter(function(x){return x&&typeof x==='object'}).map(function(x){var it=mkItem(String(x.label||''),oks.indexOf(x.source)>=0?x.source:'fixed',{});
-if(typeof x.id==='string'&&x.id)it.id=x.id;
-['column','value','fallback'].forEach(function(k){if(typeof x[k]==='string')it[k]=x[k]});
-if(Array.isArray(x.rows))it.rows=x.rows.filter(function(r){return r&&typeof r==='object'}).map(function(r){return {t:String(r.t||''),c:String(r.c||'')}});
-if(x.auto&&typeof x.auto==='object'){it.auto={prefix:String(x.auto.prefix||''),start:+x.auto.start||0,digits:Math.max(1,+x.auto.digits||3)}}
-if(x.width==='half'||x.width==='full')it.width=x.width;
-if(['S','M','L','XL'].indexOf(x.size)>=0)it.size=x.size;
-if(x.color==='accent'||x.color==='black')it.color=x.color;
-if(x.align==='left'||x.align==='center')it.align=x.align;
-it.hidden=!!x.hidden;return it})}
-/* 旧形式（固定項目）→ 項目モデル */
-function migrateWaseda(sv){if(!sv||typeof sv!=='object')return sv;var o=clone(sv);
-if(!Array.isArray(o.items)){var its=defItems(),by={};its.forEach(function(i){by[i.label]=i});
-if(typeof o.venue==='string')by['試験場'].value=o.venue;
-if(typeof o.room==='string')by['教室'].value=o.room;
-if(typeof o.date==='string')by['試験日'].value=o.date;
-if(typeof o.system==='string')by['入試制度'].value=o.system;
-if(typeof o.faculty==='string')by['志望学部'].fallback=o.faculty;
-if(Array.isArray(o.sched))by['試験時間'].rows=o.sched;
-o.items=its}
-if(o.badgeOn===undefined&&o.badge==='')o.badgeOn=false;return o}
-function renderWaseda(S0,V){var t=el('div','ticket tw'+(V.swap?' sw':'')),fits=[];
-t.style.setProperty('--wac',V.accent);t.style.fontFamily=V.font==='mincho'?'"Yu Mincho","Hiragino Mincho ProN","MS PMincho",serif':'"Yu Gothic","Meiryo","Hiragino Sans",sans-serif';
-var hd=el('div','w-hd');hd.appendChild(ed(el('span','w-hd-t',V.hdr),'hdr'));if(V.badgeOn&&V.badge)hd.appendChild(ed(el('span','w-badge',V.badge),'badge'));t.appendChild(hd);
-if(V.markOn&&V.mark)t.appendChild(ed(el('div','w-mark',V.mark),'mark'));
-var tb=el('div','w-tbl');t.appendChild(tb);
-var tbH=0;
-function addRow(its){var half=its.length>1||its[0].width==='half';var sch=its.some(function(i){return i.source==='schedule'});
-var h=half&&!sch?20.8:17.8;if(sch){var n=Math.max.apply(null,its.map(function(i){return i.source==='schedule'?i.rows.filter(function(x){return x.t||x.c}).length:0}));h=Math.max(20.4,n*ITSZ.sch[its[0].size]*0.46+2)}
-tbH+=h;var r=el('div','w-row');r.style.height=h+'mm';tb.appendChild(r);
-its.forEach(function(it){var wide=it.width!=='half';var c=el('div','w-c'+(wide?' wide':''));c.setAttribute('data-item',it.id);c.appendChild(el('div','w-l',it.label));
-var v=el('div','w-v');
-if(it.source==='schedule'){v.className+=' w-sch';v.style.fontSize=ITSZ.sch[it.size]+'pt';v.style.lineHeight='1.3';
-it.rows.filter(function(x){return x.t||x.c}).forEach(function(x){var d=el('div');d.appendChild(el('b',null,x.c));d.appendChild(el('i',null,x.t));v.appendChild(d)})}
-else{if(it.source==='fixed')ed(v,'item:'+it.id);v.textContent=itemVal(it,S0);v.style.fontSize=ITSZ[wide?'full':'half'][it.size]+'pt';if(wide){v.style.lineHeight=h+'mm';if(it.source==='date')v.style.letterSpacing='.2em';else v.style.letterSpacing='.05em'}else v.style.letterSpacing='.08em';
-if(it.align==='left')v.className+=' al-l';else if(it.align==='center')v.className+=' al-c';
-if(it.color==='accent')v.className+=' ac';fits.push(v)}
-c.appendChild(v);r.appendChild(c)})}
-var vis=V.items.filter(function(i){return !i.hidden}),q=0;
-while(q<vis.length){var a=vis[q],b=vis[q+1];if(a.width==='half'&&b&&b.width==='half'){addRow([a,b]);q+=2}else{addRow([a]);q++}}
-if(V.wmOn&&V.wmText){var wm=el('div','w-wm');var wy=V.wmAnchor==='top'?22.3:V.wmAnchor==='mid'?22.3+tbH/2:V.wmAnchor==='bot'?22.3+tbH:0;wy+=V.wmY;
-wm.style.top=wy+'mm';wm.style.fontSize=V.wmSize+'mm';wm.style.fontWeight=V.wmBold?'700':'400';wm.style.color=V.wmAcc?V.accent:V.wmColor;wm.style.opacity=Math.max(0,Math.min(100,V.wmOp))/100;
-wm.style.transform='translate(calc(-50% + '+V.wmX+'mm),-50%) rotate('+V.wmRot+'deg)';
-Array.from(V.wmText).forEach(function(ch,i,a){var sp=el('span',null,ch);if(i<a.length-1)sp.style.marginRight=V.wmSp+'em';wm.appendChild(sp)});
-t.appendChild(ed(wm,'wmText'))}
-if(V.foldOn){var fo=el('div','w-fold');fo.style.top=V.foldPos+'mm';fo.appendChild(el('span'));if(V.foldLabel)fo.appendChild(ed(el('em',null,V.foldLabel),'foldLabel'));fo.appendChild(el('span'));t.appendChild(fo)}
-var lo=el('div','w-lo');if(V.noteTitle)lo.appendChild(ed(el('div','w-nh',V.noteTitle),'noteTitle'));
-lines(V.notes).forEach(function(x){var red=/^[!！]/.test(x);if(red)x=x.replace(/^[!！]\s*/,'');lo.appendChild(el('div','w-n'+(red?' r':''),'・'+x))});
-t.appendChild(lo);
-var ri=el('div','w-ri');var ms=imgSrc(V.map,'assets/map-fujisawa.png'),ls=imgSrc(V.logo,'assets/logo-fujisawa.png');
-if(ms){var i1=el('img');i1.src=ms;i1.alt='';ri.appendChild(i1)}
-if(ls){var i2=el('img');i2.src=ls;i2.alt='';ri.appendChild(i2)}
-t.appendChild(ri);
-t._fits=fits;return t}
-addTemplate({id:'waseda',name:'早大プレ型',hasItems:true,migrate:migrateWaseda,
-fields:[
-{type:'h',label:'ヘッダー'},
-{k:'hdr',label:'ヘッダー文字',type:'text',def:'2024年度　早稲田大学受験票'},
-{k:'badge',label:'バッジ文字',type:'text',def:'折って試験当日持参',half:1},
-{k:'badgeOn',label:'バッジを表示',type:'check',def:true,half:1},
-{k:'mark',label:'右上マーク',type:'text',def:'24早',half:1},
-{k:'markOn',label:'マークを表示',type:'check',def:true,half:1},
-{k:'items',type:'items'},
-{type:'h',label:'色・書体'},
-{k:'accent',label:'アクセント色',type:'color',def:'#C00000',half:1},
-{k:'font',label:'基本フォント',type:'select',opts:[['gothic','ゴシック'],['mincho','明朝']],def:'gothic',half:1},
-{type:'h',label:'透かし文字'},
-{k:'wmOn',label:'透かしを表示',type:'check',def:false,half:1},
-{k:'wmBold',label:'太字',type:'check',def:true,half:1},
-{k:'wmText',label:'文字（プレビューのダブルクリックでも編集）',type:'text',def:'2027'},
-{k:'wmAcc',label:'色をアクセント色に合わせる',type:'check',def:true,half:1},
-{k:'wmColor',label:'色（上をオフのとき）',type:'color',def:'#C00000',half:1},
-{k:'wmOp',label:'濃さ（不透明度 %）',type:'number',def:18,half:1},
-{k:'wmSize',label:'文字の大きさ（mm）',type:'number',def:26,half:1},
-{k:'wmSp',label:'字間（em）',type:'number',def:0.6,half:1},
-{k:'wmRot',label:'回転（度）',type:'number',def:0,half:1},
-{k:'wmAnchor',label:'縦位置の基準',type:'select',opts:[['top','表の上端'],['mid','表の中央'],['bot','表の下端'],['page','用紙の上端']],def:'mid',half:1},
-{k:'wmY',label:'縦位置（mm・文字の中心）',type:'number',def:0,half:1},
-{k:'wmX',label:'横のずれ（mm）',type:'number',def:0},
-{type:'h',label:'折り線'},
-{k:'foldOn',label:'折り線を表示',type:'check',def:true,half:1},
-{k:'foldPos',label:'位置（mm）',type:'number',def:148.5,half:1},
-{k:'foldLabel',label:'折り線の文字',type:'text',def:'＜山折り＞'},
-{type:'h',label:'下半分'},
-{k:'noteTitle',label:'注意事項の見出し',type:'text',def:'注意事項'},
-{k:'notes',label:'注意事項（1行1項目・先頭「!」でアクセント色）',type:'lines',def:NOTES_W},
-{k:'swap',label:'注意事項と画像の左右を入れ替える',type:'check',def:false},
-{k:'map',label:'地図画像',type:'image',def:{d:'',hide:false}},
-{k:'logo',label:'ロゴ画像',type:'image',def:{d:'',hide:false}}],
-render:renderWaseda});
+/* ---------- UI状態（モード・ズーム等はlocalStorageに記憶） ---------- */
+var UIK='juken-hyo-ui-v1',UI={zoom:'fit',all:false,mode:'easy',tab:'items',view:'grid'};
+try{var u0=JSON.parse(localStorage.getItem(UIK)||'{}');if(u0&&typeof u0==='object'){if(u0.zoom==='100')UI.zoom='100';UI.all=!!u0.all;if(u0.mode==='adv')UI.mode='adv';if(typeof u0.tab==='string')UI.tab=u0.tab;if(u0.view==='list')UI.view='list'}}catch(e){}
+function saveUi(){try{localStorage.setItem(UIK,JSON.stringify(UI))}catch(e){}}
 
 /* ---------- 状態・保存 ---------- */
 var SUPABASE_URL='https://qaovkxpyquedvfhiacek.supabase.co',SUPABASE_ANON_KEY='sb_publishable_xJ-VtOx2-5Z6we-ar1iKYQ_n_J6sNx7',uid=null;
-var KEY='juken-hyo-v2',KEY1='juken-hyo-v1',PKEY='juken-hyo-presets-v1';
-function mkVals(tpl,saved){if(tpl.migrate)saved=tpl.migrate(saved);var v={};tpl.fields.forEach(function(f){if(!f.k)return;
-if(f.type==='items'){v[f.k]=saved&&Array.isArray(saved[f.k])?normItems(saved[f.k]):defItems();return}
-var x=clone(f.def);var s=saved&&saved[f.k];
-if(s!==undefined&&s!==null){var ok=f.type==='sched'?Array.isArray(s):f.type==='image'?(typeof s==='object'&&!Array.isArray(s)):f.type==='check'?typeof s==='boolean':f.type==='number'?(typeof s==='number'&&isFinite(s)):typeof s==='string';
-if(f.type==='color'&&ok)ok=/^#[0-9a-fA-F]{6}$/.test(s);
-if(f.type==='select'&&ok)ok=f.opts.some(function(o){return o[0]===s});
-if(ok){x=clone(s);if(f.type==='image'){x.d=typeof x.d==='string'?x.d:'';x.hide=!!x.hide}
-if(f.type==='sched')x=x.filter(function(r){return r&&typeof r==='object'}).map(function(r){return {t:String(r.t||''),c:String(r.c||'')}})}}
-v[f.k]=x});return v}
-var S={tpl:'waseda',byTpl:{},cur:'',curAt:'',curName:'',bh:''};
-try{var raw=localStorage.getItem(KEY);
-if(raw){var o0=JSON.parse(raw);if(o0&&typeof o0==='object'){if(TEMPLATES[o0.tpl])S.tpl=o0.tpl;if(o0.byTpl&&typeof o0.byTpl==='object')S.byTpl=o0.byTpl;if(typeof o0.cur==='string')S.cur=o0.cur;['curAt','curName','bh'].forEach(function(k){if(typeof o0[k]==='string')S[k]=o0[k]})}}
-else{var r1=localStorage.getItem(KEY1);if(r1){var o1=JSON.parse(r1);if(o1&&typeof o1==='object'){S.tpl='simple';S.byTpl.simple=o1}}}}catch(e){}
-var V=mkVals(TEMPLATES[S.tpl],S.byTpl[S.tpl]);
-var presets=[],localPresets=[];
-try{var pr=JSON.parse(localStorage.getItem(PKEY)||'[]');if(Array.isArray(pr))localPresets=pr.filter(function(p){return p&&typeof p.id==='string'&&typeof p.name==='string'&&TEMPLATES[p.tpl]})}catch(e){}
-function save(){S.byTpl[S.tpl]=V;try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}histSoon()}
-function tpl(){return TEMPLATES[S.tpl]}
+var KEY='juken-hyo-v3',KEY2='juken-hyo-v2',KEY1='juken-hyo-v1',PKEY='juken-hyo-presets-v1';
+var S={tpl:'waseda',cur:'',curAt:'',curName:'',bh:''},V=null;
+function loadS(o,copy){if(JT.get(o.tpl))S.tpl=o.tpl;(copy||['cur','curAt','curName','bh']).forEach(function(k){if(typeof o[k]==='string')S[k]=o[k]})}
+try{var raw=localStorage.getItem(KEY),o0;
+if(raw){o0=JSON.parse(raw);if(o0&&typeof o0==='object'){loadS(o0);V=JT.mkVals(S.tpl,o0.v)}}
+else{raw=localStorage.getItem(KEY2);
+if(raw){o0=JSON.parse(raw);if(o0&&typeof o0==='object'){loadS(o0,['cur','curAt','curName']);V=JT.mkVals(S.tpl,o0.byTpl&&o0.byTpl[S.tpl])}}
+else{var r1=localStorage.getItem(KEY1);if(r1){var o1=JSON.parse(r1);if(o1&&typeof o1==='object'){S.tpl='simple';V=JT.mkVals('simple',o1)}}}}}catch(e){}
+if(!V)V=JT.mkVals(S.tpl,{});
+function tpl(){return JT.get(S.tpl)}
+function save(){try{localStorage.setItem(KEY,JSON.stringify({tpl:S.tpl,v:V,cur:S.cur,curAt:S.curAt,curName:S.curName,bh:S.bh}))}catch(e){}histSoon()}
+var presets=[],trashed=[],localPresets=[];
+try{var pr=JSON.parse(localStorage.getItem(PKEY)||'[]');if(Array.isArray(pr))localPresets=pr.filter(function(p){return p&&typeof p.id==='string'&&typeof p.name==='string'&&JT.get(p.tpl)})}catch(e){}
 
-/* ---------- 共通設定フォーム（テンプレートのfieldsから生成） ---------- */
+/* ---------- 共通設定フォーム（共通スキーマ＋テンプレート固有の設定から生成） ---------- */
 function resizeImage(file,cb){var fr=new FileReader();fr.onload=function(){var im=new Image();im.onload=function(){
 var sc=Math.min(1,1200/Math.max(im.width,im.height));var c=document.createElement('canvas');c.width=Math.round(im.width*sc);c.height=Math.round(im.height*sc);
 var x=c.getContext('2d');var png=/png|gif|svg/.test(file.type);if(!png){x.fillStyle='#fff';x.fillRect(0,0,c.width,c.height)}
 x.drawImage(im,0,0,c.width,c.height);var du=png?c.toDataURL('image/png'):c.toDataURL('image/jpeg',.85);if(png&&du.length>350000){var c2=document.createElement('canvas');c2.width=c.width;c2.height=c.height;var x2=c2.getContext('2d');x2.fillStyle='#fff';x2.fillRect(0,0,c.width,c.height);x2.drawImage(c,0,0);du=c2.toDataURL('image/jpeg',.85)}cb(du)};
 im.onerror=function(){alert('画像を読み込めませんでした。')};im.src=fr.result};fr.readAsDataURL(file)}
-function drawFields(){var w=$('fields');w.textContent='';var g=null;
-$('itemsSec').hidden=!tpl().hasItems;$('fsum').textContent=tpl().hasItems?'デザイン':'試験情報';
-tpl().fields.forEach(function(f){var k=f.k;
-if(f.type==='items')return;
-if(f.type==='h'){g=null;w.appendChild(el('div','sub',f.label));return}
-var P=w;if(f.half){if(!g){g=el('div','grid2');g.style.alignItems='end';w.appendChild(g)}P=el('div');g.appendChild(P)}else g=null;
-if(f.type==='check'){var lb=el('label','chk');var c=el('input');c.type='checkbox';c.checked=!!V[k];c.onchange=function(){V[k]=c.checked;save();render()};lb.appendChild(c);lb.appendChild(document.createTextNode(f.label));P.appendChild(lb);return}
+function buildField(P,f,obj){var k=f.k;
+function chg(){save();render()}
+if(f.type==='check'){var lb=el('label','chk');var c=el('input');c.type='checkbox';c.checked=!!obj[k];c.onchange=function(){obj[k]=c.checked;chg()};lb.appendChild(c);lb.appendChild(document.createTextNode(f.label));P.appendChild(lb);return}
 P.appendChild(el('label',null,f.label));
-if(f.type==='sched'){var box=el('div');P.appendChild(box);
-var draw=function(){box.textContent='';V[k].forEach(function(r,idx){var d=el('div','sch');var a=el('input');a.type='text';a.value=r.t;a.placeholder='時間';
-var b=el('input');b.type='text';b.value=r.c;b.placeholder='科目・内容';var x=el('button',null,'削除');x.type='button';
-a.oninput=function(){r.t=a.value;save();render()};b.oninput=function(){r.c=b.value;save();render()};
-x.onclick=function(){V[k].splice(idx,1);save();draw();render()};d.appendChild(a);d.appendChild(b);d.appendChild(x);box.appendChild(d)})};
-draw();var ad=el('button',null,'＋ 行を追加');ad.type='button';ad.onclick=function(){V[k].push({t:'',c:''});save();draw();render()};P.appendChild(ad);return}
 if(f.type==='image'){var d2=el('div','img-f');P.appendChild(d2);
 var pv=el('img');pv.alt='';var fi=el('input');fi.type='file';fi.accept='image/*';fi.hidden=true;
-var up=el('button',null,'画像を変更');up.type='button';var rs=el('button',null,'既定に戻す');rs.type='button';
-var hl=el('label','chk');var hc=el('input');hc.type='checkbox';hc.checked=!!V[k].hide;hl.appendChild(hc);hl.appendChild(document.createTextNode('非表示'));hl.style.margin='0';
-var upd=function(){pv.src=V[k].d||(S.tpl==='waseda'?(k==='map'?'assets/map-fujisawa.png':'assets/logo-fujisawa.png'):'');pv.style.display=pv.src?'':'none'};
+var up=btn('画像を変更'),rs=btn('既定に戻す');
+var hl=el('label','chk');var hc=el('input');hc.type='checkbox';hc.checked=!!obj[k].hide;hl.appendChild(hc);hl.appendChild(document.createTextNode('非表示'));hl.style.margin='0';
+var upd=function(){pv.src=C.imageSrc({d:obj[k].d,hide:false},k);pv.style.display=pv.src?'':'none'};
 var pk=btn('素材から選ぶ','ファイル保管の画像から選ぶ'),ad=btn('素材に追加','この画像をファイル保管（画像素材）に追加');
 up.onclick=function(){fi.click()};
-pk.onclick=function(){openFiles({pick:true,title:f.label,cb:function(b){resizeImage(b,function(u){V[k].d=u;V[k].hide=false;hc.checked=false;save();upd();render();toast('「'+f.label+'」に素材の画像を設定しました')})}})};
+pk.onclick=function(){openFiles({pick:true,title:f.label,cb:function(b){resizeImage(b,function(u){obj[k].d=u;obj[k].hide=false;hc.checked=false;save();upd();render();toast('「'+f.label+'」に素材の画像を設定しました')})}})};
 ad.onclick=async function(){if(!pv.src||pv.style.display==='none'){toast('追加できる画像がありません');return}
 var d=await fdlg({title:'画像素材に追加',text:'現在の画像をファイル保管（フォルダ「画像素材」）に保存します。',fields:[{k:'n',label:'名前',value:f.label,max:80,req:1}],ok:'追加'});if(!d)return;
 try{var x=await fetch(pv.src),b=await x.blob(),ext=/png/.test(b.type)?'.png':/jpe?g/.test(b.type)?'.jpg':/gif/.test(b.type)?'.gif':/webp/.test(b.type)?'.webp':'.png';
 await fPut(b,{name:d.n.replace(/.(png|jpe?g|gif|webp)$/i,'')+ext,kind:'image',mime:b.type||'image/png',folder:'画像素材'});toast('画像素材に追加しました')}catch(e){toast('追加できませんでした：'+fErr(e))}};
-fi.onchange=function(){var fl=this.files[0];this.value='';if(!fl)return;resizeImage(fl,function(u){V[k].d=u;V[k].hide=false;hc.checked=false;save();upd();render()})};
-rs.onclick=function(){V[k]={d:'',hide:false};hc.checked=false;save();upd();render()};
-hc.onchange=function(){V[k].hide=hc.checked;save();render()};
+fi.onchange=function(){var fl=this.files[0];this.value='';if(!fl)return;resizeImage(fl,function(u){obj[k].d=u;obj[k].hide=false;hc.checked=false;save();upd();render()})};
+rs.onclick=function(){obj[k]={d:'',hide:false};hc.checked=false;save();upd();render()};
+hc.onchange=function(){obj[k].hide=hc.checked;save();render()};
 d2.appendChild(pv);d2.appendChild(up);d2.appendChild(pk);d2.appendChild(ad);d2.appendChild(rs);d2.appendChild(hl);d2.appendChild(fi);upd();return}
-if(f.type==='select'){var sl=el('select');f.opts.forEach(function(o){var op=el('option',null,o[1]);op.value=o[0];sl.appendChild(op)});sl.value=V[k];sl.onchange=function(){V[k]=sl.value;save();render()};P.appendChild(sl);return}
-if(f.type==='number'){var ni=el('input');ni.type='number';ni.step=f.step||'any';ni.value=V[k];ni.oninput=function(){var n=parseFloat(ni.value);V[k]=isFinite(n)?n:f.def;save();render()};P.appendChild(ni);return}
-if(f.type==='color'){var ci=el('input');ci.type='color';ci.value=V[k];ci.oninput=function(){V[k]=ci.value;save();render()};P.appendChild(ci);return}
-var i;if(f.type==='textarea'||f.type==='lines'){i=el('textarea');i.rows=f.type==='lines'?6:2}
-else{i=el('input');i.type=f.type==='date'?'date':f.type==='time'?'time':'text'}
-i.value=V[k]||'';i.oninput=function(){V[k]=i.value;save();render()};P.appendChild(i)})}
+if(f.type==='select'){var sl=el('select');f.opts.forEach(function(o){var op=el('option',null,o[1]);op.value=o[0];sl.appendChild(op)});sl.value=obj[k];sl.onchange=function(){obj[k]=sl.value;chg()};P.appendChild(sl);return}
+if(f.type==='number'){var ni=el('input');ni.type='number';ni.step=f.step||'any';ni.value=obj[k];ni.oninput=function(){var n=parseFloat(ni.value);obj[k]=isFinite(n)?n:f.def;chg()};P.appendChild(ni);return}
+if(f.type==='color'){var ci=el('input');ci.type='color';ci.value=obj[k];ci.oninput=function(){obj[k]=ci.value;chg()};P.appendChild(ci);return}
+var i;if(f.type==='lines'){i=el('textarea');i.rows=6}else{i=el('input');i.type='text'}
+i.value=obj[k]||'';i.oninput=function(){obj[k]=i.value;chg()};P.appendChild(i)}
+var TABF={items:'f-hdr',look:'f-look',notes:'f-notes',wm:'f-wm'};
+function fillFields(w,fs,objOf){w.textContent='';var g=null;
+fs.forEach(function(f){if(f.g){g=null;w.appendChild(el('div','sub',f.g))}
+var P=w;if(f.half){if(!g){g=el('div','grid2');g.style.alignItems='end';w.appendChild(g)}P=el('div');g.appendChild(P)}else g=null;
+buildField(P,f,objOf(f))})}
+function drawFields(){var T=tpl();
+Object.keys(TABF).forEach(function(tab){var w=$(TABF[tab]);
+var fs=JT.FIELDS.filter(function(f){return f.tab===tab&&JT.uses(T,f.u)});
+fillFields(w,fs,function(){return V});
+if(tab==='look'&&T.extras.length){w.appendChild(el('div','sub',T.name+'の設定'));var box=el('div');w.appendChild(box);fillFields(box,T.extras,function(){return V.tpl[T.id]})}
+if(!w.firstChild&&tab!=='items')w.appendChild(el('p','note',tab==='wm'?'このデザインは透かしに対応していません。':'このデザインでは使いません。'))})}
+
 
 /* ---------- 項目エディタ ---------- */
 var openIt={};
@@ -649,7 +618,7 @@ function fld(label,ctl,cls){var d=el('div',cls||'');d.appendChild(el('label',nul
 function findItem(id){for(var i=0;i<V.items.length;i++)if(V.items[i].id===id)return V.items[i]}
 function moveItem(id,dd){var a=V.items,i=a.indexOf(findItem(id)),j=i+dd;if(i<0||j<0||j>=a.length)return;var x=a[i];a[i]=a[j];a[j]=x;save();drawItems();render()}
 function removeItem(id,ask){var it=findItem(id);if(!it)return false;if(ask!==false&&!confirm('「'+(it.label||'項目')+'」を削除しますか？'))return false;V.items.splice(V.items.indexOf(it),1);if(selId===id)clearSel();save();drawItems();render();return true}
-function drawItems(){var box=$('items');box.textContent='';if(!tpl().hasItems){drawRoster();return}
+function drawItems(){var box=$('items');box.textContent='';
 var dl=el('datalist');dl.id='hdrs';(headers.length?headers:COMMON_COLS).forEach(function(h){var o=el('option');o.value=h;dl.appendChild(o)});box.appendChild(dl);
 V.items.forEach(function(it,idx){var d=el('div','it'+(it.hidden?' hid':'')+(it.id===selId?' cur':''));d.setAttribute('data-id',it.id);d.addEventListener('focusin',function(){if(selId!==it.id)selectItem(it.id,false)});var h=el('div','it-h');
 var mv=el('div','it-mv');var up=btn('▲','上へ'),dn=btn('▼','下へ');up.disabled=idx===0;dn.disabled=idx===V.items.length-1;
@@ -679,111 +648,191 @@ var zs=opt(el('select'),[['S','S 小'],['M','M 標準'],['L','L 大'],['XL','XL 
 var cs=opt(el('select'),[['black','黒'],['accent','アクセント色（太字）']],it.color);cs.onchange=function(){it.color=cs.value;save();render()};dt.appendChild(fld('文字色',cs));
 var as=opt(el('select'),[['','自動'],['left','左揃え'],['center','中央']],it.align);as.onchange=function(){it.align=as.value;save();render()};dt.appendChild(fld('揃え',as));
 var hl=el('label','chk');var hk=el('input');hk.type='checkbox';hk.checked=it.hidden;hk.onchange=function(){it.hidden=hk.checked;save();drawItems();render()};hl.appendChild(hk);hl.appendChild(document.createTextNode('非表示'));dt.appendChild(hl);
-if(it.source==='column'){var fb=el('input');fb.type='text';fb.value=it.fallback;fb.placeholder='列の値が空のとき表示';fb.oninput=function(){it.fallback=fb.value;save();render()};dt.appendChild(fld('代替文字（空欄時）',fb,'wd'))}
+if(it.source==='column'){var fb=el('input');fb.type='text';fb.value=it.fallback;fb.placeholder='列の値が空のとき表示';fb.oninput=function(){it.fallback=fb.value;save();render()};dt.appendChild(fld('代替文字（空欄時）',fb,'wd'));
+var al=el('label','chk wd');var ac=el('input');ac.type='checkbox';ac.checked=it.autoEmpty;ac.onchange=function(){it.autoEmpty=ac.checked;save();drawItems();render()};al.appendChild(ac);al.appendChild(document.createTextNode('名簿が空のとき連番を入れる'));dt.appendChild(al);
+if(it.autoEmpty){[['prefix','接頭辞','text'],['start','開始番号','number'],['digits','桁数','number']].forEach(function(k){var i=el('input');i.type=k[2];i.value=it.auto[k[0]];i.oninput=function(){it.auto[k[0]]=k[2]==='number'?(parseInt(i.value,10)||(k[0]==='digits'?1:0)):i.value;save();render()};dt.appendChild(fld(k[1],i))})}}
 d.appendChild(dt)}
 box.appendChild(d)});drawRoster()}
-$('iadd').onclick=function(){if(!tpl().hasItems)return;var it=mkItem('新しい項目','fixed',{});V.items.push(it);openIt[it.id]=true;save();drawItems();render();
+$('iadd').onclick=function(){var it=mkItem('新しい項目','fixed',{});V.items.push(it);openIt[it.id]=true;save();drawItems();render();
 var ls=$('items').querySelectorAll('.it-h input[type=text]');if(ls.length){var l=ls[ls.length-1];l.focus();l.select()}};
 
-/* ---------- デザイン選択・保存済み ---------- */
-function drawTplSel(){var s=$('tpl');s.textContent='';TPL_ORDER.forEach(function(id){var o=el('option',null,TEMPLATES[id].name);o.value=id;s.appendChild(o)});s.value=S.tpl}
-var importName='',lastFile='',presetsLoaded=false,TBL='juken_presets',busy=false,PMAX=1500000;
-function pRow(r){return {id:r.id,name:r.name,tpl:r.template,vals:r.data||{},at:r.updated_at}}
+/* ---------- 共有デザイン（Supabase: juken_presets / juken_folders） ---------- */
+var importName='',lastFile='',presetsLoaded=false,TBL='juken_presets',FTBL='juken_folders',busy=false,PMAX=1500000;
+var PBASE='id,name,template,data,updated_at,updated_by',PEXT=',folder,thumb,deleted_at';
+/* EXP.ok: null=未確認 / true=エクスプローラー用の列あり / false=SQL未実行（フラット表示に切替） */
+var EXP={ok:null,fok:null,folders:[],local:[],view:UI.view,sort:'name-asc',q:'',cwd:'',sel:{},anchor:'',trash:false,open:{},drag:null,items:[]};
+function pRow(r){return {id:r.id,name:r.name,tpl:r.template,vals:r.data||{},at:r.updated_at,by:r.updated_by||'',folder:r.folder||'',thumb:r.thumb||'',del:r.deleted_at||''}}
 function fmtAt(t){if(!t)return '';var d=new Date(t);if(isNaN(d))return '';var z=function(n){return n<10?'0'+n:n};return (d.getMonth()+1)+'/'+d.getDate()+' '+d.getHours()+':'+z(d.getMinutes())}
+function colErr(e){var m=(e&&e.message)||'';return !!e&&(e.code==='42703'||e.code==='PGRST204'||/column .*(folder|thumb|deleted_at)|(folder|thumb|deleted_at).* column/i.test(m))}
 function pErr(e){var m=(e&&e.message)||'',c=e&&e.code;
+if(colErr(e))return 'エクスプローラー機能を使うには supabase-explorer.sql を実行してください';
 if(c==='42P01'||c==='PGRST205'||/does not exist|schema cache/i.test(m))return '共有デザインの表がまだ作成されていません（supabase.sql を実行してください）';
 if(c==='42501'||/row-level security|permission denied|JWT/i.test(m))return '権限がありません。いったんログアウトして、もう一度ログインしてください。';
+if(c==='23505'||/duplicate/i.test(m))return '同じ名前のデザインが既にあります（別のフォルダやゴミ箱の中の可能性があります）。';
 if(/fetch|network|failed|timeout/i.test(m))return 'サーバーに接続できませんでした。通信状況を確認してください。';
 return '共有デザインの処理に失敗しました（'+(m||'不明なエラー')+'）';}
 function pstat(t,err){var e=$('pstat');e.textContent=t||'';e.className='note'+(err?' err':'')}
-function setBusy(b){busy=b;$('psave').disabled=$('preload').disabled=b;if(b)$('pover').disabled=$('pren').disabled=$('pdel').disabled=true;else drawPreSel()}
-function drawPreSel(){var s=$('pre');s.textContent='';var o=el('option',null,'（保存済みを選択）');o.value='';s.appendChild(o);
-presets.forEach(function(p){var op=el('option',null,p.name+'（'+TEMPLATES[p.tpl].name+'） '+fmtAt(p.at));op.value=p.id;s.appendChild(op)});
-if(presetsLoaded&&!presets.some(function(p){return p.id===S.cur}))clearCur();s.value=S.cur;
-$('pover').disabled=$('pren').disabled=$('pdel').disabled=!S.cur||busy;$('save').disabled=$('sas').disabled=busy;drawMig();refreshDirty();drawSteps()}
+function setBusy(b){busy=b;$('save').disabled=$('sas').disabled=b;if(!b)drawPreSel()}
+function anyOvl(){return !$('fp').hidden||!$('ex').hidden}
+function drawTplSel(){var s=$('tpl');s.textContent='';JT.categories().forEach(function(c){var g=document.createElement('optgroup');g.label=c;JT.list().filter(function(t){return t.category===c}).forEach(function(t){var o=el('option',null,t.name);o.value=t.id;g.appendChild(o)});s.appendChild(g)});s.value=S.tpl}
+function drawPreSel(){if(presetsLoaded&&S.cur&&!presets.some(function(p){return p.id===S.cur}))clearCur();
+$('save').disabled=$('sas').disabled=busy;drawMig();refreshDirty();
+if(UI.mode==='easy'&&step===1)drawGallery();
+if(!$('ex').hidden)exDraw()}
 function clearCur(){S.cur='';S.curAt='';S.curName=''}
 function setCur(id,name,at){S.cur=id;S.curName=name;S.curAt=at||'';importName='';lastFile=''}
 function byId(id){for(var i=0;i<presets.length;i++)if(presets[i].id===id)return presets[i]}
 function drawMig(){var m=$('mig');m.hidden=!localPresets.length;if(localPresets.length)$('migt').textContent='このブラウザに保存されたデザインが'+localPresets.length+'件あります → 共有にアップロード'}
-async function loadPresetsQuiet(){var r=chk(await sb.from(TBL).select('id,name,template,data,updated_at').order('name',{ascending:true}));presets=(r.data||[]).filter(function(x){return TEMPLATES[x.template]}).map(pRow);presetsLoaded=true}
+
+/* フォルダ（'' = ルート、'/' 区切りで入れ子） */
+function parentOf(p){var i=p.lastIndexOf('/');return i<0?'':p.slice(0,i)}
+function baseOf(p){return p.slice(p.lastIndexOf('/')+1)}
+function joinP(a,b){return a?a+'/'+b:b}
+function isUnder(p,root){return p===root||p.indexOf(root+'/')===0}
+function allFolders(){var m={};function add(p){while(p){m[p]=1;p=parentOf(p)}}
+EXP.folders.forEach(add);EXP.local.forEach(add);presets.forEach(function(p){add(p.folder)});
+return Object.keys(m).sort(function(a,b){return a.localeCompare(b,'ja')})}
+function childFolders(p){return allFolders().filter(function(f){return parentOf(f)===p})}
+function inFolder(p){return presets.filter(function(x){return x.folder===p})}
+function countIn(p){return presets.filter(function(x){return isUnder(x.folder,p)}).length}
+function folderErr(n){n=(n||'').trim();if(!n)return '名前を入力してください。';if(/[\/\\]/.test(n))return '名前に「/」「\\」は使えません。';if(n.length>40)return '名前は40文字までです。';return ''}
+async function ensureFolder(path){if(!path||!EXP.fok)return;var parts=path.split('/'),acc='';
+for(var i=0;i<parts.length;i++){acc=joinP(acc,parts[i]);if(EXP.folders.indexOf(acc)<0){var r=await sb.from(FTBL).insert({path:acc});if(r.error&&!isDup(r.error))throw r.error;EXP.folders.push(acc)}}}
+
+async function loadPresetsQuiet(){var r=null;
+if(EXP.ok!==false){r=await sb.from(TBL).select(PBASE+PEXT).order('name',{ascending:true});
+if(r.error&&colErr(r.error)){EXP.ok=false;r=null}else if(!r.error)EXP.ok=true}
+if(!r)r=await sb.from(TBL).select(PBASE).order('name',{ascending:true});
+chk(r);var all=(r.data||[]).filter(function(x){return JT.get(x.template)}).map(pRow);
+presets=all.filter(function(p){return !p.del});trashed=all.filter(function(p){return p.del}).sort(function(a,b){return tsNum(b.del)-tsNum(a.del)});
+if(EXP.ok){var f=await sb.from(FTBL).select('path');EXP.fok=!f.error;EXP.folders=f.error?[]:(f.data||[]).map(function(x){return x.path});
+EXP.local=EXP.local.filter(function(p){return EXP.folders.indexOf(p)<0})}else{EXP.fok=false;EXP.folders=[]}
+presetsLoaded=true}
 async function loadPresets(){if(!sb||busy)return;setBusy(true);pstat('共有デザインを読み込み中…');
-try{await loadPresetsQuiet();pstat(presets.length?'':'共有デザインはまだありません。')}catch(e){pstat(pErr(e&&e.message?e:{message:'network'}),true)}setBusy(false);checkDraft()}
+try{await loadPresetsQuiet();pstat(presets.length?'':'共有デザインはまだありません。')}catch(e){pstat(pErr(e&&e.message?e:{message:'network'}),true);presetsErr=pErr(e&&e.message?e:{message:'network'})}setBusy(false);checkDraft()}
+var presetsErr='';
 function sizeOk(vals){var n=JSON.stringify(vals).length;if(n>PMAX)return confirm('このデザインのデータが大きめです（約'+(n/1e6).toFixed(1)+'MB）。画像を小さくすることをおすすめします。それでも保存しますか？');return true}
-function afterDesignChange(){save();drawTplSel();drawPreSel();drawFields();drawItems();render()}
-$('preload').onclick=loadPresets;
-$('tpl').onchange=function(){importName='';lastFile='';S.byTpl[S.tpl]=V;S.tpl=this.value;clearCur();V=mkVals(tpl(),S.byTpl[S.tpl]);afterDesignChange();resetBase()};
-$('pre').onchange=function(){var p=byId(this.value);if(!p){importName='';lastFile='';clearCur();drawPreSel();save();return}
-if(p.id!==S.cur&&dirtyNow()&&!confirm('保存していない変更があります。破棄して「'+p.name+'」を開きますか？')){drawPreSel();return}
-S.tpl=p.tpl;V=mkVals(tpl(),p.vals);setCur(p.id,p.name,p.at);afterDesignChange();resetBase();hideDraft()};
+function afterDesignChange(){save();drawTplSel();drawPreSel();drawFields();drawItems();render();if(UI.mode==='easy'&&step===2)drawInfo()}
+function openPreset(id){var p=byId(id);if(!p)return false;
+if(dirtyNow()&&!confirm('保存していない変更があります。破棄して「'+p.name+'」を開きますか？'))return false;
+S.tpl=p.tpl;V=JT.mkVals(p.tpl,p.vals);setCur(p.id,p.name,p.at);afterDesignChange();resetBase();hideDraft();return true}
+/* テンプレートの切り替え。内容（項目・文字・名簿）はそのまま、色・書体だけ新しいテンプレートの既定になる */
+function applyTemplate(id,o){if(!JT.get(id))return;importName='';lastFile='';V=JT.switchVals(id,V);S.tpl=id;if(o&&o.fresh)clearCur();afterDesignChange();if(o&&o.fresh)resetBase()}
+$('tpl').onchange=function(){applyTemplate(this.value)};
 async function pdo(fn){if(busy)return;setBusy(true);pstat('通信中…');try{await fn()}catch(e){pstat(pErr(e&&e.message?e:{message:String(e)}),true)}setBusy(false)}
 function chk(r){if(r.error)throw r.error;return r}
-/* ---------- 保存（ヘッダーの「保存」・Ctrl+S） ---------- */
+
+/* ---------- ミニサムネイル（A4ページの縮小表示）・保存用サムネイル ---------- */
+function mkStu(idx,row){return {idx:idx,row:row,sample:!row,col:function(it){return colVal(this,it)}}}
+var miniRO=null;
+function mini(tid,vals){var box=el('div','mini'),t=JT.render(tid,mkStu(0,null),vals);box.appendChild(t);box._t=t;
+if(!miniRO&&window.ResizeObserver)miniRO=new ResizeObserver(function(es){es.forEach(function(e){var b=e.target,w=b.clientWidth;if(!w||!b._t)return;b._t.style.transform='scale('+(w/(210*C.PXMM))+')';if(!b._f){b._f=1;fitAll(b._t)}})});
+if(miniRO)miniRO.observe(box);else{t.style.transform='scale(.15)';setTimeout(function(){fitAll(t)},0)}
+return box}
+function thumbBox(src){var box=el('div','mini'),i=el('img','tb');i.src=src;i.alt='';box.appendChild(i);return box}
+function designThumb(p){return p.thumb?thumbBox(p.thumb):mini(p.tpl,JT.mkVals(p.tpl,p.vals))}
+function loadImg(src){return new Promise(function(ok,ng){var i=new Image();i.onload=function(){ok(i)};i.onerror=function(){ng(new Error('img'))};i.src=src})}
+async function inlineImgs(t){var ims=t.querySelectorAll('img');
+for(var i=0;i<ims.length;i++){var m=ims[i];if(/^data:/.test(m.src))continue;if(!m.naturalWidth){m.remove();continue}
+var s=Math.min(1,700/Math.max(m.naturalWidth,m.naturalHeight)),c=document.createElement('canvas');c.width=Math.round(m.naturalWidth*s);c.height=Math.round(m.naturalHeight*s);c.getContext('2d').drawImage(m,0,0,c.width,c.height);m.src=c.toDataURL('image/png')}}
+function ticketSvg(t){var w=Math.round(210*C.PXMM),h=Math.round(297*C.PXMM);
+return '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'"><foreignObject x="0" y="0" width="'+w+'" height="'+h+'"><div xmlns="http://www.w3.org/1999/xhtml"><style><![CDATA['+JT.cssText()+']]></style>'+new XMLSerializer().serializeToString(t)+'</div></foreignObject></svg>'}
+/* 先頭ページを小さく描いたJPEG(dataURL, 約60KB以下)。氏名などは含めない（サンプル表示）。SVG→canvas、だめならhtml2canvas */
+async function makeThumb(tid,vals){
+var host=el('div');host.style.cssText='position:fixed;left:-99999px;top:0;width:210mm;height:297mm;overflow:hidden;background:#fff;pointer-events:none';document.body.appendChild(host);
+try{var t=JT.render(tid,mkStu(0,null),vals);host.appendChild(t);fitAll(t);
+var ims=Array.prototype.slice.call(t.querySelectorAll('img'));await Promise.all(ims.map(function(m){return m.complete?0:new Promise(function(r){m.onload=m.onerror=r})}));
+var W=300,H=Math.round(W*297/210),cv=document.createElement('canvas');cv.width=W;cv.height=H;var x=cv.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,W,H);var ok=false;
+try{var tt=t.cloneNode(true);host.appendChild(tt);await inlineImgs(tt);var im=await loadImg('data:image/svg+xml;charset=utf-8,'+encodeURIComponent(ticketSvg(tt)));x.drawImage(im,0,0,W,H);cv.toDataURL('image/jpeg',.5);ok=true}catch(e){ok=false;x.fillStyle='#fff';x.fillRect(0,0,W,H)}
+if(!ok){await loadScript(H2C);var big=await window.html2canvas(t,{scale:W/(210*C.PXMM),backgroundColor:'#ffffff',logging:false,useCORS:true});x.drawImage(big,0,0,W,H)}
+var q=.72,u=cv.toDataURL('image/jpeg',q);while(u.length>80000&&q>.3){q-=.1;u=cv.toDataURL('image/jpeg',q)}return u}
+finally{host.remove()}}
+async function thumbFor(tp,vals){try{return await makeThumb(tp,vals)}catch(e){return null}}
+
+/* ---------- 保存（ヘッダーの「保存」・Ctrl+S・かんたんモードの保存ボタン） ---------- */
 var ss='',ssMsg='',saving=false,modalOpen=false;
 function isDup(e){return !!e&&(e.code==='23505'||/duplicate/i.test(e.message||''))}
 function tsNum(t){var d=new Date(t);return isNaN(d)?0:d.getTime()}
 function defName(){var d=new Date(),ds=(d.getMonth()+1)+'/'+d.getDate();var base=importName||lastFile||tpl().name;return base+' '+ds}
 function modal(o){return new Promise(function(res){modalOpen=true;var w=el('div');w.id='mdl';var c=el('div','mc');c.setAttribute('role','dialog');c.setAttribute('aria-modal','true');w.appendChild(c);
-c.appendChild(el('h3',null,o.title));if(o.text)c.appendChild(el('p',null,o.text));var inp=null;
-if(o.input!=null){inp=el('input');inp.type='text';inp.value=o.input;inp.maxLength=80;inp.setAttribute('aria-label','保存名');c.appendChild(inp)}
+c.appendChild(el('h3',null,o.title));if(o.text)c.appendChild(el('p',null,o.text));
 var bb=el('div','mb');c.appendChild(bb);
-function done(v){modalOpen=false;w.remove();res(v)}
-function ok(v){if(inp){var n=inp.value.trim();if(!n){inp.focus();return}done({v:v,name:n})}else done({v:v})}
-o.btns.forEach(function(b){var x=el('button',b.pri?'pri':'',b.label);x.type='button';x.onclick=function(){if(b.v==='cancel')done(null);else ok(b.v)};bb.appendChild(x)});
-w.addEventListener('keydown',function(e){if(e.key==='Escape'){e.preventDefault();done(null)}else if(e.key==='Enter'&&inp&&e.target===inp){e.preventDefault();ok(o.btns[0].v)}});
+function done(v){w.remove();modalOpen=anyOvl();res(v)}
+o.btns.forEach(function(b){var x=el('button',b.pri?'pri':'',b.label);x.type='button';x.onclick=function(){if(b.v==='cancel')done(null);else done({v:b.v})};bb.appendChild(x)});
+w.addEventListener('keydown',function(e){if(e.key==='Escape'){e.preventDefault();done(null)}});
 w.addEventListener('mousedown',function(e){if(e.target===w)done(null)});
-document.body.appendChild(w);var f=inp||bb.querySelector('.pri')||bb.lastChild;if(f){f.focus();if(inp)inp.select()}})}
+document.body.appendChild(w);var f=bb.querySelector('.pri')||bb.lastChild;if(f)f.focus()})}
+/* 名前＋フォルダを選ぶ保存ダイアログ */
+function saveDlg(o){return new Promise(function(res){modalOpen=true;var w=el('div');w.id='mdl';var c=el('div','mc xwide');c.setAttribute('role','dialog');c.setAttribute('aria-modal','true');w.appendChild(c);
+c.appendChild(el('h3',null,o.title));if(o.text)c.appendChild(el('p',null,o.text));
+c.appendChild(el('label',null,'デザインの名前'));var inp=el('input');inp.type='text';inp.value=o.name;inp.maxLength=80;inp.setAttribute('aria-label','デザインの名前');c.appendChild(inp);
+var sel=o.folder||'',open={},made=[];
+if(EXP.ok){c.appendChild(el('label',null,'保存先のフォルダ'));var tr=el('div','ftree');c.appendChild(tr);
+for(var q=sel;q;q=parentOf(q))open[q]=1;
+var drawT=function(){drawTree(tr,{sel:sel,open:open,onSel:function(p){sel=p;drawT()},rootLabel:'デザイン（フォルダなし）'})};drawT();
+var nf=el('div','nfrow'),ni=el('input');ni.type='text';ni.placeholder='新しいフォルダ名（選択中のフォルダの中に作る）';ni.maxLength=40;var nb=btn('作る');nf.appendChild(ni);nf.appendChild(nb);c.appendChild(nf);
+var mk=function(){var er=folderErr(ni.value);if(er){toast(er);return}var p=joinP(sel,ni.value.trim());
+if(allFolders().indexOf(p)<0){EXP.local.push(p);made.push(p)}open[sel]=1;sel=p;ni.value='';drawT()};
+nb.onclick=mk;ni.addEventListener('keydown',function(e){if(e.key==='Enter'){e.preventDefault();e.stopPropagation();mk()}})}
+var bb=el('div','mb');c.appendChild(bb);
+function done(v){w.remove();modalOpen=anyOvl();if(!v)EXP.local=EXP.local.filter(function(p){return made.indexOf(p)<0});res(v)}
+function ok(){var n=inp.value.trim();if(!n){inp.focus();return}done({name:n,folder:sel})}
+var cb=el('button',null,'キャンセル');cb.type='button';cb.onclick=function(){done(null)};var ob=el('button','pri','保存');ob.type='button';ob.onclick=ok;bb.appendChild(cb);bb.appendChild(ob);
+w.addEventListener('keydown',function(e){if(e.key==='Escape'){e.preventDefault();done(null)}else if(e.key==='Enter'&&e.target===inp){e.preventDefault();ok()}});
+w.addEventListener('mousedown',function(e){if(e.target===w)done(null)});
+document.body.appendChild(w);inp.focus();inp.select()})}
 function setSS(s,m){ss=s;ssMsg=m||'';refreshDirty()}
 function needAuth(){if(!sb||!uid)throw {message:'ログインしていません。ログインし直してください。',local:1};if(typeof navigator!=='undefined'&&navigator.onLine===false)throw {message:'オフラインです。通信状況を確認してください。',local:1}}
 function saveErrMsg(e){return e&&e.local?e.message:pErr(e&&e.message?e:{message:String(e)})}
 function saveFail(e){setSS('error',saveErrMsg(e));pstat(saveErrMsg(e),true);toast('保存に失敗しました。変更は残っています：'+saveErrMsg(e),'再試行',function(){saveMain()},12000)}
 function markSaved(row){S.curAt=row.updated_at||'';S.curName=row.name||S.curName;save();hideDraft()}
 function endSave(){saving=false;setBusy(false)}
-/* 新規保存（名前を聞く）。同名なら上書き／別名を選べる */
-async function saveNew(def,title){var name=def,first=true;
-for(;;){var m=await modal({title:title||'名前を付けて保存',text:first?'共有デザインとして保存します（ログイン中のスタッフ全員に共有されます）。':'別の名前を入力してください。',input:name,btns:[{label:'保存',v:'ok',pri:true},{label:'キャンセル',v:'cancel'}]});first=false;
-if(!m)return false;name=m.name;if(!sizeOk(V))return false;
+async function findActive(name,folder){var q=sb.from(TBL).select('id,name,updated_at').eq('name',name);if(EXP.ok)q=q.eq('folder',folder).is('deleted_at',null);return chk(await q.maybeSingle()).data}
+/* 新規保存（名前とフォルダを聞く）。同名なら上書き／別名を選べる */
+async function saveNew(def,title,folder0){var name=def,folder=folder0||'',first=true;
+for(;;){var m=await saveDlg({title:title||'名前を付けて保存',text:first?'共有デザインとして保存します（ログイン中のスタッフ全員に共有されます）。':'別の名前を入力してください。',name:name,folder:folder});first=false;
+if(!m)return false;name=m.name;folder=m.folder;if(!sizeOk(V))return false;
 saving=true;setBusy(true);setSS('saving');
-try{needAuth();var sn=snap(),vals=clone(V),tp=S.tpl;
-var r=await sb.from(TBL).insert({name:name,template:tp,data:vals,updated_by:uid}).select('id,name,updated_at').single();
-if(isDup(r.error)){endSave();setSS('');
+try{needAuth();var vals=clone(V),tp=S.tpl,th=EXP.ok?await thumbFor(tp,vals):null;
+var pl={name:name,template:tp,data:vals,updated_by:uid};if(EXP.ok){pl.folder=folder;pl.thumb=th;await ensureFolder(folder)}
+var r=await sb.from(TBL).insert(pl).select('id,name,updated_at').single();
+if(isDup(r.error)){var ex=await findActive(name,folder);
+if(!ex){endSave();setSS('');toast('同じ名前が別のフォルダまたはゴミ箱にあります。別の名前にしてください。');name=name+' (2)';continue}
+endSave();setSS('');
 var q=await modal({title:'同じ名前があります',text:'「'+name+'」は既に共有されています。',btns:[{label:'上書き',v:'over',pri:true},{label:'別名にする',v:'alias'},{label:'キャンセル',v:'cancel'}]});
 if(!q)return false;if(q.v==='alias'){name=name+' (2)';continue}
-saving=true;setBusy(true);setSS('saving');
-r=chk(await sb.from(TBL).update({template:tp,data:vals,updated_at:new Date().toISOString(),updated_by:uid}).eq('name',name).select('id,name,updated_at').single())}
+saving=true;setBusy(true);setSS('saving');var up={template:tp,data:vals,updated_at:new Date().toISOString(),updated_by:uid};if(EXP.ok)up.thumb=th;
+r=chk(await sb.from(TBL).update(up).eq('id',ex.id).select('id,name,updated_at').single())}
 else chk(r);
-setCur(r.data.id,r.data.name,r.data.updated_at);await loadPresetsQuiet();save();hideDraft();
-endSave();setSS('');toast('『'+name+'』に保存しました');drawPreSel();return true}
+setCur(r.data.id,r.data.name,r.data.updated_at);EXP.lastFolder=folder;await loadPresetsQuiet();save();hideDraft();
+endSave();setSS('');toast('『'+name+'』に保存しました'+(folder?'（'+folder+'）':''));drawPreSel();return true}
 catch(e){endSave();saveFail(e);return false}}}
 async function saveOver(cp){if(!sizeOk(V))return false;saving=true;setBusy(true);setSS('saving');
 try{needAuth();var vals=clone(V),tp=S.tpl;
 var sv=chk(await sb.from(TBL).select('id,name,updated_at').eq('id',cp.id).maybeSingle());
 if(!sv.data){endSave();setSS('');var q0=await modal({title:'共有デザインが見つかりません',text:'「'+cp.name+'」は削除されたようです。別名で保存しますか？',btns:[{label:'別名で保存',v:'alias',pri:true},{label:'キャンセル',v:'cancel'}]});
-if(!q0)return false;clearCur();return await saveNew(cp.name)}
+if(!q0)return false;clearCur();return await saveNew(cp.name,null,cp.folder)}
 if(S.curAt&&tsNum(sv.data.updated_at)>tsNum(S.curAt)){endSave();setSS('');
 var q=await modal({title:'他のスタッフが更新しています',text:'他のスタッフが '+fmtAt(sv.data.updated_at)+' に更新しています。上書きしますか？',btns:[{label:'上書き',v:'over',pri:true},{label:'別名で保存',v:'alias'},{label:'キャンセル',v:'cancel'}]});
-if(!q)return false;if(q.v==='alias')return await saveNew(cp.name+' コピー');
+if(!q)return false;if(q.v==='alias')return await saveNew(cp.name+' コピー',null,cp.folder);
 saving=true;setBusy(true);setSS('saving')}
-var r=chk(await sb.from(TBL).update({template:tp,data:vals,updated_at:new Date().toISOString(),updated_by:uid}).eq('id',cp.id).select('id,name,updated_at').single());
+var up={template:tp,data:vals,updated_at:new Date().toISOString(),updated_by:uid};if(EXP.ok)up.thumb=await thumbFor(tp,vals);
+var r=chk(await sb.from(TBL).update(up).eq('id',cp.id).select('id,name,updated_at').single());
 markSaved(r.data);await loadPresetsQuiet();endSave();setSS('');toast('『'+r.data.name+'』に保存しました');drawPreSel();return true}
 catch(e){endSave();saveFail(e);return false}}
 async function saveMain(){if(saving||modalOpen)return;if(busy){toast('通信中です。少しお待ちください。');return}histFlush();
-if(!S.cur){return saveNew(defName(),'保存')}
+if(!S.cur){return saveNew(defName(),'保存',EXP.lastFolder)}
 if(!presetsLoaded){try{needAuth();await loadPresetsQuiet()}catch(e){return saveFail(e)}}
-var cp=byId(S.cur);if(!cp){clearCur();drawPreSel();return saveNew(defName(),'保存')}
+var cp=byId(S.cur);if(!cp){clearCur();drawPreSel();return saveNew(defName(),'保存',EXP.lastFolder)}
 return saveOver(cp)}
-function saveAs(){if(saving||modalOpen)return;if(busy){toast('通信中です。少しお待ちください。');return}histFlush();var cp=S.cur&&byId(S.cur);return saveNew(cp?cp.name+' コピー':defName())}
-$('save').onclick=saveMain;$('psave').onclick=saveAs;$('pover').onclick=function(){saveMain()};
+function saveAs(){if(saving||modalOpen)return;if(busy){toast('通信中です。少しお待ちください。');return}histFlush();var cp=S.cur&&byId(S.cur);return saveNew(cp?cp.name+' コピー':defName(),null,cp?cp.folder:EXP.lastFolder)}
+$('save').onclick=saveMain;
 $('sas').onclick=function(){closeSM();saveAs()};$('sfile').onclick=function(){closeSM();$('fexp').click()};
 function closeSM(){$('smenu').hidden=true;$('smore').setAttribute('aria-expanded','false')}
 $('smore').onclick=function(e){e.stopPropagation();var h=!$('smenu').hidden;$('smenu').hidden=h;this.setAttribute('aria-expanded',h?'false':'true')};
 document.addEventListener('click',function(e){if(!$('smenu').hidden&&!$('smenu').contains(e.target))closeSM()});
 $('sst').onclick=function(){if(ss==='error'||dirtyNow())saveMain()};
 window.addEventListener('beforeunload',function(e){if(booted&&(dirtyNow()||saving)){e.preventDefault();e.returnValue='';return ''}});
-$('pren').onclick=function(){var p=byId(S.cur);if(!p)return;var n=prompt('新しい名前',p.name);if(n==null)return;n=n.trim();if(!n||n===p.name)return;
-pdo(async function(){var r=await sb.from(TBL).update({name:n,updated_at:new Date().toISOString(),updated_by:uid}).eq('id',p.id).select('id,name,updated_at').single();
-if(r.error&&r.error.code==='23505'){pstat('その名前は既に使われています。',true);return}chk(r);S.curName=r.data.name;S.curAt=r.data.updated_at;save();await loadPresetsQuiet();pstat('名前を変更しました')})};
-$('pdel').onclick=function(){var p=byId(S.cur);if(!p)return;if(!confirm('「'+p.name+'」を共有から削除しますか？（全員から見えなくなります）'))return;
-pdo(async function(){chk(await sb.from(TBL).delete().eq('id',p.id));clearCur();await loadPresetsQuiet();save();pstat('削除しました')})};
 $('migup').onclick=function(){if(!localPresets.length)return;
 pdo(async function(){var ex=chk(await sb.from(TBL).select('name')).data.map(function(x){return x.name}),ok=0,skip=0,big=0,fail=0,fe=null;
 for(var i=0;i<localPresets.length;i++){var p=localPresets[i];if(ex.indexOf(p.name)>=0){skip++;continue}
@@ -791,6 +840,189 @@ if(JSON.stringify(p.vals).length>PMAX*1.3){big++;continue}
 var r=await sb.from(TBL).insert({name:p.name,template:p.tpl,data:p.vals});if(r.error){if(r.error.code==='23505')skip++;else{fail++;fe=r.error}}else{ok++;ex.push(p.name)}}
 await loadPresetsQuiet();var msg='アップロード '+ok+'件 / 同名のためスキップ '+skip+'件'+(big?' / サイズ超過 '+big+'件':'')+(fail?' / 失敗 '+fail+'件':'');pstat(fail?pErr(fe):msg,fail>0);alert(msg+'\n\n不要になったら「ローカルのコピーを削除」を押してください。')})};
 $('migclr').onclick=function(){if(!confirm('このブラウザに保存されたデザイン'+localPresets.length+'件を削除します。共有にアップロード済みか確認しましたか？'))return;try{localStorage.removeItem(PKEY)}catch(e){}localPresets=[];drawMig()};
+
+/* ---------- デザインのエクスプローラー ---------- */
+/* フォルダの木（エクスプローラー左側・保存/移動ダイアログで共通）。o:{sel,open,onSel,onDrop,onCtx,rootLabel,exclude,counts,trash} */
+function drawTree(host,o){host.textContent='';
+function row(p,depth){if(o.exclude&&isUnder(p,o.exclude))return;
+var kids=childFolders(p).filter(function(k){return !(o.exclude&&isUnder(k,o.exclude))}),isOpen=p===''||o.open[p];
+var b=el('div','ft'+(o.sel===p?' on':''));b.style.paddingLeft=(8+depth*16)+'px';b.setAttribute('data-p',p);b.setAttribute('role','treeitem');
+var tg=el('span','tg',kids.length&&p!==''?(isOpen?'▾':'▸'):'');tg.onclick=function(e){e.stopPropagation();o.open[p]=!o.open[p];drawTree(host,o)};
+b.appendChild(tg);b.appendChild(el('i','fi'));b.appendChild(el('span','ti',p===''?(o.rootLabel||'デザイン'):baseOf(p)));b.title=p===''?(o.rootLabel||'デザイン'):p;
+if(o.counts)b.appendChild(el('small',null,String(p===''?presets.length:countIn(p))));
+b.onclick=function(){o.onSel(p)};
+if(o.onDrop)dropTarget(b,function(){o.onDrop(p)});
+if(o.onCtx)b.addEventListener('contextmenu',function(e){e.preventDefault();o.onCtx(p,e)});
+host.appendChild(b);if(isOpen&&p!=='')kids.forEach(function(k){row(k,depth+1)});else if(p==='')kids.forEach(function(k){row(k,1)})}
+row('',0);
+if(o.trash){var t=el('div','ft trash'+(o.sel==='\u0000trash'?' on':''));t.style.marginTop='8px';t.appendChild(el('span','tg'));t.appendChild(el('i','fi'));t.appendChild(el('span','ti','ゴミ箱'));t.appendChild(el('small',null,String(trashed.length)));t.onclick=function(){o.onSel('\u0000trash')};host.appendChild(t)}}
+function dropTarget(e,fn){e.addEventListener('dragover',function(ev){if(!EXP.drag)return;ev.preventDefault();ev.dataTransfer.dropEffect='move';e.classList.add('dt')});
+e.addEventListener('dragleave',function(){e.classList.remove('dt')});
+e.addEventListener('drop',function(ev){if(!EXP.drag)return;ev.preventDefault();e.classList.remove('dt');fn()})}
+function exOpen(){$('ex').hidden=false;modalOpen=true;EXP.q='';$('exq').value='';EXP.sel={};EXP.trash=false;var cp=S.cur&&byId(S.cur);EXP.cwd=EXP.ok&&cp?cp.folder:(EXP.ok&&EXP.cwd&&allFolders().indexOf(EXP.cwd)>=0?EXP.cwd:'');for(var q=EXP.cwd;q;q=parentOf(q))EXP.open[q]=1;
+$('ex').querySelector('.exc').classList.remove('tree-open');exDraw();if(!presetsLoaded||!busy)loadPresets();$('exlist').focus()}
+function exClose(){$('ex').hidden=true;modalOpen=!!$('mdl')||!$('fp').hidden;closeCtx()}
+function exGo(p){closeCtx();$('ex').querySelector('.exc').classList.remove('tree-open');if(p==='\u0000trash'){EXP.trash=true;EXP.cwd=''}else{EXP.trash=false;EXP.cwd=p;for(var q=p;q;q=parentOf(q))EXP.open[q]=1}EXP.q='';$('exq').value='';EXP.sel={};EXP.anchor='';exDraw()}
+function sortD(a){var s=EXP.sort,d=s.indexOf('desc')>0?-1:1;
+return a.slice().sort(function(x,y){var r=s.indexOf('at')===0?(tsNum(x.at)-tsNum(y.at)):x.name.localeCompare(y.name,'ja');return r*d||x.name.localeCompare(y.name,'ja')})}
+function exItems(){var out=[];
+if(EXP.trash){trashed.forEach(function(p){out.push({key:'d:'+p.id,t:'d',p:p,name:p.name,trash:1})});return out}
+var q=EXP.q.trim().toLowerCase();
+if(q){sortD(presets.filter(function(p){return p.name.toLowerCase().indexOf(q)>=0||p.folder.toLowerCase().indexOf(q)>=0})).forEach(function(p){out.push({key:'d:'+p.id,t:'d',p:p,name:p.name,where:1})});return out}
+if(EXP.ok)childFolders(EXP.cwd).forEach(function(f){out.push({key:'f:'+f,t:'f',path:f,name:baseOf(f),count:countIn(f)})});
+sortD(EXP.ok?inFolder(EXP.cwd):presets).forEach(function(p){out.push({key:'d:'+p.id,t:'d',p:p,name:p.name})});return out}
+function itemBy(k){for(var i=0;i<EXP.items.length;i++)if(EXP.items[i].key===k)return EXP.items[i]}
+function exDraw(){if($('ex').hidden)return;
+$('exbanner').hidden=EXP.ok!==false;
+Array.prototype.forEach.call($('exview').children,function(b){b.classList.toggle('on',b.getAttribute('data-v')===EXP.view)});$('exsort').value=EXP.sort;
+EXP.items=exItems();var valid={};EXP.items.forEach(function(i){valid[i.key]=1});Object.keys(EXP.sel).forEach(function(k){if(!valid[k])delete EXP.sel[k]});
+drawTree($('extree'),{sel:EXP.trash?'\u0000trash':EXP.cwd,open:EXP.open,onSel:exGo,onDrop:EXP.ok?exDropTo:null,onCtx:EXP.ok?exTreeCtx:null,counts:true,trash:EXP.ok!==false});
+if(EXP.ok===false)$('extree').querySelectorAll('.ft').forEach(function(x){x.style.pointerEvents='none'});
+var cr=$('excrumbs');cr.textContent='';
+function crumb(p,l){var b=el('button',null,l);b.type='button';b.title=l;b.setAttribute('data-p',p);b.onclick=function(){exGo(p)};if(EXP.ok)dropTarget(b,function(){exDropTo(p)});cr.appendChild(b)}
+if(EXP.trash){crumb('','デザイン');cr.appendChild(el('span',null,'/'));var tb=el('button',null,'ゴミ箱');tb.type='button';cr.appendChild(tb)}
+else if(EXP.q.trim()){crumb('','デザイン');cr.appendChild(el('span',null,'/'));var sb2=el('button',null,'「'+EXP.q.trim()+'」の検索結果');sb2.type='button';cr.appendChild(sb2)}
+else{crumb('','デザイン');var acc='';if(EXP.ok)EXP.cwd.split('/').filter(Boolean).forEach(function(s){acc=joinP(acc,s);cr.appendChild(el('span',null,'/'));crumb(acc,s)})}
+var L=$('exlist');L.textContent='';L.className=EXP.view==='list'?'exl':'';
+if(!EXP.items.length){var em=el('div','exfl');
+em.textContent=EXP.trash?'ゴミ箱は空です。削除したデザインはここに入り、元に戻せます。':EXP.q.trim()?'見つかりませんでした。':!presetsLoaded?(presetsErr||'読み込み中…'):EXP.cwd?'このフォルダは空です。保存時にこのフォルダを選ぶか、他のデザインをドラッグして入れられます。':'まだ保存したデザインがありません。「保存」でデザインを保存すると、ここに並びます。';L.appendChild(em)}
+else{var host=L;
+if(EXP.view==='list'){var h=el('div','exh2');['','',''].forEach(function(){h.appendChild(el('span'))});h.children[2].textContent='名前';h.appendChild(el('span','c',EXP.trash?'削除日時':'更新日時'));h.appendChild(el('span','c','更新者'));h.appendChild(el('span'));L.appendChild(h)}
+else{host=el('div','exg');L.appendChild(host)}
+EXP.items.forEach(function(it){host.appendChild(exItem(it))})}
+exMarkSel()}
+function exItem(it){var sel=!!EXP.sel[it.key],d=el('div','exi'+(sel?' sel':''));d.setAttribute('data-k',it.key);d.setAttribute('role','option');
+var canDrag=EXP.ok&&!EXP.trash;d.draggable=!!canDrag;
+var ck=el('input','ck');ck.type='checkbox';ck.checked=sel;ck.setAttribute('aria-label','選択');
+var th;if(it.t==='f'){th=el('div','fb');th.appendChild(el('i','fi'))}else th=designThumb(it.p);
+var nm=el('div','nm',it.name);nm.title=it.name;
+var mo=btn('⋯','メニュー');mo.className='mo';mo.setAttribute('aria-label','メニュー');
+var when=it.t==='f'?it.count+'件':fmtAt(it.trash?it.p.del:it.p.at),who=it.t==='d'&&it.p.by&&it.p.by===uid?($('uem').textContent||'自分'):'';
+if(EXP.view==='list'){d.appendChild(ck);d.appendChild(th);var nn=el('div','nm');nn.appendChild(document.createTextNode(it.name));if(it.where&&it.p.folder)nn.appendChild(el('span','c','　'+it.p.folder));nn.title=it.name;d.appendChild(nn);d.appendChild(el('div','c',it.t==='f'?it.count+'件':when));d.appendChild(el('div','c',who));d.appendChild(mo)}
+else{d.appendChild(ck);d.appendChild(mo);d.appendChild(th);d.appendChild(nm);d.appendChild(el('div','mt',it.where&&it.p.folder?it.p.folder:when))}
+if(it.t==='f'&&EXP.ok){d.setAttribute('data-p',it.path);dropTarget(d,function(){exDropTo(it.path)})}
+d.addEventListener('dragstart',function(e){if(!EXP.sel[it.key]){EXP.sel={};EXP.sel[it.key]=true;exMarkSel()}EXP.drag=exSelKeys();e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain','juken');
+var g=el('div');g.style.cssText='position:fixed;left:-999px;top:0;padding:6px 10px;background:#2563eb;color:#fff;border-radius:8px;font-size:13px';g.textContent=EXP.drag.length>1?EXP.drag.length+'件を移動':it.name;document.body.appendChild(g);e.dataTransfer.setDragImage(g,10,10);setTimeout(function(){g.remove()},0)});
+d.addEventListener('dragend',function(){EXP.drag=null;Array.prototype.forEach.call(document.querySelectorAll('#ex .dt'),function(x){x.classList.remove('dt')})});
+return d}
+function exSelKeys(){return EXP.items.filter(function(i){return EXP.sel[i.key]}).map(function(i){return i.key})}
+function exMarkSel(){var L=$('exlist'),n=0;
+Array.prototype.forEach.call(L.querySelectorAll('.exi'),function(d){var s=!!EXP.sel[d.getAttribute('data-k')];if(s)n++;d.classList.toggle('sel',s);d.querySelector('.ck').checked=s});
+L.classList.toggle('ex-multi',n>0);
+var a=$('exacts');a.textContent='';var keys=exSelKeys(),one=keys.length===1?itemBy(keys[0]):null,ok=EXP.ok;
+function add(t,fn,cls){var b=btn(t);if(cls)b.className=cls;b.onclick=fn;a.appendChild(b)}
+if(EXP.trash){if(keys.length){add('元に戻す',function(){exRestore(keys)});add('完全に削除',function(){exPurge(keys)},'dg')}if(trashed.length)add('ゴミ箱を空にする',function(){exPurge(trashed.map(function(p){return 'd:'+p.id}))},'dg')}
+else{if(ok&&!EXP.q.trim())add('＋ 新しいフォルダ',function(){exNewFolder(EXP.cwd)});
+if(one)add('開く',function(){exOpenItem(one)},'pri');
+if(keys.length&&ok)add('移動…',function(){exMove(keys)});
+if(keys.length)add('削除',function(){exDelete(keys)},'dg')}
+var tot=EXP.items.length;$('exst').textContent=(n?n+'件を選択中 ／ ':'')+tot+'件'+(EXP.trash?'（ゴミ箱）':EXP.q.trim()?'（検索結果）':'')+(ok===false?' ／ フォルダ機能は未設定です':'')}
+function exKeyRange(a,b){var ks=EXP.items.map(function(i){return i.key}),i=ks.indexOf(a),j=ks.indexOf(b);if(i<0||j<0)return [b];return ks.slice(Math.min(i,j),Math.max(i,j)+1)}
+$('exlist').addEventListener('click',function(e){var d=e.target.closest('.exi');if(!d){EXP.sel={};exMarkSel();return}var k=d.getAttribute('data-k');
+if(e.target.closest('.mo')){e.stopPropagation();if(!EXP.sel[k]){EXP.sel={};EXP.sel[k]=true;EXP.anchor=k;exMarkSel()}var r=e.target.getBoundingClientRect();showCtx(r.right,r.bottom,exMenu(exSelKeys()),true);return}
+if(e.target.classList.contains('ck')){if(e.target.checked)EXP.sel[k]=true;else delete EXP.sel[k];EXP.anchor=k;exMarkSel();return}
+if(e.shiftKey&&EXP.anchor){EXP.sel={};exKeyRange(EXP.anchor,k).forEach(function(x){EXP.sel[x]=true})}
+else if(e.ctrlKey||e.metaKey){if(EXP.sel[k])delete EXP.sel[k];else EXP.sel[k]=true;EXP.anchor=k}
+else{EXP.sel={};EXP.sel[k]=true;EXP.anchor=k}
+exMarkSel()});
+$('exlist').addEventListener('dblclick',function(e){var d=e.target.closest('.exi');if(!d||e.target.closest('.mo')||e.target.classList.contains('ck'))return;var it=itemBy(d.getAttribute('data-k'));if(it)exOpenItem(it)});
+$('exlist').addEventListener('contextmenu',function(e){var d=e.target.closest('.exi');if(!d)return;e.preventDefault();var k=d.getAttribute('data-k');if(!EXP.sel[k]){EXP.sel={};EXP.sel[k]=true;EXP.anchor=k;exMarkSel()}showCtx(e.clientX,e.clientY,exMenu(exSelKeys()))});
+function exOpenItem(it){if(it.t==='f'){exGo(it.path);return}if(it.trash){toast('ゴミ箱の中のデザインは、先に「元に戻す」を押してください。');return}
+if(openPreset(it.p.id)){exClose();if(UI.mode==='easy')setStep(2);toast('『'+it.p.name+'』を開きました')}}
+/* 右クリック／⋯メニュー */
+function closeCtx(){var m=$('ctxm');if(m)m.remove()}
+function showCtx(x,y,items,below){closeCtx();if(!items.length)return;var m=el('div');m.id='ctxm';m.setAttribute('role','menu');
+items.forEach(function(it){if(it==='-'){m.appendChild(document.createElement('hr'));return}var b=btn(it.t);b.setAttribute('role','menuitem');if(it.dg)b.className='dg';b.onclick=function(e){e.stopPropagation();closeCtx();it.fn()};m.appendChild(b)});
+document.body.appendChild(m);var w=m.offsetWidth,h=m.offsetHeight;if(below)x=x-w;
+m.style.left=Math.max(4,Math.min(x,innerWidth-w-4))+'px';m.style.top=Math.max(4,Math.min(y,innerHeight-h-4))+'px'}
+document.addEventListener('mousedown',function(e){var m=$('ctxm');if(m&&!m.contains(e.target))closeCtx()},true);
+window.addEventListener('blur',closeCtx);
+function exMenu(keys){var one=keys.length===1?itemBy(keys[0]):null,out=[];
+if(EXP.trash)return [{t:'元に戻す',fn:function(){exRestore(keys)}},{t:'完全に削除',dg:1,fn:function(){exPurge(keys)}}];
+if(one){out.push({t:'開く',fn:function(){exOpenItem(one)}});out.push({t:'名前の変更',fn:function(){exRename(one)}});if(one.t==='d')out.push({t:'複製',fn:function(){exDup(one.p)}})}
+if(EXP.ok)out.push({t:'移動…',fn:function(){exMove(keys)}});
+out.push('-');out.push({t:'削除',dg:1,fn:function(){exDelete(keys)}});return out}
+function exTreeCtx(p,e){var it=[{t:'開く',fn:function(){exGo(p)}},{t:'新しいフォルダ',fn:function(){exNewFolder(p)}}];
+if(p!==''){it.push({t:'名前の変更',fn:function(){exRename({t:'f',path:p,name:baseOf(p)})}});it.push('-');it.push({t:'削除',dg:1,fn:function(){exDelete(['f:'+p])}})}showCtx(e.clientX,e.clientY,it)}
+/* 操作 */
+async function exDo(fn){if(busy)return false;setBusy(true);var ok=false;try{await fn();ok=true}catch(e){toast(pErr(e&&e.message?e:{message:String(e)}),null,null,10000)}
+try{await loadPresetsQuiet()}catch(e){}setBusy(false);return ok}
+function syncCur(rows){(rows||[]).forEach(function(r){if(r.id===S.cur){S.curAt=r.updated_at||S.curAt;if(r.name)S.curName=r.name;save()}})}
+function exMoveDest(keys,dest){var fs=keys.filter(function(k){return k[0]==='f'}).map(function(k){return k.slice(2)}),ds=keys.filter(function(k){return k[0]==='d'}).map(function(k){return k.slice(2)});
+for(var i=0;i<fs.length;i++){if(isUnder(dest,fs[i]))return {err:'フォルダ「'+baseOf(fs[i])+'」を自分自身の中には移動できません。'};
+if(parentOf(fs[i])!==dest&&allFolders().indexOf(joinP(dest,baseOf(fs[i])))>=0)return {err:'移動先に同じ名前のフォルダがあります：'+baseOf(fs[i])}}
+fs=fs.filter(function(f){return parentOf(f)!==dest});ds=ds.filter(function(id){var p=byId(id);return p&&p.folder!==dest});
+return {fs:fs,ds:ds}}
+async function exMoveTo(keys,dest){var r=exMoveDest(keys,dest);if(r.err){toast(r.err);return}if(!r.fs.length&&!r.ds.length){return}
+var n=r.fs.length+r.ds.length;
+await exDo(async function(){await ensureFolder(dest);
+if(r.ds.length){var u=chk(await sb.from(TBL).update({folder:dest}).in('id',r.ds).select('id,updated_at'));syncCur(u.data)}
+for(var i=0;i<r.fs.length;i++)await renameFolderPath(r.fs[i],joinP(dest,baseOf(r.fs[i])));
+toast(n+'件を「'+(dest||'デザイン')+'」に移動しました')});EXP.sel={};exDraw()}
+function exDropTo(dest){var keys=EXP.drag;EXP.drag=null;if(keys&&keys.length)exMoveTo(keys,dest)}
+async function renameFolderPath(old,nw){var aff={};presets.concat(trashed).forEach(function(p){if(isUnder(p.folder,old))aff[p.folder]=1});
+for(var f in aff){chk(await sb.from(TBL).update({folder:nw+f.slice(old.length)}).eq('folder',f))}
+if(EXP.fok){var fr=EXP.folders.filter(function(p){return isUnder(p,old)}).sort(function(a,b){return a.length-b.length});
+if(!fr.length)await ensureFolder(nw);
+for(var i=0;i<fr.length;i++)chk(await sb.from(FTBL).update({path:nw+fr[i].slice(old.length)}).eq('path',fr[i]))}
+EXP.local=EXP.local.map(function(p){return isUnder(p,old)?nw+p.slice(old.length):p});
+var no={};Object.keys(EXP.open).forEach(function(p){no[isUnder(p,old)?nw+p.slice(old.length):p]=EXP.open[p]});EXP.open=no;
+if(isUnder(EXP.cwd,old))EXP.cwd=nw+EXP.cwd.slice(old.length)}
+function pickFolder(o){return new Promise(function(res){modalOpen=true;var w=el('div');w.id='mdl';var c=el('div','mc xwide');c.setAttribute('role','dialog');c.setAttribute('aria-modal','true');w.appendChild(c);
+c.appendChild(el('h3',null,o.title));if(o.text)c.appendChild(el('p',null,o.text));
+var sel=o.sel||'',open={};for(var q=sel;q;q=parentOf(q))open[q]=1;var tr=el('div','ftree');c.appendChild(tr);
+var dr=function(){drawTree(tr,{sel:sel,open:open,onSel:function(p){sel=p;dr()},rootLabel:'デザイン（フォルダなし）',exclude:o.exclude})};dr();
+var bb=el('div','mb');c.appendChild(bb);function done(v){w.remove();modalOpen=anyOvl();res(v)}
+var cb=btn('キャンセル');cb.onclick=function(){done(null)};var ob=btn(o.ok||'ここに移動');ob.className='pri';ob.onclick=function(){done({path:sel})};bb.appendChild(cb);bb.appendChild(ob);
+w.addEventListener('keydown',function(e){if(e.key==='Escape'){e.preventDefault();done(null)}});w.addEventListener('mousedown',function(e){if(e.target===w)done(null)});document.body.appendChild(w);ob.focus()})}
+async function exMove(keys){if(!keys.length||!EXP.ok)return;var ex=keys.filter(function(k){return k[0]==='f'}).map(function(k){return k.slice(2)})[0];
+var d=await pickFolder({title:'移動先のフォルダを選ぶ',text:keys.length+'件を移動します。',sel:EXP.cwd,exclude:ex});if(!d)return;exMoveTo(keys,d.path)}
+async function ask(title,text,okLabel,danger){var d=await fdlg({title:title,text:text,fields:[],ok:okLabel,danger:danger});return !!d}
+async function exNewFolder(parent){var d=await fdlg({title:'新しいフォルダ',text:parent?'「'+parent+'」の中に作ります。':'デザインの一番上に作ります。',fields:[{k:'n',label:'フォルダ名',value:'',max:40,req:1,ph:'例：2026年度'}],ok:'作る'});if(!d)return;
+var er=folderErr(d.n);if(er){toast(er);return}var p=joinP(parent,d.n.trim());if(allFolders().indexOf(p)>=0){toast('同じ名前のフォルダがあります。');return}
+if(!EXP.fok)EXP.local.push(p);
+var ok=await exDo(async function(){await ensureFolder(p)});if(ok){EXP.open[parent]=1;toast('フォルダ「'+d.n.trim()+'」を作りました');EXP.cwd=p;for(var q=p;q;q=parentOf(q))EXP.open[q]=1;EXP.sel={};exDraw()}}
+async function exRename(it){if(it.t==='f'){var d=await fdlg({title:'フォルダ名の変更',fields:[{k:'n',label:'新しい名前',value:it.name,max:40,req:1}],ok:'変更'});if(!d||d.n===it.name)return;
+var er=folderErr(d.n);if(er){toast(er);return}var np=joinP(parentOf(it.path),d.n.trim());if(allFolders().indexOf(np)>=0){toast('同じ名前のフォルダがあります。');return}
+await exDo(async function(){await renameFolderPath(it.path,np);toast('フォルダ名を変更しました')});EXP.sel={};exDraw();return}
+var p=it.p,d2=await fdlg({title:'名前の変更',fields:[{k:'n',label:'新しい名前',value:p.name,max:80,req:1}],ok:'変更'});if(!d2||d2.n===p.name)return;
+await exDo(async function(){var r=await sb.from(TBL).update({name:d2.n}).eq('id',p.id).select('id,name,updated_at').single();
+if(isDup(r.error)){toast('その名前は同じ場所に既にあります。');return}chk(r);syncCur([r.data]);toast('名前を変更しました')})}
+function uniqName(base,folder){var names={};presets.concat(trashed).forEach(function(p){if(!EXP.ok||p.folder===folder)names[p.name]=1});var n=base,i=2;while(names[n])n=base+' ('+(i++)+')';return n}
+async function exDup(p){await exDo(async function(){var pl={name:uniqName(p.name+' のコピー',p.folder),template:p.tpl,data:p.vals,updated_by:uid};if(EXP.ok){pl.folder=p.folder;pl.thumb=p.thumb||null}
+chk(await sb.from(TBL).insert(pl));toast('複製しました')})}
+async function exDelete(keys){var fs=keys.filter(function(k){return k[0]==='f'}).map(function(k){return k.slice(2)}),ds=keys.filter(function(k){return k[0]==='d'}).map(function(k){return k.slice(2)});
+if(EXP.ok===false){if(!ds.length)return;if(!await ask('デザインを削除','選んだ'+ds.length+'件を削除します。この環境ではゴミ箱が使えないため、元に戻せません。','削除する',true))return;
+await exDo(async function(){chk(await sb.from(TBL).delete().in('id',ds));toast('削除しました')});EXP.sel={};exDraw();return}
+for(var i=0;i<fs.length;i++){if(countIn(fs[i])||childFolders(fs[i]).length){toast('フォルダ「'+baseOf(fs[i])+'」は空ではありません。中のデザインを移動するか削除してから、削除してください。');return}}
+if(fs.length&&!await ask('フォルダを削除','空のフォルダ'+fs.length+'件を削除します。','削除する',true))return;
+await exDo(async function(){
+if(ds.length)chk(await sb.from(TBL).update({deleted_at:new Date().toISOString()}).in('id',ds));
+for(var i=0;i<fs.length;i++){var tr=trashed.filter(function(p){return p.folder===fs[i]}).map(function(p){return p.id});if(tr.length)chk(await sb.from(TBL).update({folder:''}).in('id',tr));
+if(EXP.fok)chk(await sb.from(FTBL).delete().eq('path',fs[i]));EXP.local=EXP.local.filter(function(p){return p!==fs[i]});EXP.folders=EXP.folders.filter(function(p){return p!==fs[i]});if(isUnder(EXP.cwd,fs[i]))EXP.cwd=parentOf(fs[i])}
+if(ds.length)toast(ds.length+'件をゴミ箱に移動しました','元に戻す',function(){exRestore(ds.map(function(id){return 'd:'+id}))},10000);else toast('フォルダを削除しました')});
+EXP.sel={};exDraw()}
+async function exRestore(keys){var ids=keys.filter(function(k){return k[0]==='d'}).map(function(k){return k.slice(2)});if(!ids.length)return;
+await exDo(async function(){for(var i=0;i<ids.length;i++){var r=await sb.from(TBL).update({deleted_at:null}).eq('id',ids[i]).select('id');
+if(isDup(r.error)){var p=trashed.filter(function(x){return x.id===ids[i]})[0];r=await sb.from(TBL).update({deleted_at:null,name:uniqName((p?p.name:'デザイン')+' (復元)',p?p.folder:'')}).eq('id',ids[i]).select('id')}chk(r)}
+toast(ids.length+'件を元に戻しました')});EXP.sel={};exDraw()}
+async function exPurge(keys){var ids=keys.filter(function(k){return k[0]==='d'}).map(function(k){return k.slice(2)});if(!ids.length)return;
+if(!await ask('完全に削除','選んだ'+ids.length+'件を完全に削除します。この操作は元に戻せません。','完全に削除する',true))return;
+await exDo(async function(){chk(await sb.from(TBL).delete().in('id',ids));toast('完全に削除しました')});EXP.sel={};exDraw()}
+$('dopen').onclick=exOpen;$('exx').onclick=exClose;$('exrf').onclick=function(){loadPresets()};
+$('ex').addEventListener('mousedown',function(e){if(e.target===$('ex'))exClose()});
+$('extoggle').onclick=function(){$('ex').querySelector('.exc').classList.toggle('tree-open')};
+$('exview').onclick=function(e){var b=e.target.closest('button');if(!b)return;EXP.view=b.getAttribute('data-v');UI.view=EXP.view;saveUi();exDraw()};
+$('exsort').onchange=function(){EXP.sort=this.value;exDraw()};
+var exqT;$('exq').oninput=function(){EXP.q=this.value;clearTimeout(exqT);exqT=setTimeout(function(){EXP.sel={};exDraw()},120)};
+document.addEventListener('keydown',function(e){if($('ex').hidden)return;
+if(e.key==='Escape'){if($('ctxm')){e.preventDefault();closeCtx();return}if(document.getElementById('mdl'))return;e.preventDefault();var c=$('ex').querySelector('.exc');if(c.classList.contains('tree-open'))c.classList.remove('tree-open');else exClose();return}
+if(document.getElementById('mdl'))return;var t=e.target,tn=t&&t.tagName;if(tn==='INPUT'&&t.type!=='checkbox'||tn==='TEXTAREA'||tn==='SELECT')return;
+var keys=exSelKeys(),one=keys.length===1?itemBy(keys[0]):null;
+if(e.key==='Delete'||e.key==='Backspace'&&!e.ctrlKey){if(!keys.length)return;e.preventDefault();if(EXP.trash)exPurge(keys);else exDelete(keys)}
+else if(e.key==='F2'){if(one&&!EXP.trash){e.preventDefault();exRename(one)}}
+else if(e.key==='Enter'){if(tn==='BUTTON')return;if(one){e.preventDefault();exOpenItem(one)}}
+else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='a'){e.preventDefault();EXP.sel={};EXP.items.forEach(function(i){EXP.sel[i.key]=true});exMarkSel()}})
 
 /* ---------- ファイル書き出し・読み込み（.juken.json） ---------- */
 function dlText(name,text){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'application/json'}));a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(a.href)},1000)}
@@ -802,20 +1034,18 @@ function fail(m){pstat(m,true);return false}
 try{o=JSON.parse(String(text).replace(/^﻿/,''))}catch(e){return fail('JSONとして読み取れませんでした。カンマや引用符の誤りがないか確認してください（'+e.message+'）')}
 if(!o||typeof o!=='object'||Array.isArray(o)||o.format!=='juken-design')return fail('受験票デザインのファイルではありません（"format": "juken-design" が見つかりません）。');
 if(typeof o.version==='number'&&o.version>1)return fail('このファイルは新しい形式（version '+o.version+'）です。アプリを更新してください。');
-if(typeof o.template!=='string'||!TEMPLATES[o.template])return fail('テンプレート "'+o.template+'" は存在しません。使えるのは '+TPL_ORDER.join(' / ')+' です。');
+if(typeof o.template!=='string'||!JT.get(o.template))return fail('テンプレート "'+o.template+'" は存在しません。使えるのは '+JT.list().map(function(t){return t.id}).join(' / ')+' です。');
 var data=o.data===undefined||o.data===null?{}:o.data;
 if(typeof data!=='object'||Array.isArray(data))return fail('"data" はオブジェクト（{ … }）にしてください。');
-data=clone(data);var T=TEMPLATES[o.template],known={};
-T.fields.forEach(function(f){if(f.k)known[f.k]=1});
-if(T.migrate)['venue','room','date','system','faculty','sched'].forEach(function(k){known[k]=1});
+data=clone(data);var known=JT.known(o.template);
 var unk=Object.keys(data).filter(function(k){return !known[k]});if(unk.length)notes.push('未対応の項目を無視: '+unk.join(', '));
-T.fields.forEach(function(f){if(f.type!=='image'||!(f.k in data))return;var v=data[f.k];
+['map','logo'].forEach(function(k){var f={k:k};if(!(k in data))return;var v=data[f.k];
 if(v===null||v===true||v==='')delete data[f.k];
 else if(v===false)data[f.k]={d:'',hide:true};
 else if(typeof v==='string')data[f.k]={d:v,hide:false};
 if(data[f.k]&&typeof data[f.k]==='object'&&typeof data[f.k].d==='string'){var d=data[f.k].d;
 if(d&&!/^data:image\//i.test(d)&&(/^[a-z][a-z0-9+.\-]*:/i.test(d)||/^[\/\x5c]/.test(d))){notes.push('画像「'+f.k+'」は相対パス（例: assets/xxx.png）かdataURLのみ使えます。既定画像を使用');data[f.k].d=''}}});
-var nv;try{nv=mkVals(T,data)}catch(e){return fail('内容を解釈できませんでした（'+e.message+'）')}
+var nv;try{nv=JT.mkVals(o.template,data)}catch(e){return fail('内容を解釈できませんでした（'+e.message+'）')}
 S.tpl=o.template;V=nv;clearCur();importName=typeof o.name==='string'?o.name.trim():'';if(importName)lastFile='';afterDesignChange();resetBase();hideDraft();
 pstat('読み込みました'+(importName?'（'+importName+'）':'')+'。内容を確認し、共有するなら「保存」を押してください。'+(notes.length?'［'+notes.join(' / ')+'］':''));return true}
 function importFile(f){if(!f)return;var fr=new FileReader();lastFile=String(f.name||'').replace(/\.juken\.json$|\.json$/i,'');fr.onerror=function(){pstat('ファイルを読み込めませんでした。',true)};fr.onload=function(){importDesign(fr.result)};fr.readAsText(f)}
@@ -825,12 +1055,11 @@ if(location.protocol==='file:'){pstat('ファイルを直接開いている場�
 pstat('読み込み中…');fetch('designs/'+f+'.juken.json',{cache:'no-cache'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.text()}).then(function(t){importDesign(t)}).catch(function(e){pstat('同梱デザインを読み込めませんでした（'+e.message+'）',true)})};
 $('fimpf').onchange=function(){importFile(this.files[0]);this.value=''};
 $('jgo').onclick=function(){var t=$('jtxt').value;if(!t.trim()){pstat('JSONを貼り付けてください。',true);return}if(importDesign(t)){$('jtxt').value='';$('jpaste').open=false}};
-var ds=$('designSec');
+var ds=$('tp-io');
 function hasFiles(e){var t=e.dataTransfer&&e.dataTransfer.types;return !!t&&Array.prototype.indexOf.call(t,'Files')>=0}
 ['dragenter','dragover'].forEach(function(t){ds.addEventListener(t,function(e){if(!hasFiles(e))return;e.preventDefault();ds.classList.add('over')})});
 ds.addEventListener('dragleave',function(e){if(!ds.contains(e.relatedTarget))ds.classList.remove('over')});
 ds.addEventListener('drop',function(e){if(!hasFiles(e))return;e.preventDefault();ds.classList.remove('over');importFile(e.dataTransfer.files[0])});
-
 /* ---------- 名簿 ---------- */
 function parseDelim(text,delim){var out=[],row=[],f='',q=false,i=0,n=text.length,c;
 for(;i<n;i++){c=text[i];
@@ -862,19 +1091,10 @@ function colIdx(name){var n=normH(name);if(!n)return -1;for(var i=0;i<headers.le
 function autoNum(a,idx){var d=Math.max(1,a.digits||3);return (a.prefix||'')+String((+a.start||0)+idx).padStart(d,'0')}
 function colVal(st,it){if(!st.row){var nm=it.column||it.label,g=groupOf(nm);return g?SAMPLE[g]:'〈'+nm+'〉'}
 var ix=slotIndex[it.id];return ix>=0?(st.row[ix]||''):''}
-function groupVal(st,g){if(!st.row)return SAMPLE[g]||'';if(R.has[g]&&slotIndex[g]>=0)return st.row[slotIndex[g]]||'';
-return g==='no'?autoNum({prefix:V.apre,start:V.astart,digits:V.adig},st.idx):''}
-function itemVal(it,st){var s=it.source;
-if(s==='fixed')return it.value||'';
-if(s==='date')return fmtDate(it.value);
-if(s==='autonumber')return autoNum(it.auto,st.idx);
-if(s==='column'){var v=colVal(st,it);if(v)return v;
-if(it.fallback)return it.fallback;return ''}
-return ''}
+
+function itemVal(it,st){return C.value(it,st)}
 /* 項目ごとの貼り付け欄（真実の源）。texts[欄キー]=テキスト。保存・送信しない */
-var SIMPLE_SLOTS=[['no','受験番号'],['name','氏名'],['kana','カナ氏名'],['school','学校名'],['grade','学年']];
-function getSlots(){if(tpl().hasItems)return V.items.filter(function(i){return i.source==='column'}).map(function(i){return {key:i.id,label:i.label||'（無題）',col:i.column||i.label,req:!i.hidden&&!i.fallback}});
-return SIMPLE_SLOTS.map(function(g){return {key:g[0],label:g[1],col:g[1],req:g[0]==='name'}})}
+function getSlots(){return V.items.filter(function(i){return i.source==='column'}).map(function(i){return {key:i.id,label:i.label||'（無題）',col:i.column||i.label,req:!i.hidden&&!i.fallback&&!i.autoEmpty}})}
 function isHdrLine(sl,x){var n=normH(x);if(!n)return false;if(n===normH(sl.label)||n===normH(sl.col))return true;var g=groupOf(x);return !!g&&g===groupOf(sl.label)}
 function trimTail(a){while(a.length&&a[a.length-1]==='')a.pop();return a}
 function computeRoster(){R={n:0,cnt:{},has:{},hdr:{},multi:{},vals:{}};slotIndex={};
@@ -903,12 +1123,11 @@ function drawRoster(){var box=$('slots');
 var ns=getSlots(),keys={};ns.forEach(function(s){keys[s.key]=1});
 ns.forEach(function(s){if(texts[s.key]!==undefined)return;for(var i=0;i<lastSlots.length;i++){var o=lastSlots[i];if(o.label===s.label&&!keys[o.key]&&texts[o.key]!==undefined){texts[s.key]=texts[o.key];break}}});
 slots=ns;lastSlots=ns.map(function(s){return {key:s.key,label:s.label}});slotEls={};box.textContent='';
-$('slhint').hidden=!tpl().hasItems;$('cadd').hidden=!tpl().hasItems;
 if(!slots.length)box.appendChild(el('p','note','名簿から値を取る項目がありません。'));
 slots.forEach(function(sl){var d=el('div','sl'),h=el('div','sl-h');var k=el('b','sl-k',sl.label);k.title=sl.label;h.appendChild(k);var n=el('span','sl-n','0件');h.appendChild(n);
 var cb=btn('クリア');h.appendChild(cb);d.appendChild(h);
 var ta=el('textarea');ta.rows=4;ta.wrap='off';ta.spellcheck=false;ta.value=texts[sl.key]||'';ta.setAttribute('data-slot',sl.key);ta.setAttribute('aria-label',sl.label);
-ta.placeholder='ここに'+sl.label+'を1行に1人ずつ貼り付け'+(!tpl().hasItems&&sl.key==='no'?'（空欄なら自動採番）':'');
+ta.placeholder='ここに'+sl.label+'を1行に1人ずつ貼り付け';
 ta.oninput=function(){texts[sl.key]=ta.value;delete keepHdr[sl.key];growTa(ta);rosterInput()};
 cb.onclick=function(){var prev=texts[sl.key]||'';if(!prev)return;texts[sl.key]='';ta.value='';delete keepHdr[sl.key];growTa(ta);rosterInput();
 toast('「'+sl.label+'」をクリアしました','元に戻す',function(){texts[sl.key]=prev;ta.value=prev;growTa(ta);rosterInput()})};
@@ -919,8 +1138,8 @@ $('cnt').textContent=rows.length+'名';$('rsum').textContent=has?rows.length+'�
 var rdT=null;
 function rosterInput(){rosterInfo();clearTimeout(rdT);rdT=setTimeout(render,120)}
 function rosterChanged(){drawRoster();render()}
-function focusSlot(id){var e=slotEls[id];if(!e)return;$('rosterSec').open=true;e.ta.scrollIntoView({behavior:'smooth',block:'center'});e.ta.focus({preventScroll:true})}
-$('cadd').onclick=function(){if(!tpl().hasItems)return;var n=prompt('追加する項目名を入力してください（例：志望学部）','');if(n==null)return;n=n.trim();if(!n)return;
+function focusSlot(id){var e=slotEls[id];if(!e)return;showRoster();e.ta.scrollIntoView({behavior:'smooth',block:'center'});e.ta.focus({preventScroll:true})}
+$('cadd').onclick=function(){var n=prompt('追加する項目名を入力してください（例：志望学部）','');if(n==null)return;n=n.trim();if(!n)return;
 var it=mkItem(n,'column',{});V.items.push(it);save();drawItems();render();focusSlot(it.id)};
 function clearAll(){var prev=clone(texts);var any=Object.keys(texts).some(function(k){return texts[k]});if(!any)return;texts={};keepHdr={};sel={};navPos=0;rosterChanged();
 toast('名簿をクリアしました','元に戻す',function(){texts=prev;rosterChanged()})}
@@ -930,15 +1149,13 @@ if(table.length<2){alert('データ行が見つかりません（1行目は見�
 headers=table[0].map(function(h,i){return h||('列'+(i+1))});var data=table.slice(1),prev=clone(texts),got=[],miss=[];
 slots.forEach(function(sl){var ix=colIdx(sl.col);if(ix<0){miss.push(sl.label);return}texts[sl.key]=data.map(function(r){return r[ix]||''}).join('\n');got.push(sl.label)});
 if(!got.length){texts=prev;alert('見出しが項目名と一致する列がありませんでした。\n表の見出し：'+headers.join('、')+'\n項目：'+slots.map(function(s){return s.label}).join('、'));return false}
-keepHdr={};sel={};navPos=0;$('rosterSec').open=true;rosterChanged();
+keepHdr={};sel={};navPos=0;showRoster();rosterChanged();
 toast('「'+got.join('・')+'」に'+data.length+'名分を入れました'+(miss.length?'（未入力：'+miss.join('・')+'）':''),'元に戻す',function(){texts=prev;keepHdr={};rosterChanged()},12000);return true}
 $('rclr').onclick=clearAll;
-function listLabel(r,i){var st={idx:i,row:r};
-if(tpl().hasItems){var its=V.items,no=null,nm=null,kn=/カナ|ｶﾅ|フリガナ|ふりがな/;
+function listLabel(r,i){var st=mkStu(i,r),its=V.items,no=null,nm=null,kn=/カナ|ｶﾅ|フリガナ|ふりがな/;
 its.forEach(function(x){if(!no&&/受験番号/.test(x.label))no=x;if(!nm&&/氏名|名前/.test(x.label)&&!kn.test(x.label))nm=x});
 if(!nm)nm=its.filter(function(x){return /氏名|名前/.test(x.label)})[0]||its.filter(function(x){return x.source==='column'})[0];
 return (no?itemVal(no,st):String(i+1))+' '+((nm&&itemVal(nm,st))||'（氏名なし）')}
-return groupVal(st,'no')+' '+(groupVal(st,'name')||groupVal(st,'kana')||'（氏名なし）')}
 function drawList(){var l=$('list');l.textContent='';
 rows.forEach(function(r,i){var lb=el('label');var c=el('input');c.type='checkbox';c.checked=!!sel[i];
 c.onchange=function(){sel[i]=c.checked;render()};lb.appendChild(c);
@@ -965,38 +1182,30 @@ var SAMPLE_CSV=['受験番号,氏名,カナ氏名,学校名,学年,志望学部,
 $('trysample').onclick=function(){load(parseDelim(SAMPLE_CSV,','))};
 $('sample').onclick=function(){var csv='\ufeff'+SAMPLE_CSV;
 var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='sample_meibo.csv';a.click();setTimeout(function(){URL.revokeObjectURL(a.href)},1000)};
-
 /* ---------- プレビュー ---------- */
-function current(){if(!rows.length)return [{idx:0,row:null}];var out=[];
-rows.forEach(function(r,i){if(sel[i])out.push({idx:i,row:r})});return out}
+function current(){if(!rows.length)return [mkStu(0,null)];var out=[];
+rows.forEach(function(r,i){if(sel[i])out.push(mkStu(i,r))});return out}
 var PXMM=96/25.4;
 function render(){var list=current(),box=$('pages');box.textContent='';
-var avail=Math.max(200,$('pane').clientWidth-32);var sc=zoom==='100'?1:Math.min(1,avail/(210*PXMM));
+var avail=Math.max(200,$('pane').clientWidth-32);var sc=zoom==='100'&&UI.mode==='adv'?1:Math.min(1,avail/(210*PXMM));
 var fl=[],T=tpl();
 list.forEach(function(st){var w=el('div','pw');w.style.width=(210*PXMM*sc)+'px';w.style.height=(297*PXMM*sc)+'px';
-var t=T.render(st,V);t.style.transform='scale('+sc+')';w.appendChild(t);box.appendChild(w);fl.push(t)});
-fl.forEach(function(t){(t._fits||[]).forEach(function(e){fit(e)})});
+var t=JT.render(S.tpl,st,V);t.style.transform='scale('+sc+')';w.appendChild(t);box.appendChild(w);fl.push(t)});
+fl.forEach(fitAll);
 if(rows.length)drawList();$('selcnt').textContent=rows.length?('選択 '+list.length+' / '+rows.length+'名'):'';
 applyView()}
-$('print').onclick=function(){
+function doPrint(){
 if(rows.length&&!current().length){alert('印刷する生徒が選択されていません。');return}
-window.print()};
+window.print()}
+$('print').onclick=doPrint;
 var rt;window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(render,100)});
-/* ---------- UI状態（折りたたみ・ズーム等はlocalStorageに記憶） ---------- */
-var UIK='juken-hyo-ui-v1',UI={open:{},zoom:'fit',all:false};
-try{var u0=JSON.parse(localStorage.getItem(UIK)||'{}');if(u0&&typeof u0==='object'){if(u0.open&&typeof u0.open==='object')UI.open=u0.open;if(u0.zoom==='100')UI.zoom='100';UI.all=!!u0.all}}catch(e){}
 zoom=UI.zoom;showAll=UI.all;
-function saveUi(){try{localStorage.setItem(UIK,JSON.stringify(UI))}catch(e){}}
-Array.prototype.forEach.call(document.querySelectorAll('details[data-sec]'),function(d){var k=d.getAttribute('data-sec');
-if(typeof UI.open[k]==='boolean')d.open=UI.open[k];d.addEventListener('toggle',function(){UI.open[k]=d.open;saveUi()})});
-
 /* ---------- トースト ---------- */
 var toastT=null;
 function hideToast(){$('toast').hidden=true}
 function toast(msg,label,fn,ms){$('toastm').textContent=msg;var b=$('toasta');b.hidden=!label;
 if(label){b.textContent=label;b.onclick=function(){hideToast();if(fn)fn()}}
 $('toast').hidden=false;clearTimeout(toastT);toastT=setTimeout(hideToast,ms||9000)}
-
 /* ---------- 元に戻す／やり直し（設定のスナップショット） ---------- */
 var hist=[],hi=-1,hT=null,HMAX=50,baseline='';
 function snap(){return JSON.stringify({t:S.tpl,v:V})}
@@ -1009,7 +1218,7 @@ updUndo();refreshDirty()}
 function histSoon(){if(hi<0)return;clearTimeout(hT);hT=setTimeout(histCommit,500)}
 function histFlush(){if(hT){clearTimeout(hT);histCommit()}}
 function histGo(d){histFlush();var j=hi+d;if(j<0||j>=hist.length)return;hi=j;
-var o=JSON.parse(hist[hi]);S.tpl=TEMPLATES[o.t]?o.t:S.tpl;V=mkVals(tpl(),o.v);
+var o=JSON.parse(hist[hi]);S.tpl=JT.get(o.t)?o.t:S.tpl;V=JT.mkVals(S.tpl,o.v);
 closePop();afterDesignChange();hist[hi]=snap();updUndo();refreshDirty()}
 function undo(){histGo(-1)}function redo(){histGo(1)}
 $('undo').onclick=undo;$('redo').onclick=redo;
@@ -1020,7 +1229,7 @@ function hsh(x){var h=5381;for(var i=0;i<x.length;i++)h=((h<<5)+h+x.charCodeAt(i
 var dsMemo={raw:'',out:''},dsBase='',dsBaseId='',dsBasePAt='';
 function dsnap(){var raw=snap();if(raw!==dsMemo.raw)dsMemo={raw:raw,out:dsnapOf(raw)};return dsMemo.out}
 function resetBase(){baseline=snap();S.bh=hsh(dsnap());save();refreshDirty()}
-function baseDs(cur){try{return dsnapOf(JSON.stringify({t:cur.tpl,v:mkVals(TEMPLATES[cur.tpl],cur.vals)}))}catch(e){return null}}
+function baseDs(cur){try{return dsnapOf(JSON.stringify({t:cur.tpl,v:JT.mkVals(cur.tpl,cur.vals)}))}catch(e){return null}}
 function dirtyNow(){var cur=S.cur&&byId(S.cur),cs=dsnap();
 if(cur){if(!(dsBaseId===cur.id&&dsBasePAt===cur.at)){dsBase=baseDs(cur);dsBaseId=cur.id;dsBasePAt=cur.at}return dsBase!==null&&cs!==dsBase}
 return !!S.bh&&hsh(cs)!==S.bh}
@@ -1034,27 +1243,112 @@ else if(d){st='dirty';tx='未保存の変更あり';tip='未保存の変更あ�
 else if(S.cur){st='saved';tx='保存済み';tip='保存済み'+((cur&&cur.at)||S.curAt?'（最終保存 '+fmtAt(S.curAt||cur.at)+'）':'')}
 else{st='new';tx='共有に未保存';tip='まだ共有に保存されていません（「保存」で保存）'}
 var b=$('sst');b.dataset.s=st;b.querySelector('.stx').textContent=tx;b.title=tip;b.setAttribute('aria-label',tx);
-var sv=$('save');sv.title='保存 (Ctrl+S)'+(S.cur&&(S.curAt||(cur&&cur.at))?'　最終保存 '+fmtAt(S.curAt||cur.at):'');sv.disabled=busy||saving}
+var sv=$('save');sv.title='保存 (Ctrl+S)'+(S.cur&&(S.curAt||(cur&&cur.at))?'　最終保存 '+fmtAt(S.curAt||cur.at):'');sv.disabled=busy||saving;updFinal()}
 /* ---------- 前回の未保存の変更（下書き） ---------- */
 var draftChecked=false;
 function hideDraft(){$('draftbar').hidden=true}
 function checkDraft(){if(draftChecked||!booted)return;if(S.cur&&!presetsLoaded)return;draftChecked=true;if(dirtyNow())$('draftbar').hidden=false}
 $('dfrest').onclick=hideDraft;
-$('dfdisc').onclick=function(){var p=S.cur&&byId(S.cur);if(p){S.tpl=p.tpl;V=mkVals(tpl(),p.vals)}else{V=mkVals(tpl(),{})}
+$('dfdisc').onclick=function(){var p=S.cur&&byId(S.cur);if(p){S.tpl=p.tpl;V=JT.mkVals(p.tpl,p.vals)}else{V=JT.mkVals(S.tpl,{})}
 hideDraft();afterDesignChange();resetBase();histInit();toast('前回の未保存の変更を破棄しました')};
 
-/* ---------- ステップバー ---------- */
-function setSt(i,cls,txt){var b=document.querySelector('#steps [data-st="'+i+'"]');b.className=cls;$('s'+i).textContent=txt;b.title=txt}
-function drawSteps(){var n=current().length,has=rows.length>0,mm=has&&mismatch(),bad=emptyReq(),cur=S.cur&&byId(S.cur),dn=!!(cur||importName);
-setSt(1,!has?'':mm?'ng':'ok',!has?'未入力':mm?'⚠ '+rows.length+'名・件数ずれ':'✓ '+rows.length+'名');
-setSt(2,dn?'ok':'',dn?'✓ '+(cur?cur.name:importName):tpl().name);
-setSt(3,!has?'':(mm||bad)?'ng':'ok',!has?'サンプル表示':mm?'⚠ 件数ずれ':bad?'⚠ 未入力 '+bad+'項目':'✓ 入力OK');
-setSt(4,has&&!n?'ng':'',has?(n?n+'枚':'選択なし'):'—')}
-function openSec(id){var d=$(id);if(d.hidden)return;d.open=true;d.scrollIntoView({behavior:'smooth',block:'start'})}
-$('steps').onclick=function(e){var b=e.target.closest('button');if(!b)return;var k=b.getAttribute('data-st');
-if(k==='1')openSec('rosterSec');
-else if(k==='2')openSec(tpl().hasItems?'itemsSec':'fieldsSec');
-else{if(innerWidth<1024)$('pane').scrollIntoView({behavior:'smooth',block:'start'});if(k==='3')$('pane').focus({preventScroll:true});else $('print').focus({preventScroll:true})}};
+/* ---------- かんたんモード（4ステップ）／詳細編集（タブ） ---------- */
+var step=1,STEPS=[['デザインを選ぶ','デザイン'],['試験の情報','試験情報'],['名簿を入れる','名簿'],['確認して印刷','印刷']];
+var NEXT=['次へ：試験の情報','次へ：名簿を入れる','次へ：確認して印刷','印刷する'];
+function setMode(m,init){UI.mode=m;saveUi();$('appRoot').setAttribute('data-mode',m);
+$('modebtn').textContent=m==='easy'?'詳細編集':'かんたんモードに戻る';
+$('modebtn').title=m==='easy'?'項目・色・透かしなど細かい設定を開く':'4ステップの画面に戻る';
+closePop();clearSel();moveRoster();
+if(m==='adv')setTab(UI.tab);else setStep(step,true);
+if(!init)render()}
+function moveRoster(){var easy=UI.mode==='easy',h4=$('s4host');
+(easy?$('s3host'):$('r-host')).appendChild($('rosterBlk'));
+(easy?(h4||$('store')):$('r-host2')).appendChild($('loaded'))}
+var TABS=['items','look','notes','wm','roster','io'];
+function setTab(t){if(TABS.indexOf(t)<0)t='items';UI.tab=t;saveUi();
+TABS.forEach(function(x){$('tp-'+x).hidden=x!==t});
+Array.prototype.forEach.call($('tabs').children,function(b){var on=b.getAttribute('data-tab')===t;b.classList.toggle('on',on);b.setAttribute('aria-selected',on?'true':'false')})}
+$('tabs').onclick=function(e){var b=e.target.closest('button');if(b)setTab(b.getAttribute('data-tab'))};
+$('modebtn').onclick=function(){setMode(UI.mode==='easy'?'adv':'easy')};
+function showRoster(){if(UI.mode==='adv')setTab('roster');else if(step!==3)setStep(3)}
+function whead(box,title,sub){box.appendChild(el('h2','wh',title));box.appendChild(el('p','wsub',sub))}
+function drawProg(){var o=$('wprog');o.textContent='';
+STEPS.forEach(function(s,i){var n=i+1,li=el('li',n<step?'done':n===step?'cur':'');li.setAttribute('role','button');li.tabIndex=0;li.title=s[0];if(n===step)li.setAttribute('aria-current','step');
+li.appendChild(el('span','n',n<step?'✓':String(n)));li.appendChild(el('span','t',s[1]));
+li.onclick=function(){setStep(n)};li.onkeydown=function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();setStep(n)}};o.appendChild(li)})}
+function setStep(n,quiet){step=Math.max(1,Math.min(4,n));
+[1,2,3,4].forEach(function(i){$('ws'+i).hidden=i!==step});
+if(step===1)drawGallery();else if(step===2)drawInfo();else if(step===4)drawFinal();
+moveRoster();drawProg();
+$('wnext').disabled=false;$('wback').hidden=step===1;$('wnext').textContent=NEXT[step-1];$('wnext').classList.toggle('pri',true);
+updFinal();
+if(!quiet){$('editor').scrollTop=0;if(innerWidth<1024)window.scrollTo({top:0})}}
+$('wback').onclick=function(){setStep(step-1)};
+$('wnext').onclick=function(){if(step<4)setStep(step+1);else doPrint()};
+
+/* ステップ1：デザインを選ぶ */
+var cardSel=[];
+function card(thumb,name,meta,fn,isOn){var b=el('button','card');b.type='button';b.appendChild(thumb);var n=el('div','cn',name);n.title=name;b.appendChild(n);b.appendChild(meta);b.onclick=function(){fn();markCards()};b._on=isOn;cardSel.push(b);return b}
+function markCards(){cardSel.forEach(function(b){b.classList.toggle('cur',!!b._on())})}
+function drawGallery(){var box=$('ws1');if(box.hidden)return;box.textContent='';cardSel=[];
+whead(box,'デザインを選ぶ','使いたい受験票のデザインを選んでください。あとから変えても、入力した内容は残ります。');
+var s1=el('section','gsec'),h1=el('h3',null,'よく使うデザイン');h1.appendChild(el('span','gl'));s1.appendChild(h1);box.appendChild(s1);
+var rec=presets.slice().sort(function(a,b){return tsNum(b.at)-tsNum(a.at)}).slice(0,6);
+if(rec.length){var g=el('div','gal');s1.appendChild(g);
+rec.forEach(function(p){var m=el('div','cm');m.appendChild(el('span','chip',JT.get(p.tpl).name));if(p.folder)m.appendChild(el('span','chip',p.folder));
+g.appendChild(card(designThumb(p),p.name,m,function(){if(openPreset(p.id))toast('『'+p.name+'』を選びました')},function(){return S.cur===p.id}))})}
+else s1.appendChild(el('div','empty',!presetsLoaded?(presetsErr||'読み込み中…'):'保存したデザインはまだありません。下のデザインを選んで、最後に「このデザインを保存」すると、ここに並びます。'));
+var more=btn('すべてのデザイン…','保存したデザインを整理・検索する');more.className='gmore';more.onclick=exOpen;s1.appendChild(more);
+if(EXP.ok===false){var nb=el('p','fhint','エクスプローラー機能を使うには supabase-explorer.sql を実行してください。');s1.appendChild(nb)}
+JT.categories().forEach(function(cat){var s=el('section','gsec'),h=el('h3',null,cat);h.appendChild(el('span','gl'));s.appendChild(h);var g=el('div','gal');s.appendChild(g);
+JT.list().filter(function(t){return t.category===cat}).forEach(function(t){var m=el('div','cm'),sw=el('span','swt');t.swatch.slice(0,3).forEach(function(c){var i=el('i');i.style.background=c;sw.appendChild(i)});m.appendChild(sw);m.appendChild(el('span','chip',t.category));
+var c=card(mini(t.id,JT.switchVals(t.id,V)),t.name,m,function(){applyTemplate(t.id,{fresh:true})},function(){return !S.cur&&S.tpl===t.id});c.title=t.description||t.name;g.appendChild(c)});box.appendChild(s)});
+markCards()}
+
+/* ステップ2：試験の情報（固定文字・日付・時間割の項目だけ） */
+function infoText(P,label,get,set,ph){var g=el('div','fgrp');var l=el('label',null,label);g.appendChild(l);var i=el('input');i.type='text';i.value=get();if(ph)i.placeholder=ph;i.oninput=function(){set(i.value);save();render()};g.appendChild(i);P.appendChild(g);return g}
+function drawInfo(){var box=$('ws2');if(box.hidden)return;box.textContent='';
+whead(box,'試験の情報','今回の試験に合わせて、内容を入れてください。名前や受験番号は次のステップで名簿から入ります。');
+var T=tpl(),n=0;
+if(JT.uses(T,'header')){infoText(box,'受験票のタイトル',function(){return V.hdr},function(v){V.hdr=v});n++}
+if(JT.uses(T,'mark')&&V.markOn){infoText(box,'右上のマーク（短い文字）',function(){return V.mark},function(v){V.mark=v});n++}
+V.items.forEach(function(it){if(it.hidden)return;var lab=it.label||'（無題）';
+if(it.source==='fixed'){n++;infoText(box,lab,function(){return it.value},function(v){it.value=v})}
+else if(it.source==='date'){n++;var g=el('div','fgrp');g.appendChild(el('label',null,lab));var d=el('input');d.type='date';d.value=it.value;d.oninput=function(){it.value=d.value;save();render()};g.appendChild(d);box.appendChild(g)}
+else if(it.source==='schedule'){n++;var g2=el('div','fgrp');g2.appendChild(el('label',null,lab));var sb=el('div');g2.appendChild(sb);
+var dr=function(){sb.textContent='';if(it.rows.length){var h=el('div','sch-h');h.appendChild(el('span',null,'時間'));h.appendChild(el('span',null,'科目・内容'));h.appendChild(el('span'));sb.appendChild(h)}
+it.rows.forEach(function(r,ri){var s=el('div','sch'),a=el('input');a.type='text';a.value=r.t;a.placeholder='10:00〜11:30';a.setAttribute('aria-label','時間');
+var b=el('input');b.type='text';b.value=r.c;b.placeholder='英語';b.setAttribute('aria-label','科目・内容');var x=btn('削除');
+a.oninput=function(){r.t=a.value;save();render()};b.oninput=function(){r.c=b.value;save();render()};x.onclick=function(){it.rows.splice(ri,1);save();dr();render()};
+s.appendChild(a);s.appendChild(b);s.appendChild(x);sb.appendChild(s)});
+var ad=btn('＋ 行を追加');ad.onclick=function(){it.rows.push({t:'',c:''});save();dr();render();var ins=sb.querySelectorAll('.sch');if(ins.length)ins[ins.length-1].querySelector('input').focus()};sb.appendChild(ad)};dr();box.appendChild(g2)}});
+if(!n)box.appendChild(el('div','empty','このデザインには、ここで変えられる項目がありません。そのまま次へ進めます。'));
+box.appendChild(el('p','fhint','項目の追加・並べ替えや色・文字の大きさは、右上の「詳細編集」から変えられます。'))}
+
+/* ステップ4：確認して印刷 */
+function drawFinal(){var box=$('ws4');if(box.hidden)return;box.textContent='';
+whead(box,'確認して印刷','右の受験票を確認してください。問題なければ印刷します。');
+var dl=el('dl','sum');dl.id='wsum';[['デザイン','wsn'],['名簿','wsr'],['印刷する枚数','wsc']].forEach(function(r){dl.appendChild(el('dt',null,r[0]));var d=el('dd');d.id=r[1];dl.appendChild(d)});box.appendChild(dl);
+var wn=el('div','wnote');wn.id='wwarn';wn.hidden=true;box.appendChild(wn);
+var pd=btn('PDFを保存','全員分の受験票PDFを作り、ファイル保管に保存します');pd.id='wpdf';pd.className='bigbtn';pd.onclick=makePdf;box.appendChild(pd);
+var sv=btn('このデザインを保存','共有デザインとして保存（任意）');sv.id='wsave';sv.className='bigbtn';sv.onclick=saveMain;box.appendChild(sv);
+var sa=btn('別の名前で保存…');sa.id='wsaveas';sa.className='ghost';sa.onclick=saveAs;sa.style.marginBottom='8px';box.appendChild(sa);
+var st=el('div');st.id='wsst';box.appendChild(st);
+var dt=document.createElement('details');dt.id='wsel';var sm=el('summary',null,'印刷する人を選ぶ');dt.appendChild(sm);var h4=el('div');h4.id='s4host';dt.appendChild(h4);box.appendChild(dt);
+h4.appendChild($('loaded'))}
+function updFinal(){if(UI.mode!=='easy'||step!==4||!$('wsum'))return;
+var cur=S.cur&&byId(S.cur),nm=cur?cur.name:(S.curName||importName||tpl().name+'（未保存）');
+$('wsn').textContent=nm;$('wsn').title=nm;var has=rows.length>0,n=current().length,mm=has&&mismatch(),bad=emptyReq();
+var r=$('wsr');r.textContent=has?rows.length+'名':'未入力（サンプル表示）';r.className=has?(mm?'ng':'ok'):'ng';
+$('wsc').textContent=has?(n?n+'枚（A4）':'選択なし'):'—';
+var w=$('wwarn'),msg='';if(!has)msg='名簿が入っていません。印刷するには「名簿」のステップで貼り付けてください。';
+else if(!n)msg='印刷する人が選ばれていません。「印刷する人を選ぶ」で選んでください。';
+else if(mm)msg='項目ごとの件数がずれています。名簿のステップで行がそろっているか確認してください。';
+else if(bad)msg='未入力の項目が'+bad+'つあります（空欄のまま印刷されます）。';
+w.hidden=!msg;w.textContent=msg;
+var ok=has&&n>0;$('wpdf').disabled=!ok;$('wnext').disabled=!ok;
+var d=dirtyNow();$('wsst').textContent=S.cur?(d?'未保存の変更があります':'保存済み'+(cur&&cur.at?'（'+fmtAt(cur.at)+'）':'')):'まだ保存していません（保存しなくても印刷できます）。';
+$('wsaveas').hidden=!S.cur;$('wsave').textContent=S.cur&&d?'上書き保存':'このデザインを保存'}
 
 /* ---------- プレビュー：生徒ナビ・ズーム ---------- */
 function applyView(){var list=current(),pages=$('pages').children,n=list.length,has=rows.length>0;
@@ -1064,7 +1358,7 @@ $('nav').hidden=!one;$('tall').hidden=!has;$('tall').textContent=showAll?'1名�
 $('npos').textContent=(navPos+1)+' / '+n;$('nprev').disabled=navPos<=0;$('nnext').disabled=navPos>=n-1;
 $('pcount').textContent=!has?'サンプル表示':n===0?'印刷対象が選択されていません':one?listLabel(rows[list[navPos].idx],list[navPos].idx):'全員表示：'+n+'枚（A4）';
 $('zfit').classList.toggle('on',zoom!=='100');$('z100').classList.toggle('on',zoom==='100');
-applySel();positionPop();drawSteps()}
+applySel();positionPop();updFinal()}
 function go(d){var n=current().length;if(!n||showAll)return;navPos=Math.max(0,Math.min(n-1,navPos+d));applyView()}
 $('nprev').onclick=function(){go(-1)};$('nnext').onclick=function(){go(1)};
 $('tall').onclick=function(){showAll=!showAll;UI.all=showAll;saveUi();applyView()};
@@ -1111,28 +1405,27 @@ for(var q=0;q<3;q++)(function(s,k){s.onchange=function(){it[k]=s.value;save();dr
 pop.appendChild(g);
 var ol=btn('項目欄で詳細を開く');ol.className='pl';ol.onclick=function(){openRow(it.id)};pop.appendChild(ol);
 $('pane').appendChild(pop);positionPop()}
-function openRow(id){openIt[id]=true;$('itemsSec').open=true;drawItems();var r=$('items').querySelector('.it[data-id="'+id+'"]');if(r)r.scrollIntoView({behavior:'smooth',block:'nearest'})}
-function openWm(){clearSel();$('fieldsSec').open=true;var hs=$('fields').querySelectorAll('.sub'),h=null;Array.prototype.forEach.call(hs,function(x){if(x.textContent==='透かし文字')h=x});
-if(h)h.scrollIntoView({block:'start',behavior:'smooth'});
-var ins=h&&h.parentNode.querySelectorAll('input[type=text]');for(var q=0;ins&&q<ins.length;q++){if(h.compareDocumentPosition(ins[q])&4){ins[q].focus({preventScroll:true});break}}}
-$('pages').addEventListener('click',function(e){if(editing&&editing.contains(e.target))return;if(e.target.closest('.w-wm')){if(e.detail<2)openWm();return}var c=e.target.closest('[data-item]');
+function openRow(id){openIt[id]=true;setTab('items');drawItems();var r=$('items').querySelector('.it[data-id="'+id+'"]');if(r)r.scrollIntoView({behavior:'smooth',block:'nearest'})}
+function openWm(){clearSel();setTab('wm');var i=$('f-wm').querySelector('input[type=text]');if(i)i.focus({preventScroll:true})}
+$('pages').addEventListener('click',function(e){if(UI.mode!=='adv')return;if(editing&&editing.contains(e.target))return;if(e.target.closest('.jt-wm')){if(e.detail<2)openWm();return}var c=e.target.closest('[data-item]');
 if(!c){if(selId)clearSel();return}var id=c.getAttribute('data-item');selectItem(id,true);
 if(innerWidth>=1024){var r=$('items').querySelector('.it[data-id="'+id+'"]');if(r)r.scrollIntoView({block:'nearest'})}});
 document.addEventListener('mousedown',function(e){if(!pop||pop.contains(e.target))return;if(e.target.closest&&e.target.closest('[data-item]'))return;closePop()},true);
 
 /* ---------- プレビュー：ダブルクリックでその場編集（プレーンテキスト） ---------- */
 var editing=null;
-$('pages').addEventListener('dblclick',function(e){var t=e.target.closest('[data-edit]');if(!t||editing)return;e.preventDefault();startEdit(t)});
+$('pages').addEventListener('dblclick',function(e){if(UI.mode!=='adv')return;var t=e.target.closest('[data-edit]');if(!t||editing)return;e.preventDefault();startEdit(t)});
 function startEdit(t){closePop();editing=t;var orig=t.textContent,done=false;t.setAttribute('contenteditable','true');t.classList.add('editing');t.spellcheck=false;t.focus();
 var rg=document.createRange();rg.selectNodeContents(t);var sn=window.getSelection();sn.removeAllRanges();sn.addRange(rg);
 function fin(ok){if(done)return;done=true;t.removeEventListener('keydown',kd);t.removeEventListener('blur',bl);t.removeEventListener('paste',pa);
 var txt=t.textContent.replace(/[\r\n]+/g,' ').trim();editing=null;t.removeAttribute('contenteditable');t.classList.remove('editing');
-if(ok)applyEdit(t.getAttribute('data-edit'),txt);else{t.textContent=orig;if(t.classList.contains('w-wm'))render()}}
+if(ok)applyEdit(t.getAttribute('data-edit'),txt);else{t.textContent=orig;if(t.classList.contains('jt-wm'))render()}}
 function kd(e){if(e.key==='Enter'){e.preventDefault();e.stopPropagation();fin(true)}else if(e.key==='Escape'){e.preventDefault();e.stopPropagation();fin(false)}}
 function bl(){fin(true)}
 function pa(e){e.preventDefault();var x=(e.clipboardData||window.clipboardData).getData('text/plain').replace(/[\r\n]+/g,' ');document.execCommand('insertText',false,x)}
 t.addEventListener('keydown',kd);t.addEventListener('blur',bl);t.addEventListener('paste',pa)}
 function applyEdit(key,txt){if(key.indexOf('item:')===0){var it=findItem(key.slice(5));if(!it||it.value===txt)return;it.value=txt}
+else if(key.indexOf('tpl.')===0){var pp=key.split('.'),ob=V.tpl[pp[1]];if(!ob||ob[pp[2]]===txt)return;ob[pp[2]]=txt}
 else{if(V[key]===txt)return;V[key]=txt}
 save();drawFields();drawItems();render()}
 
@@ -1156,7 +1449,7 @@ var ok=t===document.body||t===$('pane')||($('pane').contains(t)&&!isTextual(t)&&
 if(ok&&!(pop&&pop.contains(t))){e.preventDefault();go(k==='ArrowLeft'?-1:1)}}});
 
 var booted=false;
-function boot(){if(booted)return;booted=true;drawTplSel();drawPreSel();drawFields();drawItems();render();histInit()}
+function boot(){if(booted)return;booted=true;drawTplSel();drawPreSel();drawFields();drawItems();setMode(UI.mode,true);render();histInit()}
 /* ---------- ファイル保管（Supabase Storage: juken-files / 表: juken_files） ---------- */
 var BUCKET='juken-files',FT='juken_files',FMAX=52428800;
 var FL={rows:[],loaded:false,loading:false,err:'',folder:'*',tab:'all',q:'',extra:[],urls:{},pick:null,q2:[],upBusy:false};
@@ -1188,17 +1481,17 @@ if(f.type==='area'){i2=el('textarea');i2.rows=2}else{i2=el('input');i2.type='tex
 i2.value=f.value||'';i2.maxLength=f.max||200;if(f.ph)i2.placeholder=f.ph;c.appendChild(i2);ins[f.k]=i2;if(!first)first=i2});
 if(o.warn)c.appendChild(el('div','wn',o.warn));
 var bb=el('div','mb');c.appendChild(bb);
-function done(v){w.remove();modalOpen=!$('fp').hidden;res(v)}
+function done(v){w.remove();modalOpen=anyOvl();res(v)}
 function ok(){var v={};for(var k in ins)v[k]=ins[k].type==='checkbox'?ins[k].checked:ins[k].value.trim();
 for(var j=0;j<(o.fields||[]).length;j++){var f=o.fields[j];if(f.req&&!v[f.k]){ins[f.k].focus();return}}done(v)}
-var cb=el('button',null,'キャンセル');cb.type='button';cb.onclick=function(){done(null)};var ob=el('button','pri',o.ok||'OK');ob.type='button';ob.onclick=ok;bb.appendChild(cb);bb.appendChild(ob);
+var cb=el('button',null,'キャンセル');cb.type='button';cb.onclick=function(){done(null)};var ob=el('button','pri'+(o.danger?' dgb':''),o.ok||'OK');ob.type='button';ob.onclick=ok;bb.appendChild(cb);bb.appendChild(ob);
 w.addEventListener('keydown',function(e){if(e.key==='Escape'){e.preventDefault();done(null)}else if(e.key==='Enter'&&e.target.tagName==='INPUT'&&e.target.type==='text'){e.preventDefault();ok()}});
 w.addEventListener('mousedown',function(e){if(e.target===w)done(null)});
 document.body.appendChild(w);(first||ob).focus();if(first&&first.select)first.select()})}
 function progDlg(title,onCancel){modalOpen=true;var w=el('div');w.id='mdl';var c=el('div','mc');c.setAttribute('role','dialog');c.setAttribute('aria-modal','true');w.appendChild(c);
 c.appendChild(el('h3',null,title));var t=el('p',null,'準備中…'),bar=el('div','pbar'),bi=el('i');bar.appendChild(bi);c.appendChild(t);c.appendChild(bar);
 var bb=el('div','mb'),x=el('button',null,'キャンセル');x.type='button';x.onclick=function(){x.disabled=true;t.textContent='中止しています…';onCancel()};bb.appendChild(x);c.appendChild(bb);document.body.appendChild(w);
-return {set:function(txt,p){t.textContent=txt;if(p!=null)bi.style.width=Math.round(p*100)+'%'},nocancel:function(){x.disabled=true},close:function(){w.remove();modalOpen=!$('fp').hidden}}}
+return {set:function(txt,p){t.textContent=txt;if(p!=null)bi.style.width=Math.round(p*100)+'%'},nocancel:function(){x.disabled=true},close:function(){w.remove();modalOpen=anyOvl()}}}
 /* 署名付きURL（60分）。サムネイル用に50分キャッシュ */
 async function signedUrl(path,dl){needSb();var k=dl?null:path,h=k&&FL.urls[k];if(h&&h.t>Date.now())return h.u;
 var r=await sb.storage.from(BUCKET).createSignedUrl(path,3600,dl?{download:dl}:undefined);if(r.error)throw r.error;var u=r.data&&(r.data.signedUrl||r.data.signedURL);if(!u)throw {message:'URLを取得できませんでした'};
@@ -1249,7 +1542,7 @@ function fReset(){FL.rows=[];FL.loaded=false;FL.loading=false;FL.err='';FL.urls=
 function openFiles(o){FL.pick=o&&o.pick?o:null;$('fp').hidden=false;modalOpen=true;
 var pk=$('fppick');pk.hidden=!FL.pick;if(FL.pick)pk.textContent='「'+(FL.pick.title||'画像')+'」に使う画像を選んでください（選ぶとこのデザインに埋め込まれます）';
 $('fpq').value=FL.q;fDraw();if(!FL.loaded)fLoad();$('fpx').focus()}
-function closeFiles(){$('fp').hidden=true;modalOpen=!!document.getElementById('mdl');FL.pick=null;$('fpdz').hidden=true}
+function closeFiles(){$('fp').hidden=true;modalOpen=!!document.getElementById('mdl')||!$('ex').hidden;FL.pick=null;$('fpdz').hidden=true}
 async function fOpen(r){var w=window.open('','_blank');try{var u=await signedUrl(r.path);if(w){w.location.href=u}else location.href=u}catch(e){if(w)w.close();toast(fErr(e))}}
 async function fDl(r){try{var u=await signedUrl(r.path,r.name);var a=document.createElement('a');a.href=u;a.download=r.name;document.body.appendChild(a);a.click();a.remove()}catch(e){toast(fErr(e))}}
 async function fEdit(r){var d=await fdlg({title:'ファイル情報を編集',fields:[{k:'name',label:'名前',value:r.name,max:200,req:1},{k:'folder',label:'フォルダ（空欄で未分類）',value:r.folder||'',list:fNames(),max:60},{k:'note',label:'メモ',type:'area',value:r.note||'',max:500}],ok:'保存'});if(!d)return;
@@ -1289,7 +1582,7 @@ function loadScript(u){return libP[u]||(libP[u]=new Promise(function(ok,ng){var 
 function cleanFn(n){return String(n||'').replace(/[\\\/:*?"<>|\u0000-\u001f]+/g,' ').replace(/\s+/g,' ').trim()}
 function dlBlob(b,name){var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(a.href)},30000)}
 async function makePdf(){if(pdfBusy||modalOpen)return;var list=current();if(rows.length&&!list.length){alert('PDFにする生徒が選択されていません。');return}
-var base=cleanFn(S.curName||importName||V.title||tpl().name)||'受験票',dn=stamp(new Date());
+var base=cleanFn(S.curName||importName||V.hdr||tpl().name)||'受験票',dn=stamp(new Date());
 var d=await fdlg({title:'受験票PDFを作成して保存',text:list.length+'ページ（A4・1名1ページ）のPDFを作り、ファイル保管に保存します。',fields:[{k:'folder',label:'保存先フォルダ（空欄で未分類）',value:base,list:fNames(),max:60},{k:'name',label:'ファイル名',value:base+'_受験票_'+dn+'.pdf',max:120,req:1},{k:'note',label:'メモ',type:'area',value:'',max:500},{k:'dl',type:'check',label:'端末にもダウンロード',value:false}],warn:'このPDFには生徒の氏名などが含まれます。ログインしたスタッフ全員が閲覧できます。',ok:'作成して保存'});
 if(!d)return;var fname=cleanFn(d.name)||base+'_受験票';if(!/\.pdf$/i.test(fname))fname+='.pdf';
 pdfBusy=true;var cancel=false,host=null,pg=progDlg('PDFを作成して保存',function(){cancel=true});
@@ -1297,7 +1590,7 @@ try{pg.set('ライブラリを読み込み中…');await loadScript(H2C);await l
 host=el('div');host.style.cssText='position:fixed;left:0;top:0;width:210mm;height:297mm;z-index:-1;overflow:hidden;pointer-events:none;background:#fff';document.body.appendChild(host);
 var T=tpl(),pdf=null,n=list.length,sc=200/96;
 for(var i=0;i<n;i++){if(cancel)break;pg.set('PDF作成中 '+(i+1)+'/'+n,i/n);
-host.textContent='';var t=T.render(list[i],V);host.appendChild(t);(t._fits||[]).forEach(function(e){fit(e)});
+host.textContent='';var t=JT.render(S.tpl,list[i],V);host.appendChild(t);fitAll(t);
 var ims=Array.prototype.slice.call(t.querySelectorAll('img'));await Promise.all(ims.map(function(m){return m.complete?0:new Promise(function(r){m.onload=m.onerror=r})}));
 await new Promise(function(r){requestAnimationFrame(function(){setTimeout(r,0)})});
 var cv=await window.html2canvas(t,{scale:sc,backgroundColor:'#ffffff',useCORS:true,logging:false});
@@ -1317,7 +1610,7 @@ $('pdfsave').onclick=makePdf;$('spdf').onclick=function(){closeSM();makePdf()};
 /* ---------- ログイン ---------- */
 var sb=null;
 try{sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{storageKey:'juken-hyo-auth',persistSession:true,autoRefreshToken:true}})}catch(e){sb=null}
-function showLogin(msg){fReset();$('login').hidden=false;$('appRoot').classList.add('off');$('lerr').textContent=msg||''}
+function showLogin(msg){fReset();$('ex').hidden=true;closeCtx();$('login').hidden=false;$('appRoot').classList.add('off');$('lerr').textContent=msg||''}
 function showApp(sess){$('login').hidden=true;$('appRoot').classList.remove('off');var em=(sess&&sess.user&&sess.user.email)||'';$('uem').textContent=em;$('uem').title=em;uid=sess&&sess.user?sess.user.id:null;boot();render();loadPresets();if(!S.cur)checkDraft()}
 $('lform').onsubmit=async function(ev){ev.preventDefault();var em=$('lem').value.trim(),pw=$('lpw').value,er=$('lerr'),b=$('lbtn');er.textContent='';
 if(!sb){er.textContent='ログイン機能を読み込めませんでした。通信状況を確認してページを再読み込みしてください。';return}
@@ -1327,7 +1620,7 @@ try{r=await sb.auth.signInWithPassword({email:em,password:pw})}catch(e){r={error
 b.disabled=false;b.textContent='ログイン';
 if(r.error){var net=/fetch|network|failed|timeout/i.test(r.error.message||'');er.textContent=net?'サーバーに接続できませんでした。通信状況を確認してもう一度お試しください。':'メールアドレスまたはパスワードが違います。';return}
 $('lpw').value='';showApp(r.data.session)};
-$('lout').onclick=async function(){try{await sb.auth.signOut()}catch(e){}presets=[];showLogin('')};
+$('lout').onclick=async function(){try{await sb.auth.signOut()}catch(e){}presets=[];trashed=[];presetsLoaded=false;showLogin('')};
 if(sb){sb.auth.getSession().then(function(r){if(r.data&&r.data.session)showApp(r.data.session);else showLogin('')}).catch(function(){showLogin('')});
 sb.auth.onAuthStateChange(function(ev){if(ev==='SIGNED_OUT')showLogin('')})}
 else showLogin('ログイン機能を読み込めませんでした。通信状況を確認してページを再読み込みしてください。');
