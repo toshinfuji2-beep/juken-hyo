@@ -1,0 +1,264 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>受験票ジェネレーター</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{--bg:#f3f4f6;--panel:#fff;--fg:#1f2937;--mut:#6b7280;--bd:#d1d5db;--ac:#1d4ed8;--acfg:#fff;--inp:#fff;--pv:#e5e7eb}
+@media(prefers-color-scheme:dark){:root{--bg:#111827;--panel:#1f2937;--fg:#e5e7eb;--mut:#9ca3af;--bd:#374151;--ac:#3b82f6;--inp:#111827;--pv:#0b1220}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 "Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif}
+.app{display:flex;flex-direction:column;min-height:100vh}
+#editor,#pane{min-width:0}
+#editor{padding:12px 16px;background:var(--panel)}
+#pane{padding:12px 16px;background:var(--pv)}
+@media(min-width:1024px){
+.app{flex-direction:row;height:100vh;overflow:hidden}
+#editor{width:440px;flex:none;overflow-y:auto;border-right:1px solid var(--bd)}
+#pane{flex:1;overflow-y:auto}}
+h1{font-size:16px;margin:0 0 8px}
+details{border:1px solid var(--bd);border-radius:6px;margin-bottom:10px}
+summary{cursor:pointer;padding:8px 10px;font-weight:700;background:var(--bg);border-radius:6px}
+.sec{padding:10px}
+label{display:block;font-size:12px;color:var(--mut);margin:8px 0 2px;white-space:nowrap}
+input[type=text],input[type=date],input[type=number],input[type=time],textarea,select{width:100%;padding:6px 8px;border:1px solid var(--bd);border-radius:4px;background:var(--inp);color:var(--fg);font:inherit}
+textarea{resize:vertical}
+button{padding:6px 12px;border:1px solid var(--bd);border-radius:4px;background:var(--panel);color:var(--fg);font:inherit;cursor:pointer;white-space:nowrap}
+button.pri{background:var(--ac);color:var(--acfg);border-color:var(--ac)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+#drop{border:2px dashed var(--bd);border-radius:6px;padding:14px;text-align:center;color:var(--mut)}
+#drop.over{border-color:var(--ac);color:var(--ac)}
+.note{font-size:11px;color:var(--mut);margin:6px 0}
+.map{display:grid;grid-template-columns:90px 1fr;gap:4px 8px;align-items:center;margin-top:8px}
+.map span{white-space:nowrap}
+#list{max-height:180px;overflow:auto;border:1px solid var(--bd);border-radius:4px;margin-top:8px}
+#list label{display:flex;gap:6px;margin:0;padding:2px 8px;font-size:12px;color:var(--fg);align-items:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sch{display:grid;grid-template-columns:110px 1fr auto;gap:4px;margin-bottom:4px}
+.chk{display:flex;align-items:center;gap:6px;margin:8px 0;font-size:13px;color:var(--fg)}
+#bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px;flex-wrap:wrap}
+#pages{display:flex;flex-direction:column;align-items:center;gap:12px}
+.pw{position:relative;overflow:hidden;flex:none;box-shadow:0 1px 6px rgba(0,0,0,.3)}
+.pw .ticket{position:absolute;left:0;top:0;transform-origin:0 0}
+/* ticket */
+.ticket{width:210mm;height:297mm;padding:15mm;background:#fff;color:#000;font-family:"Hiragino Mincho ProN","Yu Mincho","MS PMincho",serif;font-size:10.5pt;line-height:1.5;display:flex;flex-direction:column;overflow:hidden}
+.ticket *{box-sizing:border-box}
+.t-main{flex:1;min-height:0;display:flex;flex-direction:column;gap:3.5mm}
+.t-head{text-align:center;border-bottom:1.2mm double #000;padding-bottom:3mm}
+.t-lab{font-size:13pt;letter-spacing:.6em;white-space:nowrap;font-weight:700}
+.t-title{font-size:22pt;font-weight:700;margin-top:1mm;white-space:nowrap;overflow:hidden}
+.t-org{font-size:10pt;white-space:nowrap}
+.t-box{border:.6mm solid #000;display:flex;min-height:36mm}
+.t-box .l{flex:1;min-width:0;display:flex;flex-direction:column}
+.t-box .r{width:30mm;margin:2mm;border:.3mm solid #000;display:flex;align-items:center;justify-content:center;font-size:8pt;text-align:center;color:#444;white-space:pre-line}
+.t-cell{padding:2mm 4mm;display:flex;align-items:baseline;gap:4mm;min-width:0}
+.t-cell+.t-cell{border-top:.3mm solid #000}
+.t-k{font-size:9pt;width:20mm;flex:none;white-space:nowrap}
+.t-v{flex:1;min-width:0;white-space:nowrap;overflow:hidden}
+.t-no{font-family:"Consolas","Courier New",monospace;font-size:30pt;font-weight:700;letter-spacing:.1em;line-height:1.2}
+.t-name{font-size:24pt;font-weight:700;line-height:1.2;white-space:nowrap;overflow:hidden}
+.t-kana{font-size:8.5pt;display:block;height:4.5mm;white-space:nowrap}
+.t-sch{font-size:12pt}
+table.t-info{border-collapse:collapse;width:100%}
+table.t-info th,table.t-info td{border:.3mm solid #000;padding:1.5mm 3mm;text-align:left;vertical-align:top}
+table.t-info th{width:26mm;background:#eee;font-weight:400;white-space:nowrap}
+table.t-info td{white-space:pre-line}
+.t-h{font-weight:700;font-size:10.5pt;border-left:1.5mm solid #000;padding-left:2mm;margin-bottom:1mm;white-space:nowrap}
+.t-list{margin:0;padding-left:5mm;font-size:10pt}
+ol.t-list{padding-left:6mm}
+.t-foot{margin-top:auto;border-top:.3mm solid #000;padding-top:2mm;font-size:9.5pt;white-space:pre-line}
+.t-stub{height:72mm;margin-top:3mm;border-top:.4mm dashed #000;position:relative;padding-top:6mm;display:flex;flex-direction:column;gap:2mm;flex:none}
+.t-cut{position:absolute;top:-3.6mm;left:6mm;background:#fff;padding:0 2mm;font-size:12pt;line-height:1}
+.t-stub .t-name{font-size:20pt}
+.t-stub .t-no{font-size:24pt}
+@media print{
+html,body{background:#fff}
+#editor,#bar,.noprint{display:none!important}
+.app,#pane{display:block;height:auto;overflow:visible;padding:0;background:#fff}
+#pages{display:block}
+.pw{width:210mm!important;height:297mm!important;box-shadow:none;overflow:hidden;page-break-after:always;break-after:page}
+.pw .ticket{position:static;transform:none!important}
+@page{size:A4;margin:0}}
+</style>
+</head>
+<body>
+<div class="app">
+<div id="editor">
+<h1>受験票ジェネレーター</h1>
+<details open><summary>1. 名簿読み込み</summary><div class="sec">
+<div id="drop">ここにCSV / Excelをドロップ<br><button id="fbtn" type="button">ファイルを選択</button><input id="file" type="file" accept=".csv,.xlsx,.xls" hidden></div>
+<label for="paste">貼り付け（Excelからコピーしたタブ区切り・1行目は見出し）</label>
+<textarea id="paste" rows="3"></textarea>
+<div class="row" style="margin-top:6px"><button id="pbtn" type="button">貼り付けを読み込む</button><button id="sample" type="button">サンプルCSVをダウンロード</button></div>
+<p class="note">※名簿（個人情報）は保存されません。ページを閉じる・再読込で消えます。</p>
+<div id="loaded" hidden>
+<div id="cnt" style="font-weight:700"></div>
+<div class="map" id="map"></div>
+<div id="auto" class="grid3" hidden>
+<div><label>受験番号 接頭辞</label><input type="text" id="apre"></div>
+<div><label>開始番号</label><input type="number" id="astart" value="1" min="0"></div>
+<div><label>桁数</label><input type="number" id="adig" value="3" min="1" max="10"></div></div>
+<div class="row" style="margin-top:8px"><button id="sall" type="button">全選択</button><button id="snone" type="button">全解除</button><span id="selcnt" class="note"></span></div>
+<div id="list"></div>
+</div></div></details>
+<details open><summary>2. 試験情報</summary><div class="sec">
+<label>校舎名・主催（空欄可）</label><input type="text" id="school" data-k="school">
+<label>試験名</label><input type="text" id="title" data-k="title">
+<div class="grid2"><div><label>実施日</label><input type="date" id="date" data-k="date"></div><div><label>集合時刻</label><input type="time" id="time" data-k="time"></div></div>
+<label>会場（複数行可）</label><textarea id="place" rows="2" data-k="place"></textarea>
+<label>時間割</label><div id="sch"></div><button id="addrow" type="button">＋ 行を追加</button>
+<label>持ち物（1行1項目）</label><textarea id="items" rows="3" data-k="items"></textarea>
+<label>注意事項（1行1項目）</label><textarea id="notes" rows="4" data-k="notes"></textarea>
+<label>問い合わせ先（1行）</label><input type="text" id="contact" data-k="contact">
+<label class="chk"><input type="checkbox" id="photo" data-k="photo">写真貼付欄を表示</label>
+<label class="chk"><input type="checkbox" id="stub" data-k="stub">切り取り線＋控え（試験官用）</label>
+</div></details>
+</div>
+<div id="pane">
+<div id="bar"><span id="pcount"></span><span class="row"><button class="pri" id="print" type="button">印刷 / PDF保存</button></span></div>
+<div id="pages"></div>
+</div>
+</div>
+<script>
+(function(){
+'use strict';
+var FIELDS=[['name','氏名（必須）',['氏名','名前','生徒名','name','お名前']],['kana','ふりがな',['ふりがな','フリガナ','カナ','よみ','読み','ヨミ']],['no','受験番号',['受験番号','番号','id','生徒番号','no','no.']],['school','学校名',['学校名','学校','高校','在籍校']],['grade','学年',['学年名','学年']],['note','備考',['備考','メモ']]];
+var KEY='juken-hyo-v1';
+var DEF={school:'',title:'校内実力テスト',date:'',time:'09:00',place:'',items:'筆記用具\n消しゴム\n時計（通信機能のないもの）',notes:'この受験票は試験当日必ず持参してください。\n集合時刻に遅れないように来場してください。\n試験中は携帯電話・スマートフォンの電源を切ってください。',contact:'',photo:false,stub:false,sched:[{t:'09:00〜10:00',c:'国語'},{t:'10:20〜11:20',c:'数学'}]};
+var S=JSON.parse(JSON.stringify(DEF));
+try{var raw=localStorage.getItem(KEY);if(raw){var o0=JSON.parse(raw);for(var k0 in o0)S[k0]=o0[k0];}}catch(e){}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+var $=function(id){return document.getElementById(id)};
+var headers=[],rows=[],map={},sel={};
+function el(tag,cls,txt){var e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e}
+
+document.querySelectorAll('[data-k]').forEach(function(i){
+var k=i.dataset.k;if(i.type==='checkbox')i.checked=!!S[k];else i.value=S[k]||'';
+i.addEventListener('input',function(){S[k]=i.type==='checkbox'?i.checked:i.value;save();render();});});
+function drawSched(){var w=$('sch');w.textContent='';S.sched.forEach(function(r,idx){
+var d=el('div','sch');var a=el('input');a.type='text';a.value=r.t;a.placeholder='時間';
+var b=el('input');b.type='text';b.value=r.c;b.placeholder='内容';
+var x=el('button',null,'削除');x.type='button';
+a.oninput=function(){r.t=a.value;save();render()};b.oninput=function(){r.c=b.value;save();render()};
+x.onclick=function(){S.sched.splice(idx,1);save();drawSched();render()};
+d.appendChild(a);d.appendChild(b);d.appendChild(x);w.appendChild(d);});}
+$('addrow').onclick=function(){S.sched.push({t:'',c:''});save();drawSched();render();};
+drawSched();
+
+function parseDelim(text,delim){var out=[],row=[],f='',q=false,i=0,n=text.length,c;
+for(;i<n;i++){c=text[i];
+if(q){if(c==='"'){if(text[i+1]==='"'){f+='"';i++}else q=false}else f+=c}
+else if(c==='"'&&f==='')q=true;
+else if(c===delim){row.push(f);f=''}
+else if(c==='\n'||c==='\r'){if(c==='\r'&&text[i+1]==='\n')i++;row.push(f);out.push(row);row=[];f=''}
+else f+=c}
+if(f!==''||row.length){row.push(f);out.push(row)}
+return out}
+function decode(buf){var t;try{t=new TextDecoder('utf-8',{fatal:true}).decode(buf)}catch(e){t=new TextDecoder('shift_jis').decode(buf)}
+return t.replace(/^﻿/,'')}
+function load(table){
+table=table.map(function(r){return r.map(function(v){return v==null?'':String(v).trim()})}).filter(function(r){return r.some(function(v){return v!==''})});
+if(table.length<2){alert('データ行が見つかりません（1行目は見出しにしてください）。');return false}
+headers=table[0].map(function(h,i){return h||('列'+(i+1))});rows=table.slice(1);
+map={};var norm=function(s){return s.toLowerCase().replace(/\s/g,'')};
+FIELDS.forEach(function(f){map[f[0]]=-1;
+for(var i=0;i<headers.length;i++){if(f[2].some(function(s){return norm(s)===norm(headers[i])})){map[f[0]]=i;break}}});
+if(map.name<0){var j=headers.findIndex(function(h){return /氏名|名前|name/i.test(h)});if(j>=0)map.name=j}
+sel={};rows.forEach(function(_,i){sel[i]=true});
+$('loaded').hidden=false;$('cnt').textContent=rows.length+'名読み込み';drawMap();drawList();render();return true}
+function drawMap(){var m=$('map');m.textContent='';
+FIELDS.forEach(function(f){m.appendChild(el('span',null,f[1]));var s=el('select');
+var o=el('option',null,'（使わない）');o.value=-1;s.appendChild(o);
+headers.forEach(function(h,i){var op=el('option',null,h);op.value=i;s.appendChild(op)});
+s.value=map[f[0]];s.onchange=function(){map[f[0]]=+s.value;$('auto').hidden=map.no>=0;drawList();render()};m.appendChild(s)});
+$('auto').hidden=map.no>=0;}
+function val(r,k){return map[k]>=0?(r[map[k]]||''):''}
+function numOf(r,i){if(map.no>=0)return val(r,'no');
+var d=Math.max(1,+$('adig').value||3);return $('apre').value+String((+$('astart').value||0)+i).padStart(d,'0')}
+function drawList(){var l=$('list');l.textContent='';
+rows.forEach(function(r,i){var lb=el('label');var c=el('input');c.type='checkbox';c.checked=!!sel[i];
+c.onchange=function(){sel[i]=c.checked;render()};lb.appendChild(c);
+lb.appendChild(document.createTextNode(numOf(r,i)+' '+(val(r,'name')||'（氏名なし）')));l.appendChild(lb)});}
+['apre','astart','adig'].forEach(function(id){$(id).oninput=function(){drawList();render()}});
+$('sall').onclick=function(){rows.forEach(function(_,i){sel[i]=true});drawList();render()};
+$('snone').onclick=function(){rows.forEach(function(_,i){sel[i]=false});drawList();render()};
+function readFile(f){var ext=(f.name.split('.').pop()||'').toLowerCase();var fr=new FileReader();
+fr.onerror=function(){alert('ファイルを読み込めませんでした。')};
+fr.onload=function(){try{
+if(ext==='csv'||ext==='txt'||ext==='tsv'){var t=decode(fr.result);var first=t.split(/\r?\n/)[0]||'';load(parseDelim(t,first.indexOf('\t')>=0&&first.indexOf(',')<0?'\t':','))}
+else{if(!window.XLSX){alert('Excel読み込みライブラリを取得できませんでした（オンライン接続が必要です）。CSVをご利用ください。');return}
+var wb=XLSX.read(fr.result,{type:'array'});var ws=wb.Sheets[wb.SheetNames[0]];
+load(XLSX.utils.sheet_to_json(ws,{header:1,raw:false,defval:''}))}
+}catch(e){alert('読み込みエラー: '+e.message)}};
+fr.readAsArrayBuffer(f)}
+$('fbtn').onclick=function(){$('file').click()};
+$('file').onchange=function(){if(this.files[0])readFile(this.files[0]);this.value=''};
+var dz=$('drop');
+['dragenter','dragover'].forEach(function(t){dz.addEventListener(t,function(e){e.preventDefault();dz.classList.add('over')})});
+['dragleave','drop'].forEach(function(t){dz.addEventListener(t,function(e){e.preventDefault();dz.classList.remove('over')})});
+dz.addEventListener('drop',function(e){var f=e.dataTransfer.files[0];if(f)readFile(f)});
+$('pbtn').onclick=function(){var t=$('paste').value;if(!t.trim())return;load(parseDelim(t,'\t'))};
+$('sample').onclick=function(){var csv='﻿受験番号,氏名,ふりがな,学校名,学年,備考\r\n001,藤沢 太郎,ふじさわ たろう,藤沢高等学校,高3,\r\n002,湘南 花子,しょうなん はなこ,湘南高等学校,高2,\r\n003,江ノ島 次郎,えのしま じろう,江ノ島高等学校,高1,\r\n';
+var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='sample_meibo.csv';a.click();setTimeout(function(){URL.revokeObjectURL(a.href)},1000)};
+
+function fmtDate(s){if(!s)return '';var m=/^(\d+)-(\d+)-(\d+)$/.exec(s);if(!m)return s;
+var d=new Date(+m[1],+m[2]-1,+m[3]);return m[1]+'年'+(+m[2])+'月'+(+m[3])+'日（'+'日月火水木金土'[d.getDay()]+'）'}
+function lines(s){return (s||'').split(/\r?\n/).map(function(x){return x.trim()}).filter(Boolean)}
+function cell(k,v,cls){var c=el('div','t-cell');c.appendChild(el('div','t-k',k));var d=el('div','t-v '+(cls||''));if(v instanceof Node)d.appendChild(v);else d.textContent=v;c.appendChild(d);return c}
+function fit(e,min){var fs=parseFloat(getComputedStyle(e).fontSize),g=0;
+e.style.fontSize=fs+'px';while(e.scrollWidth>e.clientWidth+0.5&&fs>(min||6)&&g++<200){fs-=0.5;e.style.fontSize=fs+'px'}}
+function ticket(st){var t=el('div','ticket'),fits=[];var m=el('div','t-main');
+var h=el('div','t-head');h.appendChild(el('div','t-lab','受験票'));
+var ti=el('div','t-title',S.title||'');h.appendChild(ti);fits.push(ti);
+if(S.school)h.appendChild(el('div','t-org',S.school));m.appendChild(h);
+var box=el('div','t-box'),l=el('div','l');
+l.appendChild(cell('受験番号',st.no,'t-no'));
+var nm=el('div');nm.appendChild(el('span','t-kana',st.kana||''));var nn=el('div','t-name',st.name);nm.appendChild(nn);
+l.appendChild(cell('氏名',nm,''));fits.push(nn);
+var sg=[st.school,st.grade].filter(Boolean).join('　');
+if(sg){var c3=cell('学校・学年',sg,'t-sch');l.appendChild(c3);fits.push(c3.lastChild)}
+box.appendChild(l);
+if(S.photo)box.appendChild(el('div','r','写真\n（縦4cm×横3cm）'));
+m.appendChild(box);
+var tb=el('table','t-info');
+function tr(k,v){var r=document.createElement('tr');r.appendChild(el('th',null,k));r.appendChild(el('td',null,v));tb.appendChild(r)}
+if(S.date)tr('実施日',fmtDate(S.date));if(S.time)tr('集合時刻',S.time);if(S.place)tr('会場',S.place);
+if(tb.rows.length)m.appendChild(tb);
+var sr=S.sched.filter(function(r){return r.t||r.c});
+if(sr.length){var w=el('div');w.appendChild(el('div','t-h','時間割'));var t2=el('table','t-info');
+sr.forEach(function(r){var x=document.createElement('tr');x.appendChild(el('th',null,r.t));x.appendChild(el('td',null,r.c));t2.appendChild(x)});
+t2.querySelectorAll('th').forEach(function(th){th.style.width='42mm'});w.appendChild(t2);m.appendChild(w)}
+var it=lines(S.items);if(it.length){var w2=el('div');w2.appendChild(el('div','t-h','持ち物'));var u=el('ul','t-list');it.forEach(function(x){u.appendChild(el('li',null,x))});w2.appendChild(u);m.appendChild(w2)}
+var nt=lines(S.notes);if(nt.length){var w3=el('div');w3.appendChild(el('div','t-h','注意事項'));var o=el('ol','t-list');nt.forEach(function(x){o.appendChild(el('li',null,x))});w3.appendChild(o);m.appendChild(w3)}
+if(S.contact)m.appendChild(el('div','t-foot','お問い合わせ：'+S.contact));
+t.appendChild(m);
+if(S.stub){var sb=el('div','t-stub');sb.appendChild(el('div','t-cut','✂'));
+var a=el('div','t-lab','受験票（控え）');a.style.textAlign='left';a.style.letterSpacing='.3em';sb.appendChild(a);
+var s1=el('div','t-cell');s1.appendChild(el('div','t-k','受験番号'));s1.appendChild(el('div','t-v t-no',st.no));
+var s2=el('div','t-cell');s2.appendChild(el('div','t-k','氏名'));var sn=el('div','t-v t-name',st.name);s2.appendChild(sn);fits.push(sn);
+sb.appendChild(s1);sb.appendChild(s2);if(S.title)sb.appendChild(el('div',null,S.title+(S.date?'　'+fmtDate(S.date):'')));t.appendChild(sb)}
+t._fits=fits;return t}
+var SAMPLE={no:'001',name:'藤沢 太郎',kana:'ふじさわ たろう',school:'藤沢高等学校',grade:'高3',note:''};
+function current(){if(!rows.length)return [SAMPLE];var out=[];
+rows.forEach(function(r,i){if(sel[i])out.push({no:numOf(r,i),name:val(r,'name'),kana:val(r,'kana'),school:val(r,'school'),grade:val(r,'grade'),note:val(r,'note')})});return out}
+var PXMM=96/25.4;
+function render(){var list=current(),box=$('pages');box.textContent='';
+var avail=Math.max(200,$('pane').clientWidth-32);var sc=Math.min(1,avail/(210*PXMM));
+var fl=[];
+list.forEach(function(st){var w=el('div','pw');w.style.width=(210*PXMM*sc)+'px';w.style.height=(297*PXMM*sc)+'px';
+var t=ticket(st);t.style.transform='scale('+sc+')';w.appendChild(t);box.appendChild(w);fl.push(t)});
+fl.forEach(function(t){t._fits.forEach(function(e){fit(e)})});
+$('pcount').textContent=rows.length?('プレビュー：'+list.length+'枚（A4）'):'プレビュー：サンプル 1枚（A4）';
+$('selcnt').textContent=rows.length?('選択 '+list.length+' / '+rows.length+'名'):''}
+$('print').onclick=function(){
+if(rows.length&&!current().length){alert('印刷する生徒が選択されていません。');return}
+window.print()};
+var rt;window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(render,100)});
+render();
+})();
+</script>
+</body>
+</html>
