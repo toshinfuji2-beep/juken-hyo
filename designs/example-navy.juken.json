@@ -1,0 +1,85 @@
+{
+  "format": "juken-design",
+  "version": 1,
+  "name": "早大プレ（紺・明朝）",
+  "template": "waseda",
+  "data": {
+    "hdr": "第3回　東進模擬試験　受験票",
+    "badge": "印刷して当日持参",
+    "badgeOn": true,
+    "mark": "模試",
+    "markOn": true,
+    "items": [
+      {
+        "label": "受験番号",
+        "source": "column",
+        "column": "受験番号",
+        "width": "half",
+        "size": "L"
+      },
+      {
+        "label": "氏名",
+        "source": "column",
+        "column": "氏名",
+        "width": "half",
+        "size": "L"
+      },
+      {
+        "label": "試験日",
+        "source": "date",
+        "value": "2026-11-15",
+        "size": "L"
+      },
+      {
+        "label": "試験会場",
+        "source": "fixed",
+        "value": "東進衛星予備校 藤沢校",
+        "size": "L",
+        "color": "accent"
+      },
+      {
+        "label": "志望校",
+        "source": "column",
+        "column": "志望学部",
+        "fallback": "未記入",
+        "size": "M",
+        "align": "left"
+      },
+      {
+        "label": "試験時間",
+        "source": "schedule",
+        "size": "XL",
+        "rows": [
+          {
+            "t": "9:30〜11:00",
+            "c": "英語"
+          },
+          {
+            "t": "12:00〜13:30",
+            "c": "数学"
+          },
+          {
+            "t": "14:30〜16:00",
+            "c": "国語"
+          }
+        ]
+      }
+    ],
+    "accent": "#1F3A93",
+    "font": "mincho",
+    "foldOn": true,
+    "foldPos": 148.5,
+    "foldLabel": "＜山折り＞",
+    "noteTitle": "注意事項",
+    "notes": "!この受験票を試験当日に必ず持参してください。\n試験開始の30分前までに入場してください。\n受験票は試験中、机の上に置いてください。\n筆記用具・時計（通信機能のないもの）を持参してください。",
+    "swap": false,
+    "map": {
+      "d": "",
+      "hide": true
+    },
+    "logo": {
+      "d": "assets/logo-fujisawa.png",
+      "hide": false
+    }
+  }
+}

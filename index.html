@@ -151,6 +151,7 @@ html,body{background:#fff}
 #mig{margin:8px 0;padding:8px;border:1px solid var(--ac);border-radius:6px;font-size:12px}
 #mig[hidden]{display:none}
 #mig .row{margin-top:6px;display:flex;gap:6px;flex-wrap:wrap}
+#designSec.over{outline:2px dashed var(--ac);outline-offset:-2px}
 #pstat{min-height:1.4em}#pstat.err{color:#dc2626}
 .prow{display:flex;gap:6px}.prow select{flex:1;min-width:0}.prow button{padding:6px 10px}
 @media print{#login,#ubar{display:none!important}}
@@ -169,12 +170,15 @@ html,body{background:#fff}
 <div id="editor">
 <h1>受験票ジェネレーター</h1>
 <div id="ubar"><span id="uem"></span><button id="lout" type="button">ログアウト</button></div>
-<details open><summary>1. テンプレート・保存</summary><div class="sec">
+<details open id="designSec"><summary>1. テンプレート・保存</summary><div class="sec">
 <label for="tpl">デザイン（テンプレート）</label><select id="tpl"></select>
 <label for="pre">保存済みデザイン</label><div class="prow"><select id="pre"></select><button id="preload" type="button" title="共有デザインを再読み込み" aria-label="再読み込み">↻</button></div>
 <p class="note" id="pstat"></p>
 <div id="mig" hidden><div id="migt"></div><div class="row"><button id="migup" class="pri" type="button">共有にアップロード</button><button id="migclr" type="button">ローカルのコピーを削除</button></div></div>
 <div class="pgrid"><button id="psave" type="button">デザインを保存</button><button id="pover" type="button">上書き保存</button><button id="pren" type="button">名前を変更</button><button id="pdel" type="button">削除</button></div>
+<div class="pgrid"><button id="fexp" type="button">ファイルに書き出し</button><button id="fimp" type="button">ファイルから読み込み</button></div><input id="fimpf" type="file" accept=".json,application/json" hidden>
+<details id="jpaste" style="margin:6px 0 0"><summary style="font-weight:400;font-size:12px">JSONを貼り付けて読み込み</summary><div class="sec"><textarea id="jtxt" rows="5" placeholder='{"format":"juken-design","version":1,"template":"waseda","data":{…}}' spellcheck="false"></textarea><div class="row" style="margin-top:6px"><button id="jgo" type="button">読み込み</button></div></div></details>
+<p class="note">※ファイルをこの枠（「1. テンプレート・保存」）にドロップしても読み込めます。形式は DESIGN_FORMAT.md を参照。</p>
 <p class="note">※項目・デザイン設定を名前を付けて保存すると、ログインしているスタッフ全員で共有されます。<br>※名簿はこの端末の中だけで処理され、送信されません。</p>
 </div></details>
 <details open><summary>2. 名簿読み込み</summary><div class="sec">
@@ -464,7 +468,7 @@ var ls=$('items').querySelectorAll('.it-h input[type=text]');if(ls.length){var l
 
 /* ---------- デザイン選択・保存済み ---------- */
 function drawTplSel(){var s=$('tpl');s.textContent='';TPL_ORDER.forEach(function(id){var o=el('option',null,TEMPLATES[id].name);o.value=id;s.appendChild(o)});s.value=S.tpl}
-var TBL='juken_presets',busy=false,PMAX=1500000;
+var importName='',TBL='juken_presets',busy=false,PMAX=1500000;
 function pRow(r){return {id:r.id,name:r.name,tpl:r.template,vals:r.data||{},at:r.updated_at}}
 function fmtAt(t){if(!t)return '';var d=new Date(t);if(isNaN(d))return '';var z=function(n){return n<10?'0'+n:n};return (d.getMonth()+1)+'/'+d.getDate()+' '+d.getHours()+':'+z(d.getMinutes())}
 function pErr(e){var m=(e&&e.message)||'',c=e&&e.code;
@@ -486,12 +490,12 @@ try{await loadPresetsQuiet();pstat(presets.length?'':'共有デザインはま�
 function sizeOk(vals){var n=JSON.stringify(vals).length;if(n>PMAX)return confirm('このデザインのデータが大きめです（約'+(n/1e6).toFixed(1)+'MB）。画像を小さくすることをおすすめします。それでも保存しますか？');return true}
 function afterDesignChange(){save();drawTplSel();drawPreSel();drawFields();drawItems();render()}
 $('preload').onclick=loadPresets;
-$('tpl').onchange=function(){S.byTpl[S.tpl]=V;S.tpl=this.value;S.cur='';V=mkVals(tpl(),S.byTpl[S.tpl]);afterDesignChange()};
-$('pre').onchange=function(){var p=byId(this.value);if(!p){S.cur='';drawPreSel();save();return}
+$('tpl').onchange=function(){importName='';S.byTpl[S.tpl]=V;S.tpl=this.value;S.cur='';V=mkVals(tpl(),S.byTpl[S.tpl]);afterDesignChange()};
+$('pre').onchange=function(){importName='';var p=byId(this.value);if(!p){S.cur='';drawPreSel();save();return}
 S.tpl=p.tpl;V=mkVals(tpl(),p.vals);S.cur=p.id;afterDesignChange()};
 async function pdo(fn){if(busy)return;setBusy(true);pstat('通信中…');try{await fn()}catch(e){pstat(pErr(e&&e.message?e:{message:String(e)}),true)}setBusy(false)}
 function chk(r){if(r.error)throw r.error;return r}
-$('psave').onclick=function(){var cp=S.cur&&byId(S.cur);var n=prompt('保存名を入力してください（例：第1回早大プレ）',cp?cp.name:'');if(n==null)return;n=n.trim();if(!n)return;if(!sizeOk(V))return;
+$('psave').onclick=function(){var cp=S.cur&&byId(S.cur);var n=prompt('保存名を入力してください（例：第1回早大プレ）',cp?cp.name:importName);if(n==null)return;n=n.trim();if(!n)return;if(!sizeOk(V))return;
 pdo(async function(){var vals=clone(V),r=await sb.from(TBL).insert({name:n,template:S.tpl,data:vals}).select('id').single();
 if(r.error&&(r.error.code==='23505'||/duplicate/i.test(r.error.message||''))){
 if(!confirm('「'+n+'」は既に共有されています。上書きしますか？'))return pstat('');
@@ -512,6 +516,42 @@ if(JSON.stringify(p.vals).length>PMAX*1.3){big++;continue}
 var r=await sb.from(TBL).insert({name:p.name,template:p.tpl,data:p.vals});if(r.error){if(r.error.code==='23505')skip++;else{fail++;fe=r.error}}else{ok++;ex.push(p.name)}}
 await loadPresetsQuiet();var msg='アップロード '+ok+'件 / 同名のためスキップ '+skip+'件'+(big?' / サイズ超過 '+big+'件':'')+(fail?' / 失敗 '+fail+'件':'');pstat(fail?pErr(fe):msg,fail>0);alert(msg+'\n\n不要になったら「ローカルのコピーを削除」を押してください。')})};
 $('migclr').onclick=function(){if(!confirm('このブラウザに保存されたデザイン'+localPresets.length+'件を削除します。共有にアップロード済みか確認しましたか？'))return;try{localStorage.removeItem(PKEY)}catch(e){}localPresets=[];drawMig()};
+
+/* ---------- ファイル書き出し・読み込み（.juken.json） ---------- */
+function dlText(name,text){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'application/json'}));a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(a.href)},1000)}
+$('fexp').onclick=function(){var cp=S.cur&&byId(S.cur),nm=cp?cp.name:importName||'';
+var fn=(nm.replace(/[\x5c\/:*?"<>|\r\n]+/g,'_').trim()||'design')+'.juken.json';
+dlText(fn,JSON.stringify({format:'juken-design',version:1,name:nm,template:S.tpl,data:clone(V)},null,2));pstat('書き出しました（'+fn+'）')};
+function importDesign(text){var o,notes=[];
+function fail(m){pstat(m,true);return false}
+try{o=JSON.parse(String(text).replace(/^﻿/,''))}catch(e){return fail('JSONとして読み取れませんでした。カンマや引用符の誤りがないか確認してください（'+e.message+'）')}
+if(!o||typeof o!=='object'||Array.isArray(o)||o.format!=='juken-design')return fail('受験票デザインのファイルではありません（"format": "juken-design" が見つかりません）。');
+if(typeof o.version==='number'&&o.version>1)return fail('このファイルは新しい形式（version '+o.version+'）です。アプリを更新してください。');
+if(typeof o.template!=='string'||!TEMPLATES[o.template])return fail('テンプレート "'+o.template+'" は存在しません。使えるのは '+TPL_ORDER.join(' / ')+' です。');
+var data=o.data===undefined||o.data===null?{}:o.data;
+if(typeof data!=='object'||Array.isArray(data))return fail('"data" はオブジェクト（{ … }）にしてください。');
+data=clone(data);var T=TEMPLATES[o.template],known={};
+T.fields.forEach(function(f){if(f.k)known[f.k]=1});
+if(T.migrate)['venue','room','date','system','faculty','sched'].forEach(function(k){known[k]=1});
+var unk=Object.keys(data).filter(function(k){return !known[k]});if(unk.length)notes.push('未対応の項目を無視: '+unk.join(', '));
+T.fields.forEach(function(f){if(f.type!=='image'||!(f.k in data))return;var v=data[f.k];
+if(v===null||v===true||v==='')delete data[f.k];
+else if(v===false)data[f.k]={d:'',hide:true};
+else if(typeof v==='string')data[f.k]={d:v,hide:false};
+if(data[f.k]&&typeof data[f.k]==='object'&&typeof data[f.k].d==='string'){var d=data[f.k].d;
+if(d&&!/^data:image\//i.test(d)&&(/^[a-z][a-z0-9+.\-]*:/i.test(d)||/^[\/\x5c]/.test(d))){notes.push('画像「'+f.k+'」は相対パス（例: assets/xxx.png）かdataURLのみ使えます。既定画像を使用');data[f.k].d=''}}});
+var nv;try{nv=mkVals(T,data)}catch(e){return fail('内容を解釈できませんでした（'+e.message+'）')}
+S.tpl=o.template;V=nv;S.cur='';importName=typeof o.name==='string'?o.name.trim():'';afterDesignChange();
+pstat('読み込みました'+(importName?'（'+importName+'）':'')+'。内容を確認し、共有するなら「デザインを保存」を押してください。'+(notes.length?'［'+notes.join(' / ')+'］':''));return true}
+function importFile(f){if(!f)return;var fr=new FileReader();fr.onerror=function(){pstat('ファイルを読み込めませんでした。',true)};fr.onload=function(){importDesign(fr.result)};fr.readAsText(f)}
+$('fimp').onclick=function(){$('fimpf').click()};
+$('fimpf').onchange=function(){importFile(this.files[0]);this.value=''};
+$('jgo').onclick=function(){var t=$('jtxt').value;if(!t.trim()){pstat('JSONを貼り付けてください。',true);return}if(importDesign(t)){$('jtxt').value='';$('jpaste').open=false}};
+var ds=$('designSec');
+function hasFiles(e){var t=e.dataTransfer&&e.dataTransfer.types;return !!t&&Array.prototype.indexOf.call(t,'Files')>=0}
+['dragenter','dragover'].forEach(function(t){ds.addEventListener(t,function(e){if(!hasFiles(e))return;e.preventDefault();ds.classList.add('over')})});
+ds.addEventListener('dragleave',function(e){if(!ds.contains(e.relatedTarget))ds.classList.remove('over')});
+ds.addEventListener('drop',function(e){if(!hasFiles(e))return;e.preventDefault();ds.classList.remove('over');importFile(e.dataTransfer.files[0])});
 
 /* ---------- 名簿 ---------- */
 function parseDelim(text,delim){var out=[],row=[],f='',q=false,i=0,n=text.length,c;
