@@ -108,6 +108,9 @@ JukenTemplates.register({
 ## フリーデザイン（`free`）と独自の設定型
 
 - `templates/free.js` は A4 に要素（text/field/rect/ellipse/line/image/notes/table/fold）を mm で絶対配置するテンプレート。要素モデルは `DESIGN_FORMAT.md` §7。エディタは `editor/free-editor.js`（`FreeEditor.open()`）。
-- `JukenFree`（`window.JukenFree`）: `normElement(s)` `newElement(type, props)` `starter(V)`（初期レイアウトの要素配列）`geom/aabb` `resolveText`。フェーズB（既存テンプレート→キャンバス変換・スターター集）は、`JukenFree.newElement` で要素を作って `V.tpl.free.elements` に入れるだけで実装できます。
+- `JukenFree`（`window.JukenFree`）: `normElement(s)` `newElement(type, props)` `starter(V)`（初期レイアウトの要素配列）`geom/aabb` `resolveText`。`LAYOUTS`（スターターレイアウト：シンプル縦型・2段カード・大きな受験番号。`build(V)` が要素配列を返す）。
 - `extras` には `{ type:'json', norm:function(saved, def){…}, hidden:true }` を使えます（`norm` が正規化。`hidden:true` は詳細編集の設定欄に出さない）。
 - `ctx.fitText` の対象に `e._fitBase`（縮小前のfont-size）・`e._fitH=true`（高さのはみ出しも縮小）を設定できます。
+- `editor/free-convert.js`: `JukenFree.convert(templateId, V, student)` → Promise<`{elements, bg, wm:{y}|null, count}`>。既存テンプレートをA4で画面外に描画してDOMを要素に変換します（内容は `DESIGN_FORMAT.md` §7末尾）。**変換に強いテンプレートの書き方**：項目は `C.item(el, it)`、ヘッダー・バッジ・マークは `C.edit(el, 'hdr'|'badge'|'mark')`、折り線は `C.fold(V)`、透かしは `C.watermark(V, …)` のフックを使う（`data-item`/`data-edit`/`.jt-fold`/`.jt-wm` を手がかりにします）。注意事項は、各行が1つの要素になっていれば `notes` 要素になります。疑似要素（`::before`/`::after`）は本物の要素に置き換えて測定します。
+- 差し込みの表示：`render('free', st, V)` の `st._edit=true` で編集用の描画、`st._raw=true` で全部 `{{項目名}}`（チップ）表示、`st._rawIds={要素id:1}` でその要素だけチップ表示。それ以外は実データ。
+- エディタの画面状態（左パネルの開閉・右の詳細の折りたたみ・タブ・グリッド・スナップ）は `localStorage` の `juken-free-ui` に保存されます。

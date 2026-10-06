@@ -31,7 +31,7 @@ var DEF = {
   line: { x: 15, y: 15, w: 60, h: 0, stroke: '#1f2937', strokeWidth: 1, dash: 'solid' },
   image: { x: 15, y: 15, w: 50, h: 50, src: '', fit: 'contain', radius: 0 },
   notes: { x: 15, y: 156, w: 112, h: 124, title: '注意事項', size: 9.5, color: '#111827', accentColor: 'accent', bullet: 'number', lineHeight: 1.5, fit: 'shrink' },
-  table: { x: 15, y: 60, w: 180, h: 60, itemIds: [], borderColor: 'accent', labelBg: '#f3f4f6', labelColor: '#374151', color: '#111827', size: 12, rowGap: 1.5 },
+  table: { x: 15, y: 60, w: 180, h: 60, itemIds: [], borderColor: 'accent', labelBg: '#f3f4f6', labelColor: '#374151', color: '#111827', size: 12, rowGap: 1.5, itemSize: false },
   fold: { x: 0, y: 148.5, w: 210, h: 0, label: '＜山折り＞', size: 11, color: '#111827', strokeWidth: 1, dash: 'dashed' }
 };
 var SEL = { font: ['gothic', 'mincho', 'maru', 'sans-en'], align: ['left', 'center', 'right'], valign: ['top', 'middle', 'bottom'], dash: ['solid', 'dashed', 'dotted'], bullet: ['number', 'dot', 'none'], labelPos: ['top', 'left'] };
@@ -149,14 +149,16 @@ function vText(n, text, e) {
     n.appendChild(col);
   });
 }
+/* 差し込み表示：st._raw=すべて項目名で表示 / st._rawIds={要素id:1}=その要素だけ項目名（チップ）で表示。それ以外は実データ */
+function isRaw(st, e) { return !!(st._edit && (st._raw || (st._rawIds && st._rawIds[e.id]))); }
 function rText(e, V, st, t, edit) {
-  var d = base(e, 'fz-text'), n = el('div', 'fz-t');
+  var raw = isRaw(st, e), d = base(e, 'fz-text'), n = el('div', 'fz-t');
   d.style.display = 'flex'; if (e.padding) d.style.padding = mm(e.padding); if (e.bg) d.style.background = rc(e.bg, V);
   if (e.vertical) { n.className += ' fz-v'; d.style.justifyContent = { top: 'flex-end', middle: 'center', bottom: 'flex-start' }[e.valign]; }
   else { d.style.alignItems = JUST[e.valign]; n.style.width = '100%'; n.style.whiteSpace = e.fit === 'shrink' ? 'nowrap' : 'pre-wrap'; n.style.overflowWrap = 'anywhere'; }
   textStyle(n, e, V);
-  if (e.vertical) vText(n, edit ? e.text : resolveText(e.text, V, st), e);
-  else if (edit) chips(n, e.text, V); else n.textContent = resolveText(e.text, V, st);
+  if (e.vertical) vText(n, raw ? e.text : resolveText(e.text, V, st), e);
+  else if (raw) chips(n, e.text, V); else n.textContent = resolveText(e.text, V, st);
   d.appendChild(n);
   if (e.fit === 'shrink' && !e.vertical) { n._fitBase = e.size + 'pt'; C.fitText(t, n, 4); }
   return d;
@@ -181,7 +183,7 @@ function rField(e, V, st, t, edit) {
     v.style.whiteSpace = 'nowrap';
     C.sched(it).forEach(function (r) { var s = el('div', 'fz-sr'); s.appendChild(el('span', 'fz-st', r.t)); s.appendChild(el('span', 'fz-sc', r.c)); v.appendChild(s); });
   } else {
-    v.textContent = C.value(it, st);
+    if (isRaw(st, e)) chips(v, '{{' + it.label + '}}', V); else v.textContent = C.value(it, st);
     v.style.whiteSpace = e.fit === 'shrink' ? 'nowrap' : 'pre-wrap'; v.style.overflowWrap = 'anywhere';
     if (e.fit === 'shrink') { v._fitBase = e.size + 'pt'; C.fitText(t, v, 4); }
   }
@@ -246,7 +248,7 @@ function rTable(e, V, st, t, edit) {
       if (it.source === 'schedule') {
         var w = el('div'); w.style.cssText = 'line-height:1.35';
         C.sched(it).forEach(function (s) { w.appendChild(el('div', null, (s.t + '　' + s.c).trim())); }); v.appendChild(w);
-      } else { var tx = el('div', null, C.value(it, st)); tx.style.cssText = 'flex:1;min-width:0;overflow:hidden'; v.appendChild(tx); tx._fitBase = ''; C.fitText(t, tx, 5); }
+      } else { var tx = el('div'); if (st._edit && st._raw) chips(tx, '{{' + it.label + '}}', V); else tx.textContent = C.value(it, st); var fsz = e.itemSize ? ({ S: 0.8, M: 1, L: 1.2, XL: 1.4 }[it.size] || 1) + 'em' : ''; tx.style.cssText = 'flex:1;min-width:0;overflow:hidden' + (fsz ? ';font-size:' + fsz : ''); v.appendChild(tx); tx._fitBase = fsz; C.fitText(t, tx, 5); }
       c.appendChild(l); c.appendChild(v); tr.appendChild(c);
     });
     d.appendChild(tr);
@@ -289,6 +291,65 @@ function starter(V) {
   return els;
 }
 
+/* ---------- スターターレイアウト（テンプレタブの「ひな形」） ---------- */
+function layoutBase(V) {
+  var find = function (re, not) { return C.findItem(V, re, not); };
+  var no = find(/受験番号/), kn = find(/カナ|ｶﾅ|フリガナ|ふりがな/) || find(/氏名|名前/);
+  if (kn === no) kn = null;
+  var rest = V.items.filter(function (i) { return !i.hidden && i !== no && i !== kn; });
+  return { ft: V.font === 'mincho' ? 'mincho' : 'gothic', no: no, kn: kn, rest: rest, rows: rowsOf(rest) };
+}
+function tableH(rows) { var w = 0; rows.forEach(function (r) { w += r.length === 1 && r[0].source === 'schedule' ? Math.max(1, C.sched(r[0]).length) : 1; }); return Math.max(20, Math.min(78, w * 10.5)); }
+function lowerHalf(els, V, add, o) {
+  if (V.foldOn !== false) add('fold', { name: '折り線', y: 148.5, label: V.foldLabel == null ? '＜山折り＞' : V.foldLabel });
+  if (o && o.card) add('rect', { name: '注意事項の枠', x: 13, y: 154, w: 116, h: 130, fill: '#ffffff', stroke: 'accent', strokeWidth: 1, radius: 3 });
+  add('notes', { name: '注意事項', x: o && o.card ? 17 : 15, y: o && o.card ? 158 : 156, w: o && o.card ? 108 : 112, h: o && o.card ? 122 : 124, title: V.noteTitle || '' });
+  add('image', { name: '地図', x: 133, y: 156, w: 62, h: 62, src: 'map' });
+}
+var LAYOUTS = [
+  { id: 'simple-v', name: 'シンプル縦型', desc: 'タイトル・番号・氏名を縦に並べた基本形',
+    build: function (V) {
+      var els = [], b = layoutBase(V);
+      function add(t, p) { var e = newElement(t, p); if (e) els.push(e); return e; }
+      add('text', { name: 'タイトル', x: 15, y: 12, w: 180, h: 12, text: '{{ヘッダー}}', size: 18, weight: 700, color: 'accent', valign: 'middle', font: b.ft, fit: 'shrink' });
+      add('line', { name: 'タイトル罫線', x: 15, y: 27, w: 180, stroke: 'accent', strokeWidth: 1.2 });
+      if (b.no) add('field', { name: b.no.label, x: 15, y: 32, w: 180, h: 15, itemId: b.no.id, size: 26, font: b.ft, labelPos: 'left', labelSize: 9 });
+      if (b.kn) add('field', { name: b.kn.label, x: 15, y: 49, w: 180, h: 13, itemId: b.kn.id, size: 18, font: b.ft, labelPos: 'left', labelSize: 9 });
+      if (b.rest.length) add('table', { name: '情報テーブル', x: 15, y: 68, w: 180, h: tableH(b.rows), itemIds: b.rest.map(function (i) { return i.id; }), font: b.ft });
+      lowerHalf(els, V, add);
+      return els;
+    } },
+  { id: 'two-card', name: '2段カード', desc: '帯のタイトルと、角丸カードに入れた番号・氏名・表',
+    build: function (V) {
+      var els = [], b = layoutBase(V);
+      function add(t, p) { var e = newElement(t, p); if (e) els.push(e); return e; }
+      add('rect', { name: 'タイトル帯', x: 0, y: 0, w: 210, h: 26, fill: 'accent' });
+      add('text', { name: 'タイトル', x: 15, y: 6, w: 180, h: 14, text: '{{ヘッダー}}', size: 20, weight: 700, color: '#ffffff', valign: 'middle', font: b.ft, fit: 'shrink' });
+      add('rect', { name: '番号カード', x: 15, y: 33, w: 86, h: 26, fill: 'secondary', radius: 4 });
+      add('rect', { name: '氏名カード', x: 109, y: 33, w: 86, h: 26, fill: 'secondary', radius: 4 });
+      if (b.no) add('field', { name: b.no.label, x: 19, y: 35, w: 78, h: 22, itemId: b.no.id, size: 28, font: b.ft });
+      if (b.kn) add('field', { name: b.kn.label, x: 113, y: 35, w: 78, h: 22, itemId: b.kn.id, size: 18, font: b.ft });
+      if (b.rest.length) {
+        add('rect', { name: '情報カード', x: 15, y: 66, w: 180, h: tableH(b.rows) + 6, fill: '#ffffff', stroke: 'accent', strokeWidth: 1, radius: 4 });
+        add('table', { name: '情報テーブル', x: 18, y: 69, w: 174, h: tableH(b.rows), itemIds: b.rest.map(function (i) { return i.id; }), font: b.ft, borderColor: '#d1d5db', labelBg: '' });
+      }
+      lowerHalf(els, V, add, { card: true });
+      return els;
+    } },
+  { id: 'big-no', name: '大きな受験番号', desc: '受験番号を特大で見せる、番号重視のレイアウト',
+    build: function (V) {
+      var els = [], b = layoutBase(V);
+      function add(t, p) { var e = newElement(t, p); if (e) els.push(e); return e; }
+      add('text', { name: 'タイトル', x: 15, y: 10, w: 180, h: 11, text: '{{ヘッダー}}', size: 16, weight: 700, color: 'accent', valign: 'middle', font: b.ft, fit: 'shrink' });
+      add('rect', { name: '番号の枠', x: 15, y: 24, w: 180, h: 38, fill: '#ffffff', stroke: 'accent', strokeWidth: 2.5, radius: 2 });
+      if (b.no) add('field', { name: b.no.label, x: 19, y: 26, w: 172, h: 34, itemId: b.no.id, size: 60, font: b.ft, align: 'center', labelPos: 'top', labelSize: 9 });
+      if (b.kn) add('field', { name: b.kn.label, x: 15, y: 66, w: 180, h: 12, itemId: b.kn.id, size: 18, font: b.ft, align: 'center', showLabel: false });
+      if (b.rest.length) add('table', { name: '情報テーブル', x: 15, y: 82, w: 180, h: Math.min(60, tableH(b.rows)), itemIds: b.rest.map(function (i) { return i.id; }), font: b.ft, size: 11 });
+      lowerHalf(els, V, add);
+      return els;
+    } }
+];
+
 JT.register({
   id: 'free',
   name: 'フリーデザイン',
@@ -326,6 +387,6 @@ JT.register({
 g.JukenFree = {
   TYPES: TYPES, TYPE_NAMES: TYPE_NAMES, FONTS: FONTS, FONT_NAMES: FONT_NAMES, DEF: DEF, SEL: SEL,
   normElement: normElement, normElements: normElements, normGuides: normGuides, newElement: newElement, newId: newId,
-  starter: starter, geom: geom, aabb: aabb, resolveText: resolveText, placeholders: placeholders, itemById: itemById, rowsOf: rowsOf, rc: rc, loadFonts: loadFonts
+  starter: starter, LAYOUTS: LAYOUTS, geom: geom, aabb: aabb, resolveText: resolveText, placeholders: placeholders, itemById: itemById, rowsOf: rowsOf, rc: rc, loadFonts: loadFonts
 };
 })(window);

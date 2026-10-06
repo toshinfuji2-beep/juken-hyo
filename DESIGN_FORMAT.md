@@ -550,8 +550,10 @@ A4（210×297mm）に要素を絶対配置するテンプレート。`data.tpl.f
 | `line` | `stroke` `strokeWidth` `dash`（長さ=`w`、回転=`rot`） |
 | `image` | `src`（dataURL / `assets/…` / `"map"` / `"logo"`＝このデザインの地図・ロゴ）`fit`(contain/cover) `radius` |
 | `notes` | `title` `size` `color` `accentColor` `bullet`(number/dot/none) `lineHeight` `fit`。本文は共通設定の `notes`（行頭`!`で強調） |
-| `table` | `itemIds[]`（半幅2つは横並び）`borderColor` `labelBg` `labelColor` `color` `size` `rowGap`(セル上下余白mm)。行の高さは枠の高さを等分 |
+| `table` | `itemIds[]`（半幅2つは横並び）`borderColor` `labelBg` `labelColor` `color` `size` `rowGap`(セル上下余白mm) `itemSize`(true=各項目の `size` S/M/L/XL を倍率0.8/1/1.2/1.4で反映。既定false)。行の高さは枠の高さを等分 |
 | `fold` | `label` `size` `color` `strokeWidth` `dash`（既定 x=0,w=210,y=148.5） |
 
 透かしは共通設定 `wmOn` 等を使い、ページ全体（`wmAnchor` の top/mid/bot＝用紙の上端/中央/下端）に最前面で描画されます。
 フリーデザインのJSON例は、アプリで作って「ファイルに書き出し」したものを参照してください。
+
+**既存デザインからの変換**: 既存テンプレート（またはいま開いているデザイン）を「自由編集」に変換すると、画面外に描画したDOMを `rect`（背景・罫線・角丸。円は `ellipse`、片側だけの罫線は細い `rect`/`line`）・`text`（書体は gothic/mincho/maru/sans-en に対応付け。`{{ヘッダー}}` `{{バッジ}}` `{{マーク}}` は差し込みに戻す）・`field`（項目の値だけ。`itemId` で結び、`showLabel:false`。項目名は別の `text`）・`notes`（本文のみ）・`fold`・`image`（`"map"`/`"logo"`）に置き換えます（最大150個）。透かしは共通設定を維持し、`wmAnchor:"page"`・`wmY`（用紙の上端からのmm）に変換します。色が `accent`/`secondary` と一致するものはトークン参照になります。

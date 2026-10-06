@@ -19,6 +19,7 @@
 <script src="templates/pop-candy.js"></script>
 <script src="templates/natural.js"></script>
 <script src="templates/free.js"></script>
+<script src="editor/free-convert.js"></script>
 <script src="editor/free-editor.js"></script>
 <style>
 :root{--bg:#f3f4f6;--panel:#fff;--fg:#1f2937;--mut:#6b7280;--bd:#d1d5db;--ac:#1d4ed8;--acfg:#fff;--inp:#fff;--pv:#e5e7eb;--warn:#b45309;--warnbg:#fef3c7;--ok:#15803d;--err:#dc2626}
@@ -311,6 +312,10 @@ button.dg,.dg{color:var(--err)}
 .card{display:flex;flex-direction:column;gap:6px;min-width:0;padding:var(--s2);border:2px solid var(--bd);border-radius:12px;background:var(--panel);text-align:left;cursor:pointer;white-space:normal;position:relative}
 .card:hover{border-color:var(--mut)}
 .card.cur{border-color:var(--ac);box-shadow:0 0 0 3px var(--acs)}
+.cw{position:relative;display:flex;min-width:0}.cw>.card{flex:1}
+.cconv{position:absolute;left:8px;top:8px;display:inline-flex;align-items:center;gap:4px;height:26px;padding:0 9px;border:1px solid var(--bd);border-radius:13px;background:var(--panel);color:var(--fg);font-size:11px;font-weight:600;cursor:pointer;opacity:0;transition:opacity .12s;box-shadow:0 1px 4px rgba(0,0,0,.18);white-space:nowrap}
+.cw:hover .cconv,.cconv:focus-visible{opacity:1}.cconv:hover{border-color:var(--ac);color:var(--ac)}
+@media(hover:none){.cconv{opacity:1}.cconv span{display:none}.cconv{width:26px;padding:0;justify-content:center}}
 .card.cur:after{content:"\2713";position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;background:var(--ac);color:#fff;font-size:13px;line-height:22px;text-align:center;font-weight:700}
 .card .cn{font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .card .cm{display:flex;align-items:center;gap:6px;min-width:0}
@@ -499,7 +504,7 @@ button.dg,.dg{color:var(--err)}
 </section>
 </div>
 <div id="pane" tabindex="0">
-<div id="bar"><span id="pcount"></span><span class="seg" id="nav"><button id="nprev" type="button" title="前の1名 (←)" aria-label="前の1名">◀</button><span id="npos"></span><button id="nnext" type="button" title="次の1名 (→)" aria-label="次の1名">▶</button></span><button id="fedit" class="pri" type="button" hidden title="文字・図形・画像を自由に配置するエディタを開きます">デザイン編集</button><button id="tall" type="button" title="全員をまとめて表示／1名ずつ表示">全員表示</button><span class="seg adv-only"><button id="zfit" type="button" title="画面幅に合わせる">幅に合わせる</button><button id="z100" type="button" title="実寸（A4=100%）">100%</button></span><button id="pdfsave" class="adv-only" type="button" title="全員分の受験票PDFを作り、ファイル保管に保存します">PDFを保存</button><button class="pri adv-only" id="print" type="button">印刷 / PDF保存</button></div>
+<div id="bar"><span id="pcount"></span><span class="seg" id="nav"><button id="nprev" type="button" title="前の1名 (←)" aria-label="前の1名">◀</button><span id="npos"></span><button id="nnext" type="button" title="次の1名 (→)" aria-label="次の1名">▶</button></span><button id="fedit" class="pri" type="button" hidden title="文字・図形・画像を自由に配置するエディタを開きます">デザイン編集</button><button id="fconv" type="button" hidden title="いまのデザインを、自由に動かせる要素に変換して編集します（名簿の値・固定の文字・日付はそのまま入ります）">自由編集にする</button><button id="tall" type="button" title="全員をまとめて表示／1名ずつ表示">全員表示</button><span class="seg adv-only"><button id="zfit" type="button" title="画面幅に合わせる">幅に合わせる</button><button id="z100" type="button" title="実寸（A4=100%）">100%</button></span><button id="pdfsave" class="adv-only" type="button" title="全員分の受験票PDFを作り、ファイル保管に保存します">PDFを保存</button><button class="pri adv-only" id="print" type="button">印刷 / PDF保存</button></div>
 <div id="pages"></div>
 </div>
 </div>
@@ -1302,6 +1307,13 @@ $('wnext').onclick=function(){if(step<4)setStep(step+1);else doPrint()};
 var cardSel=[];
 function card(thumb,name,meta,fn,isOn){var b=el('button','card');b.type='button';b.appendChild(thumb);var n=el('div','cn',name);n.title=name;b.appendChild(n);b.appendChild(meta);b.onclick=function(){fn();markCards()};b._on=isOn;cardSel.push(b);return b}
 function markCards(){cardSel.forEach(function(b){b.classList.toggle('cur',!!b._on())})}
+/* 既存デザイン → フリーデザイン変換（ギャラリー・「自由編集にする」ボタンから）。いま開いているデザインならその設定のまま、別のデザインなら項目はそのままで見た目だけ元のデザインにする */
+function convertToFree(tid){if(busy||tid==='free'||!JT.get(tid)||!window.JukenFree||!JukenFree.convert)return;
+var T=JT.get(tid),same=tid===S.tpl,srcV=same?V:JT.switchVals(tid,V),cp=S.cur&&byId(S.cur),base=same?(cp?cp.name:(S.curName||importName||T.name)):T.name,nm=base.replace(/（自由編集）$/,'')+'（自由編集）';
+busy=true;toast('「'+T.name+'」を自由編集に変換しています…');
+JukenFree.convert(tid,srcV,mkStu(0,null)).then(function(r){busy=false;
+var nv=JSON.parse(JSON.stringify(srcV));nv.tpl=nv.tpl||{};nv.tpl.free={bg:r.bg,elements:r.elements,guides:[]};if(r.wm){nv.wmAnchor='page';nv.wmY=r.wm.y}
+V=JT.mkVals('free',nv);S.tpl='free';clearCur();importName=nm;afterDesignChange();resetBase();toast('自由編集に変換しました（'+r.count+'個の要素）。保存すると『'+nm+'』として残せます');FreeEditor.open()},function(e){busy=false;toast('変換できませんでした：'+(e&&e.message||e))})}
 function drawGallery(){var box=$('ws1');if(box.hidden)return;box.textContent='';cardSel=[];
 whead(box,'デザインを選ぶ','使いたい受験票のデザインを選んでください。あとから変えても、入力した内容は残ります。');
 var s1=el('section','gsec'),h1=el('h3',null,'よく使うデザイン');h1.appendChild(el('span','gl'));s1.appendChild(h1);box.appendChild(s1);
@@ -1316,7 +1328,7 @@ var gcats=JT.categories().slice();var fi=gcats.indexOf('自由編集');if(fi>0){
 gcats.forEach(function(cat){var s=el('section','gsec'),h=el('h3',null,cat);h.appendChild(el('span','gl'));s.appendChild(h);var g=el('div','gal');s.appendChild(g);
 JT.list().filter(function(t){return t.category===cat}).forEach(function(t){var m=el('div','cm'),sw=el('span','swt');t.swatch.slice(0,3).forEach(function(c){var i=el('i');i.style.background=c;sw.appendChild(i)});m.appendChild(sw);m.appendChild(el('span','chip',t.category));
 var isF=t.id==='free',gv=JT.switchVals(t.id,V);if(isF)freeInit(gv,gv.tpl.free.elements.length===0||S.tpl!=='free');
-var c=card(mini(t.id,gv),isF?'白紙から自由にデザイン':t.name,m,function(){if(isF&&S.tpl==='free'){FreeEditor.open();return}applyTemplate(t.id,{fresh:true});if(isF)FreeEditor.open()},function(){return !S.cur&&S.tpl===t.id});c.title=t.description||t.name;if(isF){var cnn=c.querySelector('.cn');cnn.style.whiteSpace='normal';cnn.style.lineHeight='1.3'}g.appendChild(c)});box.appendChild(s)});
+var c=card(mini(t.id,gv),isF?'白紙から自由にデザイン':t.name,m,function(){if(isF&&S.tpl==='free'){FreeEditor.open();return}applyTemplate(t.id,{fresh:true});if(isF)FreeEditor.open()},function(){return !S.cur&&S.tpl===t.id});c.title=t.description||t.name;if(isF){var cnn=c.querySelector('.cn');cnn.style.whiteSpace='normal';cnn.style.lineHeight='1.3';g.appendChild(c)}else{var cw=el('div','cw');cw.appendChild(c);var cb=el('button','cconv');cb.type='button';cb.innerHTML='<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h13l-3-3M20 16H7l3 3"/></svg><span>自由編集に変換</span>';cb.title='このデザインを元に自由編集（文字・図形・項目を自由に動かせる形に変換します）';cb.onclick=function(ev){ev.stopPropagation();convertToFree(t.id)};cw.appendChild(cb);g.appendChild(cw)}});box.appendChild(s)});
 markCards()}
 
 /* ステップ2：試験の情報（固定文字・日付・時間割の項目だけ） */
@@ -1371,7 +1383,7 @@ for(var i=0;i<pages.length;i++){var off=one&&i!==navPos;pages[i].classList.toggl
 $('nav').hidden=!one;$('tall').hidden=!has;$('tall').textContent=showAll?'1名ずつ':'全員表示';$('tall').classList.toggle('on',showAll);
 $('npos').textContent=(navPos+1)+' / '+n;$('nprev').disabled=navPos<=0;$('nnext').disabled=navPos>=n-1;
 $('pcount').textContent=!has?'サンプル表示':n===0?'印刷対象が選択されていません':one?listLabel(rows[list[navPos].idx],list[navPos].idx):'全員表示：'+n+'枚（A4）';
-$('fedit').hidden=S.tpl!=='free';$('zfit').classList.toggle('on',zoom!=='100');$('z100').classList.toggle('on',zoom==='100');
+$('fedit').hidden=S.tpl!=='free';$('fconv').hidden=S.tpl==='free';$('zfit').classList.toggle('on',zoom!=='100');$('z100').classList.toggle('on',zoom==='100');
 applySel();positionPop();updFinal()}
 function go(d){var n=current().length;if(!n||showAll)return;navPos=Math.max(0,Math.min(n-1,navPos+d));applyView()}
 $('nprev').onclick=function(){go(-1)};$('nnext').onclick=function(){go(1)};
@@ -1463,7 +1475,8 @@ var ok=t===document.body||t===$('pane')||($('pane').contains(t)&&!isTextual(t)&&
 if(ok&&!(pop&&pop.contains(t))){e.preventDefault();go(k==='ArrowLeft'?-1:1)}}});
 
 $('fedit').onclick=function(){FreeEditor.open()};
-FreeEditor.init({V:function(){return V},changed:function(flush){save();if(flush)histFlush()},students:current,sample:function(){return mkStu(0,null)},fitAll:fitAll,
+$('fconv').onclick=function(){convertToFree(S.tpl)};
+FreeEditor.init({V:function(){return V},columns:function(){return headers.slice()},changed:function(flush){save();if(flush)histFlush()},students:current,sample:function(){return mkStu(0,null)},fitAll:fitAll,
 label:function(st){return st.sample?'サンプル（名簿なし）':listLabel(rows[st.idx],st.idx)},
 pickImage:function(cb){openFiles({pick:true,title:'画像',cb:function(b){resizeImage(b,cb)}})},resizeImage:resizeImage,toast:toast,save:function(){saveMain()},undo:function(){undo()},redo:function(){redo()},
 hist:function(){return {u:!$('undo').disabled,r:!$('redo').disabled}},name:function(){return $('hname').textContent},
