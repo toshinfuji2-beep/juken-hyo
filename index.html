@@ -473,7 +473,7 @@ button.dg,.dg{color:var(--err)}
 <div class="wstep" id="ws2" data-s="2"></div>
 <div class="wstep" id="ws3" data-s="3" hidden>
 <h2 class="wh">名簿を入れる</h2><p class="wsub">項目ごとにExcelの1列をコピーして、下の欄に貼り付けます。1行が1人分です。</p>
-<div class="hintbox"><table class="xl" aria-hidden="true"><tr><th></th><th>A</th><th>B</th></tr><tr><th>1</th><td class="hl">受験番号</td><td>氏名</td></tr><tr><th>2</th><td class="hl">101</td><td>坂東 慶次</td></tr><tr><th>3</th><td class="hl">102</td><td>湘南 花子</td></tr></table><div><b>Excelの列をまるごとコピー</b>して、同じ項目の欄に貼り付けてください。1行目の見出しは自動で除きます。</div></div>
+<div class="hintbox"><table class="xl" aria-hidden="true"><tr><th></th><th>A</th><th>B</th></tr><tr><th>1</th><td class="hl">受験番号</td><td>氏名</td></tr><tr><th>2</th><td class="hl">101</td><td>藤沢 太郎</td></tr><tr><th>3</th><td class="hl">102</td><td>湘南 花子</td></tr></table><div><b>Excelの列をまるごとコピー</b>して、同じ項目の欄に貼り付けてください。1行目の見出しは自動で除きます。</div></div>
 <div id="s3host"></div>
 </div>
 <div class="wstep" id="ws4" data-s="4" hidden></div>
@@ -1093,7 +1093,7 @@ faculty:['志望学部','学部','志望'],
 room:['教室','会場','部屋'],
 school:['学校名','学校','高校','在籍校'],
 grade:['学年','学年名']};
-var SAMPLE={no:'001',name:'坂東 慶次',kana:'バンドウケイジ',school:'藤沢高等学校',grade:'高3',faculty:'文学部',room:'レクチャールーム'};
+var SAMPLE={no:'001',name:'藤沢 太郎',kana:'フジサワタロウ',school:'藤沢高等学校',grade:'高3',faculty:'文学部',room:'レクチャールーム'};
 function normH(s){return String(s==null?'':s).toLowerCase().replace(/[\s　]/g,'')}
 function groupOf(n){n=normH(n);if(!n)return '';for(var g in SG)if(SG[g].some(function(s){return normH(s)===n}))return g;return ''}
 function groupIdx(g){for(var i=0;i<headers.length;i++){var h=normH(headers[i]);if(SG[g].some(function(s){return normH(s)===h}))return i}
@@ -1190,7 +1190,7 @@ var dz=$('drop');
 ['dragleave','drop'].forEach(function(t){dz.addEventListener(t,function(e){e.preventDefault();dz.classList.remove('over')})});
 dz.addEventListener('drop',function(e){var f=e.dataTransfer.files[0];if(f)readFile(f)});
 $('pbtn').onclick=function(){var t=$('paste').value;if(!t.trim())return;if(load(parseDelim(t,'\t')))$('paste').value=''};
-var SAMPLE_CSV=['受験番号,氏名,カナ氏名,学校名,学年,志望学部,教室,備考','001,坂東 慶次,バンドウケイジ,藤沢高等学校,高3,文学部,レクチャールーム,','002,湘南 花子,ショウナンハナコ,湘南高等学校,高2,政治経済学部,第2教室,','003,江ノ島 次郎,エノシマジロウ,江ノ島高等学校,高1,商学部,,'].join('\r\n')+'\r\n';
+var SAMPLE_CSV=['受験番号,氏名,カナ氏名,学校名,学年,志望学部,教室,備考','001,藤沢 太郎,フジサワタロウ,藤沢高等学校,高3,文学部,レクチャールーム,','002,湘南 花子,ショウナンハナコ,湘南高等学校,高2,政治経済学部,第2教室,','003,江ノ島 次郎,エノシマジロウ,江ノ島高等学校,高1,商学部,,'].join('\r\n')+'\r\n';
 $('trysample').onclick=function(){load(parseDelim(SAMPLE_CSV,','))};
 $('sample').onclick=function(){var csv='\ufeff'+SAMPLE_CSV;
 var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='sample_meibo.csv';a.click();setTimeout(function(){URL.revokeObjectURL(a.href)},1000)};
