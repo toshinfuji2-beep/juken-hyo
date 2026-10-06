@@ -103,7 +103,7 @@ var CSS = [
 '#dimp .dp-pop .st button{padding:2px 8px}',
 '#dimp .dp-pop .st input[type=color]{width:34px;height:26px;padding:0;border:1px solid var(--bd)}',
 '#dimp .dp-pop .st .num{min-width:34px;text-align:center;font-size:12px}',
-'@media(max-width:820px){#dimp .dp-map{flex-direction:column}#dimp .dp-stage{flex:none;height:46vh;padding:8px}#dimp .dp-side{width:auto;border-left:0;border-top:1px solid var(--bd);flex:1}#dimp .dp-pop{position:fixed;left:8px!important;right:8px;top:auto!important;bottom:8px;width:auto;max-height:60vh;overflow:auto}#dimp .hit{min-width:14px;min-height:14px}}'
+'@media(max-width:820px){#dimp .dp-map{flex-direction:column}#dimp .dp-stage{flex:none;height:46vh;padding:8px}#dimp .dp-side{width:auto;border-left:0;border-top:1px solid var(--bd);flex:1}#dimp .dp-pop{position:fixed;left:8px!important;right:8px;top:auto!important;bottom:8px;width:auto;max-height:60vh;overflow:auto}#dimp .hit{min-width:14px;min-height:14px}#dimp .hit .chip{font-size:9px;padding:0 3px}}'
 ].join('\n');
 function ensureCss() { if (document.getElementById('dimp-css')) return; var s = document.createElement('style'); s.id = 'dimp-css'; s.textContent = CSS; document.head.appendChild(s); }
 
@@ -545,7 +545,7 @@ function drawSide() {
   sc.scrollTop = top;
 }
 function summary(box) {
-  var S = M.stats, d = document.createElement('details'); d.className = 'dp-sum'; d.open = !!(S.skippedTotal || S.emf.length || S.aspectDiff);
+  var S = M.stats, d = document.createElement('details'); d.className = 'dp-sum'; d.open = innerWidth > 820 && !!(S.skippedTotal || S.emf.length || S.aspectDiff);
   var sm = el('summary', null, S.bgOnly ? '取り込み結果（' + S.what + 'を背景にしました）' : '取り込み結果（' + S.count + '個の要素' + (S.skippedTotal ? '・' + S.skippedTotal + '個は取り込めず' : '') + '）'); d.appendChild(sm);
   var b = el('div'); d.appendChild(b);
   if (S.aspectDiff) b.appendChild(el('p', 'w', S.bgOnly ? '元の縦横比がA4（210×297mm）と違うため、全体を縮小して中央に置きました（上下または左右に余白ができます）。' : 'スライドの縦横比がA4（210×297mm）と違うため、縦横比を保ったまま縮小して中央に置きました（余白ができます）。'));
