@@ -1224,17 +1224,18 @@ function toast(msg,label,fn,ms){$('toastm').textContent=msg;var b=$('toasta');b.
 if(label){b.textContent=label;b.onclick=function(){hideToast();if(fn)fn()}}
 $('toast').hidden=false;clearTimeout(toastT);toastT=setTimeout(hideToast,ms||9000)}
 /* ---------- 元に戻す／やり直し（設定のスナップショット） ---------- */
-var hist=[],hi=-1,hT=null,HMAX=50,baseline='';
+var hist=[],hi=-1,hT=null,HMAX=50,baseline='',hlab=[],plab='';
 function snap(){return JSON.stringify({t:S.tpl,v:V})}
 function updUndo(){$('undo').disabled=hi<=0;$('redo').disabled=hi<0||hi>=hist.length-1;if(window.FreeEditor)FreeEditor.status()}
-function histInit(){hist=[snap()];hi=0;baseline=hist[0];if(!S.bh)S.bh=hsh(dsnap());updUndo();refreshDirty()}
+function histInit(){hist=[snap()];hlab=['開く'];hi=0;baseline=hist[0];if(!S.bh)S.bh=hsh(dsnap());updUndo();refreshDirty()}
 function histBytes(){var n=0;for(var i=0;i<hist.length;i++)n+=hist[i].length;return n}
 function histCommit(){hT=null;if(hi<0)return;var s=snap();
-if(s!==hist[hi]){hist.splice(hi+1);hist.push(s);while(hist.length>HMAX||(hist.length>3&&histBytes()>4e7))hist.shift();hi=hist.length-1}
+if(s!==hist[hi]){hist.splice(hi+1);hlab.splice(hi+1);hist.push(s);hlab.push(plab||'変更');while(hist.length>HMAX||(hist.length>3&&histBytes()>4e7)){hist.shift();hlab.shift()}hi=hist.length-1}plab='';
 updUndo();refreshDirty()}
 function histSoon(){if(hi<0)return;clearTimeout(hT);hT=setTimeout(histCommit,500)}
 function histFlush(){if(hT){clearTimeout(hT);histCommit()}}
-function histGo(d){histFlush();var j=hi+d;if(j<0||j>=hist.length)return;hi=j;
+function histGo(d){histFlush();histJump(hi+d)}
+function histJump(j){histFlush();if(j<0||j>=hist.length)return;hi=j;
 var o=JSON.parse(hist[hi]);S.tpl=JT.get(o.t)?o.t:S.tpl;V=JT.mkVals(S.tpl,o.v);
 closePop();afterDesignChange();hist[hi]=snap();updUndo();refreshDirty();if(window.FreeEditor&&FreeEditor.isOpen())FreeEditor.refresh()}
 function undo(){histGo(-1)}function redo(){histGo(1)}
@@ -1479,7 +1480,8 @@ $('fconv').onclick=function(){convertToFree(S.tpl)};
 FreeEditor.init({V:function(){return V},columns:function(){return headers.slice()},changed:function(flush){save();if(flush)histFlush()},students:current,sample:function(){return mkStu(0,null)},fitAll:fitAll,
 label:function(st){return st.sample?'サンプル（名簿なし）':listLabel(rows[st.idx],st.idx)},
 pickImage:function(cb){openFiles({pick:true,title:'画像',cb:function(b){resizeImage(b,cb)}})},resizeImage:resizeImage,toast:toast,save:function(){saveMain()},undo:function(){undo()},redo:function(){redo()},
-hist:function(){return {u:!$('undo').disabled,r:!$('redo').disabled}},name:function(){return $('hname').textContent},
+hist:function(){return {u:!$('undo').disabled,r:!$('redo').disabled}},hlabel:function(t){plab=t},histList:function(){histFlush();return {labels:hlab.slice(),i:hi}},histTo:function(j){histJump(j)},
+act:function(n){if(n==='saveas')saveAs();else if(n==='pdf')makePdf();else if(n==='print')doPrint();else if(n==='json')$('fexp').click();else if(n==='roster'){FreeEditor.close();showRoster()}},name:function(){return $('hname').textContent},
 ensureFree:function(){if(S.tpl!=='free')applyTemplate('free')},onClose:function(){drawFields();render()}});
 if(document.fonts&&document.fonts.addEventListener)document.fonts.addEventListener('loadingdone',function(){if(S.tpl==='free'){clearTimeout(rt);rt=setTimeout(function(){if(!FreeEditor.isOpen())render()},150)}});
 var booted=false;
