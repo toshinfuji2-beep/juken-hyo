@@ -104,3 +104,10 @@ JukenTemplates.register({
 - CSS は `.tpl-<id>` の下に書き、`mm`/`pt` を使う（印刷とPDFで同じ見た目にするため）。
 - 項目数や時間割の行数が増えてもページに収まるよう、行の高さは項目から計算する。
 - 動作確認：ブラウザで開き、サンプル表示・名簿あり・「全員表示」・かんたんモードのギャラリー・保存したときのサムネイルを確認する。
+
+## フリーデザイン（`free`）と独自の設定型
+
+- `templates/free.js` は A4 に要素（text/field/rect/ellipse/line/image/notes/table/fold）を mm で絶対配置するテンプレート。要素モデルは `DESIGN_FORMAT.md` §7。エディタは `editor/free-editor.js`（`FreeEditor.open()`）。
+- `JukenFree`（`window.JukenFree`）: `normElement(s)` `newElement(type, props)` `starter(V)`（初期レイアウトの要素配列）`geom/aabb` `resolveText`。フェーズB（既存テンプレート→キャンバス変換・スターター集）は、`JukenFree.newElement` で要素を作って `V.tpl.free.elements` に入れるだけで実装できます。
+- `extras` には `{ type:'json', norm:function(saved, def){…}, hidden:true }` を使えます（`norm` が正規化。`hidden:true` は詳細編集の設定欄に出さない）。
+- `ctx.fitText` の対象に `e._fitBase`（縮小前のfont-size）・`e._fitH=true`（高さのはみ出しも縮小）を設定できます。

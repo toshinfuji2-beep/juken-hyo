@@ -533,3 +533,25 @@ A4縦1枚。上半分に枠線付きの項目表、折り線、下半分に注�
   }
 }
 ```
+
+## 7. テンプレート `free`（フリーデザイン）の要素モデル
+
+A4（210×297mm）に要素を絶対配置するテンプレート。`data.tpl.free = { "bg": "#ffffff", "elements": [ … ], "guides": [ {"axis":"x"|"y","pos":mm} ] }`。
+項目（`items`）・注意事項・画像・透かし（`wm*`）は共通設定（§3）をそのまま使い、要素から参照します。座標・サイズはすべて **mm、左上原点**。`elements` は **配列の後ろほど前面**。不正な値は読み込み時に既定値へ（`JukenFree.normElement`）。
+
+**共通キー**: `id`(string) `type` `x` `y` `w` `h` `rot`(度) `opacity`(0〜1) `locked` `hidden` `name`。`line`/`fold` は `h` を持たず、`y` が線の位置（当たり判定は±1.5mm）。
+**色**: `#rrggbb` / `#rgb` / `"transparent"`(または空=なし) / `"accent"`・`"secondary"`（デザインの色に追従するトークン）。
+
+| type | 固有キー（既定値） |
+|---|---|
+| `text` | `text`（`{{項目名}}` `{{ヘッダー}}` `{{バッジ}}` `{{マーク}}` を生徒ごとに差し込み）`font`(gothic/mincho/maru/sans-en) `size`(pt) `weight` `color` `align`(left/center/right) `valign`(top/middle/bottom) `lineHeight` `letterSpacing`(em) `vertical`(縦書き) `fit`(none/shrink=1行で自動縮小) `bg` `padding`(mm) |
+| `field` | `itemId`（項目の `id`）`showLabel` `labelText` `labelSize` `labelColor` `labelPos`(top/left) ＋ text と同じ文字スタイル。時間割項目は行で表示 |
+| `rect` / `ellipse` | `fill` `stroke` `strokeWidth`(pt) `dash`(solid/dashed/dotted) `radius`(mm・rectのみ) |
+| `line` | `stroke` `strokeWidth` `dash`（長さ=`w`、回転=`rot`） |
+| `image` | `src`（dataURL / `assets/…` / `"map"` / `"logo"`＝このデザインの地図・ロゴ）`fit`(contain/cover) `radius` |
+| `notes` | `title` `size` `color` `accentColor` `bullet`(number/dot/none) `lineHeight` `fit`。本文は共通設定の `notes`（行頭`!`で強調） |
+| `table` | `itemIds[]`（半幅2つは横並び）`borderColor` `labelBg` `labelColor` `color` `size` `rowGap`(セル上下余白mm)。行の高さは枠の高さを等分 |
+| `fold` | `label` `size` `color` `strokeWidth` `dash`（既定 x=0,w=210,y=148.5） |
+
+透かしは共通設定 `wmOn` 等を使い、ページ全体（`wmAnchor` の top/mid/bot＝用紙の上端/中央/下端）に最前面で描画されます。
+フリーデザインのJSON例は、アプリで作って「ファイルに書き出し」したものを参照してください。

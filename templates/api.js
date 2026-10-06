@@ -18,9 +18,11 @@ function fmtDate(s) {
 }
 /* 1行に収まるまで文字を縮める（DOMに入ってから呼ぶ） */
 function fit(e, min) {
+  /* e._fitBase（任意）=縮小前の font-size（CSS値）。再実行しても元の大きさから測り直す。e._fitH=true なら高さのはみ出しも対象 */
+  if (e._fitBase != null) e.style.fontSize = e._fitBase;
   var fs = parseFloat(getComputedStyle(e).fontSize), n = 0;
   e.style.fontSize = fs + 'px';
-  while (e.scrollWidth > e.clientWidth + 0.5 && fs > (min || 6) && n++ < 200) { fs -= 0.5; e.style.fontSize = fs + 'px'; }
+  while ((e.scrollWidth > e.clientWidth + 0.5 || (e._fitH && e.scrollHeight > e.clientHeight + 0.5)) && fs > (min || 6) && n++ < 400) { fs -= 0.5; e.style.fontSize = fs + 'px'; }
 }
 var seq = 0;
 function newId() { return 'i' + Date.now().toString(36) + (seq++); }
@@ -100,6 +102,7 @@ var LOOK = ['accent', 'secondary', 'font'];     /* テンプレートを切り�
 var DEFAULT_IMG = { map: 'assets/map-fujisawa.png', logo: 'assets/logo-fujisawa.png' };
 
 function normField(f, s, def) {
+  if (typeof f.norm === 'function') return f.norm(s, def === undefined ? f.def : def);   /* type:'json' など独自の正規化（フリーデザインの elements 等） */
   var x = clone(def === undefined ? f.def : def);
   if (s === undefined || s === null) return x;
   var ok = f.type === 'image' ? (typeof s === 'object' && !Array.isArray(s)) : f.type === 'check' ? typeof s === 'boolean' : f.type === 'number' ? (typeof s === 'number' && isFinite(s)) : typeof s === 'string';
@@ -111,7 +114,7 @@ function normField(f, s, def) {
 
 /* ---------- 登録 ---------- */
 var REG = {}, ORDER = [];
-var CATEGORIES = ['ベーシック', 'シック', 'ポップ', 'ナチュラル', 'モダン'];
+var CATEGORIES = ['ベーシック', 'シック', 'ポップ', 'ナチュラル', 'モダン', '自由編集'];
 function addStyle(id, css) {
   var old = document.querySelector('style[data-tpl="' + id + '"]'); if (old) old.remove();
   if (!css) return;
