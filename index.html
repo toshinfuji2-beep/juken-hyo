@@ -21,6 +21,8 @@
 <script src="templates/free.js"></script>
 <script src="editor/free-convert.js"></script>
 <script src="editor/free-editor.js"></script>
+<script src="editor/pptx-import.js"></script>
+<script src="editor/design-import.js"></script>
 <style>
 :root{--bg:#f3f4f6;--panel:#fff;--fg:#1f2937;--mut:#6b7280;--bd:#d1d5db;--ac:#1d4ed8;--acfg:#fff;--inp:#fff;--pv:#e5e7eb;--warn:#b45309;--warnbg:#fef3c7;--ok:#15803d;--err:#dc2626}
 @media(prefers-color-scheme:dark){:root{--bg:#111827;--panel:#1f2937;--fg:#e5e7eb;--mut:#9ca3af;--bd:#374151;--ac:#3b82f6;--inp:#111827;--pv:#0b1220;--warn:#fbbf24;--warnbg:#3b2f0a;--ok:#4ade80;--err:#f87171}}
@@ -1317,6 +1319,7 @@ var nv=JSON.parse(JSON.stringify(srcV));nv.tpl=nv.tpl||{};nv.tpl.free={bg:r.bg,e
 V=JT.mkVals('free',nv);S.tpl='free';clearCur();importName=nm;afterDesignChange();resetBase();toast('自由編集に変換しました（'+r.count+'個の要素）。保存すると『'+nm+'』として残せます');FreeEditor.open()},function(e){busy=false;toast('変換できませんでした：'+(e&&e.message||e))})}
 function drawGallery(){var box=$('ws1');if(box.hidden)return;box.textContent='';cardSel=[];
 whead(box,'デザインを選ぶ','使いたい受験票のデザインを選んでください。あとから変えても、入力した内容は残ります。');
+if(window.DesignImport)box.appendChild(DesignImport.card());
 var s1=el('section','gsec'),h1=el('h3',null,'よく使うデザイン');h1.appendChild(el('span','gl'));s1.appendChild(h1);box.appendChild(s1);
 var rec=presets.slice().sort(function(a,b){return tsNum(b.at)-tsNum(a.at)}).slice(0,6);
 if(rec.length){var g=el('div','gal');s1.appendChild(g);
@@ -1484,6 +1487,11 @@ hist:function(){return {u:!$('undo').disabled,r:!$('redo').disabled}},hlabel:fun
 act:function(n){if(n==='saveas')saveAs();else if(n==='pdf')makePdf();else if(n==='print')doPrint();else if(n==='json')$('fexp').click();else if(n==='roster'){FreeEditor.close();showRoster()}},name:function(){return $('hname').textContent},
 ensureFree:function(){if(S.tpl!=='free')applyTemplate('free')},onClose:function(){drawFields();render()}});
 if(document.fonts&&document.fonts.addEventListener)document.fonts.addEventListener('loadingdone',function(){if(S.tpl==='free'){clearTimeout(rt);rt=setTimeout(function(){if(!FreeEditor.isOpen())render()},150)}});
+DesignImport.init({sample:function(){return mkStu(0,null)},fitAll:fitAll,toast:toast,
+apply:function(o){var nv=JT.mkVals('free',{items:o.items,tpl:{free:{bg:o.bg,elements:o.elements,guides:[]}}});
+S.tpl='free';V=nv;clearCur();importName=o.name;lastFile='';selId='';navPos=0;afterDesignChange();resetBase();hideDraft();
+if(o.rosterLines){V.items.forEach(function(it){var ls=o.rosterLines[it.label];if(ls)texts[it.id]=ls.join('\n')});drawRoster()}
+if(UI.mode!=='easy')setMode('easy');setStep(3);render()}});
 var booted=false;
 function boot(){if(booted)return;booted=true;drawTplSel();drawPreSel();drawFields();drawItems();setMode(UI.mode,true);render();histInit()}
 /* ---------- ファイル保管（Supabase Storage: juken-files / 表: juken_files） ---------- */

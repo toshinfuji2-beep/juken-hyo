@@ -78,7 +78,7 @@ function normElement(x, seen) {
 function normElements(arr) {
   if (!Array.isArray(arr)) return [];
   var seen = {}, out = [];
-  arr.slice(0, 400).forEach(function (x) { var e = normElement(x, seen); if (e) out.push(e); });
+  arr.slice(0, 600).forEach(function (x) { var e = normElement(x, seen); if (e) out.push(e); });
   var gn = {}; out.forEach(function (e) { if (e.groupId) gn[e.groupId] = (gn[e.groupId] || 0) + 1; });
   out.forEach(function (e) { if (e.groupId && gn[e.groupId] < 2) delete e.groupId; });   /* 1つだけのグループは解除 */
   return out;
