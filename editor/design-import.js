@@ -4,7 +4,7 @@
 (function (g) {
 'use strict';
 var JT = g.JukenTemplates, C = JT.ctx, el = C.el, PXMM = C.PXMM;
-var H = null, M = null, OV = null;
+var H = null, M = null, OV = null, DD = g.DesignDetect;
 var MAX_BYTES = 30 * 1024 * 1024;
 var LIB = {
   jszip: 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
@@ -103,6 +103,23 @@ var CSS = [
 '#dimp .dp-pop .st button{padding:2px 8px}',
 '#dimp .dp-pop .st input[type=color]{width:34px;height:26px;padding:0;border:1px solid var(--bd)}',
 '#dimp .dp-pop .st .num{min-width:34px;text-align:center;font-size:12px}',
+'#dimp .hit.det{outline:1px dashed rgba(100,116,139,.55)}',
+'#dimp .hit.det:hover{outline:2px solid rgba(37,99,235,.7)}',
+'#dimp .dp-busy .bm{margin-bottom:6px}',
+'#dimp .dp-busy .bn{font-size:12px;color:var(--mut);line-height:1.6;margin:0 0 12px}',
+'#dimp .dp-meth{font-size:12px;border-radius:8px;padding:6px 10px;margin:0 0 10px;line-height:1.55;border:1px solid var(--bd);background:var(--bg)}',
+'#dimp .dp-meth.mok{border-color:#16a34a}#dimp .dp-meth.mck{border-color:#f59e0b}',
+'#dimp .dp-meth b{display:block;font-size:13px}',
+'#dimp .dp-wb{display:inline-block;font-size:11px;line-height:1.4;padding:0 6px;border-radius:4px;background:var(--warnbg,#fef3c7);color:var(--warn,#b45309);margin-left:4px}',
+'#dimp .dp-sg .cf{flex:none;font-size:11px;color:var(--mut)}',
+'#dimp .dp-conf{flex:1;overflow:auto;padding:16px}',
+'#dimp .dp-conf table{border-collapse:collapse;font-size:13px}',
+'#dimp .dp-conf th,#dimp .dp-conf td{border:1px solid var(--bd);padding:2px 4px;text-align:left;white-space:nowrap}',
+'#dimp .dp-conf th{background:var(--panel);position:sticky;top:0;z-index:1}',
+'#dimp .dp-conf td input{width:100%;min-width:110px;padding:4px 6px;font-size:13px;box-sizing:border-box}',
+'#dimp .dp-conf td.low input{background:var(--warnbg,#fef3c7);border-color:#f59e0b}',
+'#dimp .dp-cf{padding:10px 14px;border-top:1px solid var(--bd);display:flex;gap:8px;flex-wrap:wrap;align-items:center;background:var(--panel)}',
+'#dimp .dp-cf .pri{padding:10px 16px;font-weight:700}',
 '@media(max-width:820px){#dimp .dp-map{flex-direction:column}#dimp .dp-stage{flex:none;height:46vh;padding:8px}#dimp .dp-side{width:auto;border-left:0;border-top:1px solid var(--bd);flex:1}#dimp .dp-pop{position:fixed;left:8px!important;right:8px;top:auto!important;bottom:8px;width:auto;max-height:60vh;overflow:auto}#dimp .hit{min-width:14px;min-height:14px}#dimp .hit .chip{font-size:9px;padding:0 3px}}'
 ].join('\n');
 function ensureCss() { if (document.getElementById('dimp-css')) return; var s = document.createElement('style'); s.id = 'dimp-css'; s.textContent = CSS; document.head.appendChild(s); }
@@ -119,19 +136,25 @@ function kindOfFile(f) {
 function readBuf(f) { return new Promise(function (ok, ng) { var r = new FileReader(); r.onload = function () { ok(r.result); }; r.onerror = function () { ng(new Error('read')); }; r.readAsArrayBuffer(f); }); }
 function baseName(f) { return String(f.name || '取り込んだデザイン').replace(/\.[A-Za-z0-9]{1,5}$/, ''); }
 
-/* 公開：ファイルを受け取って開始 */
-async function handleFile(f) {
-  if (!f) return;
+/* 公開：ファイルを受け取って開始（複数の画像も可） */
+async function handleFile(arg) {
+  var files = Array.isArray(arg) ? arg : (arg && !arg.name && arg.length != null ? Array.prototype.slice.call(arg) : [arg]);
+  files = files.filter(Boolean);
+  if (!files.length) return;
+  var f = files[0];
   ensureCss();
   var k = kindOfFile(f);
   if (!k) { showBusy(null, 'このファイルは取り込めません。\nPowerPoint（.pptx）、画像（PNG・JPEG）、PDF のいずれかを選んでください。'); return; }
   if (k === 'ppt') { showBusy(null, '古い形式（.ppt）は取り込めません。\nPowerPointで開いて「名前を付けて保存」から .pptx（またはPDF）にしてください。'); return; }
-  if (f.size > MAX_BYTES) { showBusy(null, 'ファイルが大きすぎます（' + (f.size / 1048576).toFixed(1) + 'MB）。30MBまでのファイルを選んでください。\n画像が多い場合は、PowerPointで「図の圧縮」をするか、PDFにしてから取り込むと小さくなります。'); return; }
+  if (files.length > 1 && files.some(function (x) { return kindOfFile(x) !== 'image'; })) { showBusy(null, '複数のファイルを選ぶときは、画像（PNG・JPEG）だけにしてください。\nPowerPointやPDFは1つずつ選びます。'); return; }
+  var tot = files.reduce(function (a, x) { return a + x.size; }, 0);
+  if (f.size > MAX_BYTES || tot > MAX_BYTES * 2) { showBusy(null, 'ファイルが大きすぎます（' + (tot / 1048576).toFixed(1) + 'MB）。30MBまでのファイルを選んでください。\n画像が多い場合は、PowerPointで「図の圧縮」をするか、PDFにしてから取り込むと小さくなります。'); return; }
   openOverlay();
-  M = { kind: k, name: baseName(f), file: f, map: {}, orig: {}, custom: {}, fixed: {}, extra: [], sel: null, sc: 1, seq: 0, wantRoster: false, rosterSig: '', rosterLines: null };
+  M = { kind: files.length > 1 ? 'images' : k, name: baseName(f), file: f, files: files, map: {}, orig: {}, custom: {}, det: {}, fixed: {}, extra: [], sel: null, sc: 1, seq: 0, wantRoster: false, rosterSig: '', rosterLines: null, method: '' };
   try {
     if (k === 'pptx') await startPptx(f);
     else if (k === 'pdf') await startPdf(f);
+    else if (files.length > 1) await startImages(files);
     else await startImage(f);
   } catch (e) {
     if (M && M.cancelled) return;
@@ -139,26 +162,135 @@ async function handleFile(f) {
   }
 }
 
-/* ---------- 画像（背景＋差し込み枠） ---------- */
+/* ---------- 画像（背景＋差し込み枠＋OCRで自動判定） ---------- */
 function loadImg(url) { return new Promise(function (ok, ng) { var i = new Image(); i.onload = function () { ok(i); }; i.onerror = function () { ng(new Error('img')); }; i.src = url; }); }
-async function startImage(f) {
-  showBusy('画像を読み込んでいます…');
+async function fileCanvas(f) {
   var url = URL.createObjectURL(f), im;
   try { im = await loadImg(url); } catch (e) { URL.revokeObjectURL(url); throw new Error('画像を読み込めませんでした。壊れていないか確認してください。'); }
   var s = Math.min(1, 2000 / Math.max(im.naturalWidth, im.naturalHeight)), cv = document.createElement('canvas');
   cv.width = Math.max(1, Math.round(im.naturalWidth * s)); cv.height = Math.max(1, Math.round(im.naturalHeight * s));
-  var x = cv.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, cv.width, cv.height); x.drawImage(im, 0, 0, cv.width, cv.height); URL.revokeObjectURL(url);
+  var x = cv.getContext('2d', { willReadFrequently: true }); x.fillStyle = '#fff'; x.fillRect(0, 0, cv.width, cv.height); x.drawImage(im, 0, 0, cv.width, cv.height); URL.revokeObjectURL(url);
+  return { cv: cv, ratio: im.naturalWidth / im.naturalHeight };
+}
+async function startImage(f) {
+  showBusy('画像を読み込んでいます…');
+  var r = await fileCanvas(f), cv = r.cv;
   var src = /png|gif|webp/i.test(f.type) ? cv.toDataURL('image/png') : cv.toDataURL('image/jpeg', 0.9);
   if (src.length > 1.6e6) src = cv.toDataURL('image/jpeg', 0.85);
-  startBackground(src, im.naturalWidth / im.naturalHeight, '画像');
+  await startBackground(src, r.ratio, '画像', cv, 'ocr');
 }
-function startBackground(src, ratio, what) {
+/* 複数の画像：生徒ごとに1枚ずつ。どれか1枚をデザインにして、全部から名簿を読み取れる */
+async function startImages(files) {
+  M.name = baseName(files[0]);
+  showPicker({ title: 'どの画像をデザインにしますか？', sub: '画像が' + files.length + '枚あります。生徒ごとに1枚ずつなら、どれか1枚を選んでください（あとで、全部の画像から名簿も読み取れます）。', count: files.length, thumb: async function (i, box) {
+    var u = URL.createObjectURL(files[i]), im = new Image(); im.onload = function () { URL.revokeObjectURL(u); }; im.src = u; box.appendChild(im);
+  }, label: function (i) { return (i + 1) + '枚目'; }, pick: async function (i) {
+    try { M.imgIdx = i; await startImage(files[i]); } catch (e) { if (M && M.cancelled) return; showBusy(null, (e && e.message) || '取り込めませんでした。'); }
+  } });
+}
+function geoOf(cv) { var k = Math.min(210 / cv.width, 297 / cv.height); return { k: k, ox: (210 - cv.width * k) / 2, oy: (297 - cv.height * k) / 2, cw: cv.width, ch: cv.height }; }
+async function startBackground(src, ratio, what, cv, mode) {
   var diff = Math.abs(ratio - 210 / 297) > 0.02;
   M.elements = [{ type: 'image', id: 'bg', x: 0, y: 0, w: 210, h: 297, fit: 'contain', locked: true, name: '背景（' + what + '）', src: src }];
   M.bg = '#ffffff';
   M.stats = { count: 1, skipped: {}, skippedTotal: 0, emf: [], aspectDiff: diff, bgOnly: true, what: what };
-  M.sugg = [];
+  M.sugg = []; M.det = {}; M.orig = {}; M.map = {}; M.custom = {}; M.fixed = {};
+  M.pix = cv || null; M.geo = cv ? geoOf(cv) : null; M.method = 'none'; M.detectNote = '';
+  if (cv) { try { await detectText(mode); } catch (e) { if (M && M.cancelled) return; M.detectNote = '文字の自動判定ができませんでした。「差し込み枠を追加」で指定してください。'; } }
+  if (!M || M.cancelled) return;
   showMap();
+}
+
+/* ---------- 文字の自動判定（PDFの文字情報／OCR）→ 差し込み候補 ---------- */
+function setBusyMsg(t) { var b = OV && OV.querySelector('.dp-busy .bm'); if (b) b.textContent = t; }
+function ocrProg(m) {
+  if (!m || !OV) return;
+  var p = m.progress != null ? ' ' + Math.round(m.progress * 100) + '%' : '', s = String(m.status || '');
+  if (/recogniz/i.test(s)) setBusyMsg('文字を読み取り中…' + p);
+  else if (/loading|download/i.test(s)) setBusyMsg('読み取り用データを読み込み中…' + p);
+  else setBusyMsg('読み取りの準備をしています…');
+}
+function ocrNote() { return '初回は読み取り用データ（約10MB）を読み込みます。\n画像はこの端末のブラウザ内だけで処理され、外部には送られません。'; }
+async function detectText(mode) {
+  var lines, ocr = false;
+  if (mode === 'text') {
+    lines = DD.mergeItems(M.textItems);
+    M.method = 'text';
+  } else {
+    ocr = true;
+    showBusy('読み取りの準備をしています…', null, function () { M.detectCancelled = true; DD.cancelOcr(); }, ocrNote());
+    try { lines = await DD.ocrPage(M.pix, ocrProg); M.method = 'ocr'; }
+    catch (e) {
+      if (M && M.cancelled) throw e;
+      lines = []; M.method = 'none';
+      M.detectNote = (e && e.message === 'cancel') ? '文字の自動判定をやめました。「差し込み枠を追加」で指定できます。' : ((e && e.message) || '文字の自動判定ができませんでした。') ;
+    }
+    if (M.method === 'ocr' && M.noTextLayer) M.detectNote = 'このPDFには文字情報が無い（スキャン画像）ため、画像として文字を読み取りました。';
+  }
+  if (!M || M.cancelled) return;
+  await buildDetected(lines, ocr);
+}
+/* ラベルは見つかったのに値が見つからないとき（1文字の数字など、OCRが拾いにくいもの）、ラベルの下・右の範囲だけを読み直す */
+async function rescueLabels(boxes) {
+  var G = M.geo, sb = boxes.map(function (b, i) { return { id: 't' + i, text: b.text, x: b.x, y: b.y, w: b.w, h: b.h, size: b.size }; });
+  var labs = DD.findLabels(sb, true), have = {}, seen = {};
+  DD.suggest(sb, { fuzzy: true }).forEach(function (x) { if (/^「/.test(x.why)) have[x.label] = 1; });
+  var miss = labs.filter(function (l) { if (have[l.label] || seen[l.label]) return false; seen[l.label] = 1; return true; });
+  if (!miss.length || M.detectCancelled) return boxes;
+  setBusyMsg('見つからなかった項目を探しています…');
+  var out = boxes.slice(), toPx = function (r) { return { x: (r.x - G.ox) / G.k, y: (r.y - G.oy) / G.k, w: r.w / G.k, h: r.h / G.k }; };
+  var empty = function (r) { return !sb.some(function (o) { var ow = Math.min(o.x + o.w, r.x + r.w) - Math.max(o.x, r.x), oh = Math.min(o.y + o.h, r.y + r.h) - Math.max(o.y, r.y); return ow > 0 && oh > 0 && ow * oh > 0.5 * o.w * o.h; }); };
+  for (var i = 0; i < miss.length; i++) {
+    var L = miss[i], a = L.e, rl = 206;
+    sb.forEach(function (o) { if (o !== a && o.x > a.x + a.w && Math.min(o.y + o.h, a.y + a.h) - Math.max(o.y, a.y) > 0.3 * a.h) rl = Math.min(rl, o.x - 1); });
+    var regs = [{ x: a.x - 2, y: a.y + a.h + 0.5, w: Math.max(a.w * 2.5, 45), h: Math.max(a.h * 2, 13) }, { x: a.x + a.w + 1, y: a.y - 1, w: Math.max(5, Math.min(rl - (a.x + a.w + 1), 70)), h: a.h + 2 }];
+    for (var j = 0; j < regs.length; j++) {
+      var rg = regs[j]; rg.x = Math.max(0, rg.x); rg.w = Math.min(rg.w, 210 - rg.x); rg.y = Math.max(0, rg.y); rg.h = Math.min(rg.h, 297 - rg.y);
+      if (!empty(rg)) continue;
+      var ink = DD.inkBox(M.pix, toPx(rg)); if (!ink) continue;
+      var r = await DD.ocrRegion(M.pix, ink, L.label, ocrProg), t = r.text;
+      var okTxt = t && (L.label === '受験番号' ? /^[0-9]{1,10}$/.test(t) : (t.length <= 20 && r.conf >= 45 && !DD.labelOf(t, true)));
+      if (!okTxt) continue;
+      var hh = ink.h * G.k, isNum = /^[0-9A-Za-z.\-]+$/.test(t), bx = { text: t, x: G.ox + ink.x * G.k, y: G.oy + ink.y * G.k, w: ink.w * G.k, h: hh, size: hh * 2.8346 / (isNum ? 0.74 : 0.92), conf: r.conf };
+      out.push(bx); sb.push({ id: 'r' + out.length, text: t, x: bx.x, y: bx.y, w: bx.w, h: bx.h, size: bx.size }); break;
+    }
+  }
+  return out;
+}
+/* 文字の箱（px）→ 要素（mm）。元の文字を隠す四角・文字色・位置揃えも用意しておく */
+async function buildDetected(lines, ocr) {
+  var G = M.geo, boxes = [];
+  lines.forEach(function (l) {
+    var b = { text: DD.cleanText(l.text), x: G.ox + l.x * G.k, y: G.oy + l.y * G.k, w: l.w * G.k, h: l.h * G.k, size: l.fh * G.k * 2.8346, conf: l.conf };
+    if (!b.text || b.text.length > 40 || b.size < 3 || b.size > 90 || b.w < 1) return;
+    var sp = DD.splitLabelValue(b, ocr); if (sp) { boxes.push(sp[0]); boxes.push(sp[1]); } else boxes.push(b);
+  });
+  if (boxes.length > 300) boxes = boxes.slice(0, 300);
+  if (ocr && M.method === 'ocr') { try { boxes = await rescueLabels(boxes); } catch (e) { if (M && M.cancelled) throw e; } }
+  var sb = [];
+  boxes.forEach(function (b, i) { b.id = 'd' + (i + 1); sb.push({ id: b.id, text: b.text, x: b.x, y: b.y, w: b.w, h: b.h, size: b.size }); });
+  var padMm = 0.8, padPx = padMm / G.k;
+  boxes.forEach(function (b) {
+    var gl = b.x, gr = 210 - (b.x + b.w);
+    boxes.forEach(function (o) {
+      if (o === b) return;
+      var ov = Math.min(b.y + b.h, o.y + o.h) - Math.max(b.y, o.y); if (ov < 0.5 * Math.min(b.h, o.h)) return;
+      if (o.x + o.w <= b.x + b.w * 0.3) gl = Math.min(gl, Math.max(0, b.x - (o.x + o.w)));
+      else if (o.x >= b.x + b.w * 0.7) gr = Math.min(gr, Math.max(0, o.x - (b.x + b.w)));
+    });
+    var al = Math.abs(gl - gr) < 0.3 * (gl + gr) ? 'center' : (gl < gr ? 'left' : 'right');
+    var px = { x: (b.x - G.ox) / G.k, y: (b.y - G.oy) / G.k, w: b.w / G.k, h: b.h / G.k }, sm = DD.sampleBox(M.pix, px, padPx);
+    var extra = Math.min(60, Math.max(b.w * 0.8, 20)), ex = b.x, ew = b.w;
+    if (al === 'left') ew += Math.max(0, Math.min(extra, gr - 1.5));
+    else if (al === 'right') { var m1 = Math.max(0, Math.min(extra, gl - 1.5)); ex -= m1; ew += m1; }
+    else { var m2 = Math.max(0, Math.min(extra / 2, gl / 2 - 0.75, gr / 2 - 0.75)); ex -= m2; ew += m2 * 2; }
+    var size = Math.max(4, Math.min(120, Math.round(b.size * 10) / 10));
+    M.elements.push({ type: 'text', id: b.id, det: 1, x: ex, y: b.y, w: ew, h: b.h, text: b.text, name: '読み取った文字', font: 'gothic', size: size, weight: 400, color: sm.fg, align: al, valign: 'middle', fit: 'shrink', lineHeight: 1.2, padding: 0, conf: b.conf,
+      gl: gl, gr: gr, ax: b.x, aw: b.w, cover: { x: b.x - padMm, y: b.y - padMm, w: b.w + padMm * 2, h: b.h + padMm * 2, fill: sm.bg, uniform: sm.uniform } });
+    M.det[b.id] = 1; M.orig[b.id] = b.text;
+  });
+  M.sugg = DD.suggest(sb, { fuzzy: ocr });
+  M.stats.count = 1 + boxes.length;
 }
 
 /* ---------- PDF ---------- */
@@ -186,14 +318,26 @@ async function startPdf(f) {
     cv.width = Math.round(v.width); cv.height = Math.round(v.height); await pg.render({ canvasContext: cv.getContext('2d'), viewport: v }).promise; box.appendChild(cv);
   }, label: function (i) { return (i + 1) + 'ページ'; }, pick: function (i) { pickPdfPage(i + 1); } });
 }
+async function renderPdfPage(n, sc) {
+  var pg = await M.pdf.getPage(n), v0 = pg.getViewport({ scale: 1 });
+  if (!sc) sc = Math.min(4, 1800 / Math.max(v0.width, v0.height));
+  var v = pg.getViewport({ scale: sc }), cv = document.createElement('canvas');
+  cv.width = Math.round(v.width); cv.height = Math.round(v.height);
+  var x = cv.getContext('2d', { willReadFrequently: true }); x.fillStyle = '#fff'; x.fillRect(0, 0, cv.width, cv.height);
+  await pg.render({ canvasContext: x, viewport: v }).promise;
+  return { pg: pg, v: v, cv: cv, ratio: v0.width / v0.height, sc: sc };
+}
 async function pickPdfPage(n) {
   showBusy('ページを取り込んでいます…');
-  var pg = await M.pdf.getPage(n), v0 = pg.getViewport({ scale: 1 }), sc = Math.min(4, 1800 / Math.max(v0.width, v0.height)), v = pg.getViewport({ scale: sc }), cv = document.createElement('canvas');
-  cv.width = Math.round(v.width); cv.height = Math.round(v.height);
-  var x = cv.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, cv.width, cv.height);
-  await pg.render({ canvasContext: x, viewport: v }).promise;
+  var r = await renderPdfPage(n), cv = r.cv;
   var src = cv.toDataURL('image/jpeg', 0.9); if (src.length > 1.6e6) src = cv.toDataURL('image/jpeg', 0.8);
-  startBackground(src, v0.width / v0.height, 'PDF');
+  M.pdfSc = r.sc; M.pdfPage = n; M.noTextLayer = false; M.textItems = null;
+  var items = [];
+  try { items = await DD.pdfItems(r.pg, r.v, g.pdfjsLib); } catch (e) { items = []; }
+  var real = items.filter(function (i) { return String(i.s).trim(); });
+  var mode = 'ocr';
+  if (real.length >= 3) { M.textItems = items; mode = 'text'; } else M.noTextLayer = true;
+  await startBackground(src, r.ratio, 'PDF', cv, mode);
 }
 
 /* ---------- PowerPoint ---------- */
@@ -221,55 +365,8 @@ async function pickSlide(i) {
 }
 
 /* ---------- 差し込み候補の推定 ---------- */
-var LBL = [
-  [/(カナ|ｶﾅ|フリガナ|ふりがな|ﾌﾘｶﾞﾅ|ヨミ|よみ)/, 'カナ氏名'],
-  [/^(受験|受検|生徒|会員)?(番号|No\.?|NO\.?|ID)$/i, '受験番号'],
-  [/^(受験|受検)(番号|No)/i, '受験番号'],
-  [/^(氏名|名前|お名前|生徒名|受験者名|受験者)$/, '氏名'],
-  [/^(志望学部|志望学科|志望|学部|学部名)$/, '志望学部'],
-  [/^(試験)?教室$|^座席$|^教室名$/, '教室'],
-  [/^(学校名|学校|高校|在籍校|出身校)$/, '学校名'],
-  [/^学年$/, '学年']
-];
-function normLbl(t) { return String(t || '').replace(/[\s　:：・\/／\-]/g, ''); }
-function labelOf(text) {
-  var n = normLbl(text);
-  if (!n || n.length > 9) return '';
-  for (var i = 0; i < LBL.length; i++) if (LBL[i][0].test(n)) return LBL[i][1];
-  return '';
-}
-function textEls() { return M.elements.filter(function (e) { return e.type === 'text' && !e.hidden && String(e.text).trim() && !e.vertical; }); }
-function suggest() {
-  var els = textEls(), labels = [], vals = [], out = [], used = {};
-  els.forEach(function (e) { var l = labelOf(e.text); if (l) labels.push({ e: e, label: l }); });
-  var isLab = {}; labels.forEach(function (l) { isLab[l.e.id] = 1; });
-  var GEN = /^.{1,5}(番号|名|日|場|制度|時間|会場|科目|区分|種別|住所)[：:]?$/;
-  var cands = els.filter(function (e) { return !isLab[e.id] && !GEN.test(normLbl(e.text)); });
-  labels.forEach(function (L) {
-    var a = L.e, best = null, bs = 1e9;
-    cands.forEach(function (c) {
-      if (used[c.id]) return;
-      if (c.size < a.size * 0.9) return;
-      var ov = Math.min(a.y + a.h, c.y + c.h) - Math.max(a.y, c.y), mh = Math.min(a.h, c.h);
-      var right = c.x - (a.x + a.w), s;
-      if (ov > 0.3 * mh && c.x >= a.x + a.w * 0.4 && right < 90) s = Math.max(0, right) + Math.abs((c.y + c.h / 2) - (a.y + a.h / 2)) * 0.4;
-      else {
-        var below = c.y - (a.y + a.h * 0.5), cxm = c.x + c.w / 2;
-        if (below > 0 && below < 40 && cxm > a.x - 10 && cxm < a.x + a.w + 60) s = 100 + below * 1.5; else return;
-      }
-      if (s < bs) { bs = s; best = c; }
-    });
-    if (best) { used[best.id] = 1; out.push({ eid: best.id, label: L.label, why: '「' + String(a.text).trim() + '」の隣' }); }
-  });
-  var have = function (l) { return out.some(function (o) { return o.label === l; }); };
-  cands.forEach(function (c) {
-    if (used[c.id]) return; var t = String(c.text).trim();
-    if (!have('受験番号') && /^[0-9０-９]{1,10}$/.test(t) && t.length <= 8) { out.push({ eid: c.id, label: '受験番号', why: '数字だけの文字' }); used[c.id] = 1; }
-    else if (!have('カナ氏名') && /^[ァ-ヶー・ 　ｦ-ﾟ]{3,}$/.test(t)) { out.push({ eid: c.id, label: 'カナ氏名', why: 'カタカナだけの文字' }); used[c.id] = 1; }
-    else if (!have('氏名') && /^[一-鿿々]{1,4}[ 　][一-鿿々ぁ-んァ-ヶ]{1,4}$/.test(t)) { out.push({ eid: c.id, label: '氏名', why: '名前のような文字' }); used[c.id] = 1; }
-  });
-  return out;
-}
+function textEls() { return M.elements.filter(function (e) { return e.type === 'text' && !e.hidden && !e.det && String(e.text).trim() && !e.vertical; }); }
+function suggest() { return DD.suggest(textEls(), {}); }
 
 /* ---------- 画面（オーバーレイ） ---------- */
 function openOverlay() {
@@ -294,12 +391,16 @@ function header(title, back) {
   var x = btn('✕ やめる', '取り込みをやめて閉じる (Esc)'); x.onclick = closeOverlay; h.appendChild(x);
   return h;
 }
-function showBusy(msg, err) {
+function showBusy(msg, err, cancel, note) {
   openOverlay(); ensureCss(); OV.textContent = '';
   OV.appendChild(header('自分のデザインを取り込む'));
   var b = el('div', 'dp-b'), w = el('div', 'dp-busy');
   if (err) { w.appendChild(el('div', 'dp-err', err)); var c = btn('閉じる', null, 'pri'); c.onclick = closeOverlay; w.appendChild(c); }
-  else { w.appendChild(el('div', 'sp1')); w.appendChild(el('div', null, msg || '')); }
+  else {
+    w.appendChild(el('div', 'sp1')); w.appendChild(el('div', 'bm', msg || ''));
+    if (note) w.appendChild(el('p', 'bn', note)).style.whiteSpace = 'pre-line';
+    if (cancel) { var cb = btn('キャンセル（手動で指定する）'); cb.onclick = cancel; w.appendChild(cb); }
+  }
   b.appendChild(w); OV.appendChild(b);
   if (M) M.stage = null;
 }
@@ -333,11 +434,21 @@ function itemsForDraft() {
   });
 }
 function tempVals(elements, bg, items) { return JT.mkVals('free', { items: items, tpl: { free: { bg: bg, elements: elements, guides: [] } } }); }
+function coverEl(e) {
+  var c = e.cover; return { type: 'rect', id: 'cv_' + e.id, x: c.x, y: c.y, w: c.w, h: c.h, fill: c.fill, stroke: 'transparent', strokeWidth: 0, locked: true, name: '元の文字を隠す', groupId: 'g_' + e.id };
+}
 function stageElements() {
-  return M.elements.map(function (e) {
-    if (M.custom[e.id]) { var c = Object.assign({}, e); c.text = M.map[e.id] ? '{{' + M.map[e.id] + '}}' : ''; return c; }
-    return e;
+  var out = [];
+  M.elements.forEach(function (e) {
+    if (M.det[e.id]) {
+      var l = M.map[e.id], c = Object.assign({}, e); delete c.cover; c.text = l ? '{{' + l + '}}' : '';
+      if (l) { out.push(coverEl(e)); c.groupId = 'g_' + e.id; out.push(c); }
+      return;
+    }
+    if (M.custom[e.id]) { var c2 = Object.assign({}, e); c2.text = M.map[e.id] ? '{{' + M.map[e.id] + '}}' : ''; out.push(c2); return; }
+    out.push(e);
   });
+  return out;
 }
 
 function showMap() {
@@ -363,7 +474,7 @@ function drawStage() {
   var sg = {}; (M.sugg || []).forEach(function (s) { if (!M.map[s.eid]) sg[s.eid] = s; });
   M.elements.forEach(function (e) {
     if (e.type !== 'text' || e.hidden) return;
-    if (!M.custom[e.id] && !String(e.text).trim()) return;
+    if (!M.custom[e.id] && !M.det[e.id] && !String(e.text).trim()) return;
     var h = el('div', 'hit'), map = M.map[e.id], fx = map && M.fixedLbl[map] !== undefined;
     h.setAttribute('data-eid', e.id);
     var q = JukenFree.geom(e);
@@ -371,8 +482,9 @@ function drawStage() {
     if (e.rot) h.style.transform = 'rotate(' + e.rot + 'deg)';
     if (map) { h.classList.add(fx ? 'fix' : 'map'); h.appendChild(el('span', 'chip', (fx ? '固定：' : '') + map)); }
     else if (sg[e.id]) { h.classList.add('sug'); h.appendChild(el('span', 'chip', '候補：' + sg[e.id].label)); }
+    else if (M.det[e.id]) h.classList.add('det');
     if (M.sel === e.id) { h.classList.add('cur'); if (M.custom[e.id]) { var rz = el('span', 'rz'); rz.setAttribute('data-rz', '1'); h.appendChild(rz); } }
-    h.title = map ? '「' + map + '」に差し込み（クリックで変更）' : 'クリックして、この文字を何にするか選ぶ';
+    h.title = map ? '「' + map + '」に差し込み（クリックで変更）' : (M.det[e.id] ? '『' + String(e.text).slice(0, 20) + '』をクリックして、何にするか選ぶ' : 'クリックして、この文字を何にするか選ぶ');
     hits.appendChild(h);
   });
   hits.onpointerdown = onDown;
@@ -494,11 +606,13 @@ function placePop(pop, e) {
 
 /* ---- 右パネル ---- */
 function syncDrawBtn() { var b = M.side && M.side.querySelector('.dp-draw'); if (b) { b.classList.toggle('on', !!M.draw); b.textContent = M.draw ? 'ページ上をドラッグして枠をかこむ（Escで中止）' : '＋ 差し込み枠を追加'; } if (M.hits) M.hits.classList.toggle('draw', !!M.draw); }
+function hasDet() { return Object.keys(M.det || {}).length > 0; }
 function drawSide() {
   var s = M.side, keep = s.querySelector('.dp-sc'), top = keep ? keep.scrollTop : 0; s.textContent = '';
   var sc = el('div', 'dp-sc'); s.appendChild(sc);
   sc.appendChild(el('h2', null, '生徒ごとに変わる文字をクリックしてください'));
-  sc.appendChild(el('p', 'dp-sub', M.stats && M.stats.bgOnly ? '取り込んだ' + M.stats.what + 'は背景になりました。「差し込み枠を追加」で、受験番号や氏名を入れる場所をドラッグで指定します。' : '受験番号・氏名など、人によって変わる文字をクリックして項目を選びます。試験日や会場など全員同じものは、そのままで構いません。'));
+  sc.appendChild(el('p', 'dp-sub', M.stats && M.stats.bgOnly ? (hasDet() ? '取り込んだ' + M.stats.what + 'は背景になりました。見つかった文字（点線の枠）をクリックして項目を選ぶと、元の文字を隠して差し込みます。見つからない場所は「差し込み枠を追加」で指定できます。' : '取り込んだ' + M.stats.what + 'は背景になりました。「差し込み枠を追加」で、受験番号や氏名を入れる場所をドラッグで指定します。') : '受験番号・氏名など、人によって変わる文字をクリックして項目を選びます。試験日や会場など全員同じものは、そのままで構いません。'));
+  methodNote(sc);
   summary(sc);
   /* おすすめ */
   var pend = (M.sugg || []).filter(function (x) { return !M.map[x.eid] && elOf(x.eid); });
@@ -508,7 +622,7 @@ function drawSide() {
     all.onclick = function () { pend.forEach(function (x) { mapEl(x.eid, x.label); }); drawStage(); drawSide(); H.toast(pend.length + '件を割り当てました'); }; sec.appendChild(all);
     pend.forEach(function (x) {
       var r = el('div', 'dp-sg'), tx = el('span', 'tx'); tx.appendChild(el('b', null, x.label)); tx.appendChild(document.createTextNode('　←『' + String(M.orig[x.eid] || '').replace(/\s+/g, ' ').trim().slice(0, 14) + '』（' + x.why + '）'));
-      tx.title = x.why; r.appendChild(tx); var ok = btn('適用'); ok.onclick = function (ev) { ev.stopPropagation(); mapEl(x.eid, x.label); drawStage(); drawSide(); }; r.appendChild(ok);
+      tx.title = x.why + '（確度：' + DD.confWord(x.conf == null ? 0.7 : x.conf) + '）'; r.appendChild(tx); if (x.conf != null) r.appendChild(el('span', 'cf', '確度' + DD.confWord(x.conf))); var ok = btn('適用'); ok.onclick = function (ev) { ev.stopPropagation(); mapEl(x.eid, x.label); drawStage(); drawSide(); }; r.appendChild(ok);
       r.onclick = function () { M.sel = x.eid; var h = M.hits && M.hits.querySelector('[data-eid="' + x.eid + '"]'); if (h) h.scrollIntoView({ block: 'center', behavior: 'smooth' }); openPop(x.eid); };
       sec.appendChild(r);
     });
@@ -522,6 +636,7 @@ function drawSide() {
     var r = el('div', 'dp-mp'), l = M.map[k], fx = M.fixedLbl[l] !== undefined;
     r.appendChild(el('b', null, (fx ? '固定：' : '') + l));
     var tx = el('span', 'tx', M.custom[k] ? '（差し込み枠）' : '←『' + String(M.orig[k] || '').replace(/\s+/g, ' ').trim().slice(0, 16) + '』'); r.appendChild(tx);
+    var de = M.det[k] && elOf(k); if (de && de.cover && !de.cover.uniform) { var wb = el('div', 'dp-wb', '背景が模様のため消し跡が見える可能性'); wb.style.marginLeft = '0'; r.style.flexWrap = 'wrap'; r.appendChild(wb); }
     var go = btn('選択', '位置を表示'); go.onclick = function () { M.sel = k; var h = M.hits && M.hits.querySelector('[data-eid="' + k + '"]'); if (h) h.scrollIntoView({ block: 'center', behavior: 'smooth' }); openPop(k); }; r.appendChild(go);
     var x = btn('✕', '割り当てをやめる'); x.setAttribute('aria-label', '割り当てをやめる'); x.onclick = function () { mapEl(k, null); drawStage(); drawSide(); }; r.appendChild(x);
     sec2.appendChild(r);
@@ -529,12 +644,20 @@ function drawSide() {
   sc.appendChild(sec2);
   var dr = btn('＋ 差し込み枠を追加', '空いている場所に、項目を入れる枠をドラッグで作ります'); dr.className = 'dp-draw' + (M.draw ? ' on' : ''); dr.style.width = '100%';
   dr.onclick = function () { M.draw = !M.draw; closePop(); syncDrawBtn(); }; sc.appendChild(dr);
-  /* 名簿の読み取り（複数スライドのPPTX） */
-  if (M.kind === 'pptx' && M.pkg && M.pkg.slides.length > 1) {
-    var rs = el('div', 'dp-sec'); rs.style.marginTop = '14px'; rs.appendChild(el('h3', null, '作成済みのスライドから名簿を作る'));
-    var rb = btn(M.wantRoster ? '✓ スライドから名簿も読み取る' : 'スライドから名簿も読み取る（' + M.pkg.slides.length + '枚）', '全スライドの同じ位置の文字を、名簿の貼り付け欄に入れます'); rb.style.width = '100%'; if (M.wantRoster) rb.className = 'on';
-    rb.onclick = function () { M.wantRoster = !M.wantRoster; if (M.wantRoster) readRoster(true); else { drawSide(); } }; rs.appendChild(rb);
-    var info = el('p', 'dp-sub', M.wantRoster ? (M.rosterLines ? M.rosterN + '名分を読み取りました（名簿の欄に入ります。この端末内だけで処理され、保存・送信されません）。' : '「このデザインで名簿を入れる」を押すと読み取ります。') : '生徒ごとに1枚ずつ作ってあるファイルなら、割り当てた項目の文字を全スライドから集めて、名簿に入れます。'); info.style.marginTop = '6px'; rs.appendChild(info);
+  /* 名簿の読み取り（複数スライドのPPTX／複数ページのPDF／複数の画像） */
+  var nPages = rosterPages();
+  if (nPages > 1) {
+    var isP = M.kind === 'pptx', isPdfT = M.kind === 'pdf' && M.method === 'text';
+    var rs = el('div', 'dp-sec'); rs.style.marginTop = '14px';
+    rs.appendChild(el('h3', null, isP ? '作成済みのスライドから名簿を作る' : (isPdfT ? '作成済みのPDFから名簿を作る' : '作成済みの画像から名簿を作る')));
+    var nm = isP ? 'スライド' : (isPdfT ? 'PDF' : '画像'), unit = isP ? '枚' : (M.kind === 'images' ? '枚' : 'ページ');
+    var rb = btn(M.wantRoster ? '✓ ' + nm + 'から名簿も読み取る' : nm + 'から名簿も読み取る（' + nPages + unit + '）', '全ページの同じ位置の文字を、名簿の貼り付け欄に入れます'); rb.style.width = '100%'; if (M.wantRoster) rb.className = 'on';
+    rb.onclick = function () { M.wantRoster = !M.wantRoster; if (M.wantRoster && isP) readRoster(true); else { drawSide(); } }; rs.appendChild(rb);
+    var info;
+    if (isP) info = M.wantRoster ? (M.rosterLines ? M.rosterN + '名分を読み取りました（名簿の欄に入ります。この端末内だけで処理され、保存・送信されません）。' : '「このデザインで名簿を入れる」を押すと読み取ります。') : '生徒ごとに1枚ずつ作ってあるファイルなら、割り当てた項目の文字を全スライドから集めて、名簿に入れます。';
+    else if (isPdfT) info = M.wantRoster ? '「このデザインで名簿を入れる」を押すと、全ページの文字情報から読み取ります（正確）。この端末内だけで処理され、保存・送信されません。' : '生徒ごとに1ページずつのPDFなら、割り当てた項目の文字を全ページから集めて、名簿に入れます。';
+    else info = M.wantRoster ? '「このデザインで名簿を入れる」を押すと、各ページの文字を読み取ります（時間がかかります）。読み取った内容は確認画面で直せます。この端末内だけで処理され、保存・送信されません。' : '生徒ごとに1ページずつあるなら、割り当てた場所の文字を全ページから読み取って名簿に入れます（読み取り結果は確認してから入ります）。';
+    info = el('p', 'dp-sub', info); info.style.marginTop = '6px'; rs.appendChild(info);
     sc.appendChild(rs);
   }
   var ft = el('div', 'dp-sf');
@@ -543,6 +666,15 @@ function drawSide() {
   if (!n) { var hint = el('p', 'dp-sub', '※ 差し込む文字がまだありません。このまま進むと、全員同じ受験票になります。'); hint.style.margin = '0'; ft.appendChild(hint); }
   ft.appendChild(go2); s.appendChild(ft);
   sc.scrollTop = top;
+}
+function methodNote(box) {
+  if (!M.stats || !M.stats.bgOnly || !M.method) return;
+  var d = el('div', 'dp-meth');
+  if (M.method === 'text') { d.classList.add('mok'); d.appendChild(el('b', null, 'PDFの文字情報から自動判定しました（正確）')); d.appendChild(document.createTextNode('文字の位置と大きさをPDFから直接読み取っています。')); }
+  else if (M.method === 'ocr') { d.classList.add('mck'); d.appendChild(el('b', null, '画像の文字を読み取って判定しました（要確認）')); d.appendChild(document.createTextNode((M.detectNote ? M.detectNote + ' ' : '') + '読み間違いがないか、候補をよく確認してください。画像はこの端末のブラウザ内だけで処理され、外部には送られません。')); }
+  else if (M.detectNote) { d.classList.add('mck'); d.appendChild(document.createTextNode(M.detectNote)); }
+  else return;
+  box.appendChild(d);
 }
 function summary(box) {
   var S = M.stats, d = document.createElement('details'); d.className = 'dp-sum'; d.open = innerWidth > 820 && !!(S.skippedTotal || S.emf.length || S.aspectDiff);
@@ -562,16 +694,28 @@ function summary(box) {
 
 /* ---------- 名簿の読み取り・確定 ---------- */
 function mapSig() { return JSON.stringify(M.map) + '|' + M.slideIdx; }
+function rosterPages() {
+  if (!M) return 0;
+  if (M.kind === 'pptx') return M.pkg ? M.pkg.slides.length : 0;
+  if (M.kind === 'pdf') return M.pdf ? M.pdf.numPages : 0;
+  if (M.kind === 'images') return M.files ? M.files.length : 0;
+  return 0;
+}
+function sideProg(t) { var side = M.side && M.side.querySelector('.dp-sf'); if (side) { var p = side.querySelector('.dp-prog') || side.insertBefore(el('p', 'dp-sub dp-prog'), side.firstChild); p.textContent = t; } }
+function rosterTargets() {
+  var first = {};
+  Object.keys(M.map).forEach(function (eid) { var l = M.map[eid]; if (M.fixedLbl[l] !== undefined || first[l] || !elOf(eid)) return; if (M.kind === 'pptx' && M.custom[eid]) return; first[l] = eid; });
+  return first;
+}
 async function readRoster(show) {
   var sig = mapSig();
   if (M.rosterLines && M.rosterSig === sig) { if (show) drawSide(); return M.rosterLines; }
-  var by = {}, firstEid = {};
-  Object.keys(M.map).forEach(function (eid) { var l = M.map[eid]; if (M.fixedLbl[l] !== undefined || M.custom[eid] || firstEid[l]) return; firstEid[l] = eid; });
+  var by = {}, firstEid = rosterTargets();
   var labels = Object.keys(firstEid), n = M.pkg.slides.length; labels.forEach(function (l) { by[l] = []; });
   var token = M;
   for (var i = 0; i < n; i++) {
     if (!OV || M !== token) return null;
-    if (show || i % 4 === 0) { var side = M.side && M.side.querySelector('.dp-sf'); if (side) { var p = side.querySelector('.dp-prog') || side.insertBefore(el('p', 'dp-sub dp-prog'), side.firstChild); p.textContent = '名簿を読み取っています… ' + (i + 1) + ' / ' + n; } await nextFrame(); }
+    if (show || i % 4 === 0) { sideProg('名簿を読み取っています… ' + (i + 1) + ' / ' + n); await nextFrame(); }
     var tx = {}; try { tx = await PptxImport.slideTexts(M.pkg, i); } catch (e) { tx = {}; }
     labels.forEach(function (l) { by[l].push(String(tx[firstEid[l]] == null ? '' : tx[firstEid[l]]).replace(/\s*\n\s*/g, ' ').replace(/[ 　]+$/, '').replace(/^[ 　]+/, '')); });
   }
@@ -579,16 +723,119 @@ async function readRoster(show) {
   if (show) drawSide();
   return by;
 }
-async function finish() {
-  var elements = M.elements.filter(function (e) { return !M.custom[e.id] || M.map[e.id]; }).map(function (e) {
-    var c = JSON.parse(JSON.stringify(e)), l = M.map[e.id];
-    if (l) { c.text = '{{' + l + '}}'; if (!c.vertical) c.fit = 'shrink'; }
-    return c;
+function rosterRect(e) {
+  if (!e.det) return e;
+  var cl = function (v, m) { return Math.max(0, Math.min(v, m)); }, x = e.ax, w = e.aw;
+  if (e.align === 'left') w += cl(e.gr - 1.5, 80);
+  else if (e.align === 'right') { var m1 = cl(e.gl - 1.5, 80); x -= m1; w += m1; }
+  else { var m2 = cl(Math.min(e.gl, e.gr) / 2 - 0.75, 40); x -= m2; w += m2 * 2; }
+  return { x: x, y: e.y, w: w, h: e.h };
+}
+function pageFrac(e0) { var G = M.geo, e = rosterRect(e0); return { x: (e.x - G.ox) / G.k / G.cw, y: (e.y - G.oy) / G.k / G.ch, w: e.w / G.k / G.cw, h: e.h / G.k / G.ch }; }
+function fixVal(l, t) { t = DD.cleanText(t); return l === '受験番号' ? DD.halfDigits(t).replace(/[ 　]+/g, '') : t; }
+/* PDFの文字情報から（全ページ） */
+async function readRosterPdf() {
+  var tg = rosterTargets(), labels = Object.keys(tg), n = M.pdf.numPages, by = {}, token = M, lib = g.pdfjsLib;
+  labels.forEach(function (l) { by[l] = []; });
+  var fr = {}; labels.forEach(function (l) { fr[l] = pageFrac(elOf(tg[l])); });
+  for (var i = 1; i <= n; i++) {
+    if (!OV || M !== token) return null;
+    sideProg('名簿を読み取っています… ' + i + ' / ' + n); if (i % 3 === 1) await nextFrame();
+    var pg = await M.pdf.getPage(i), vp = pg.getViewport({ scale: M.pdfSc }), items = [];
+    try { items = await DD.pdfItems(pg, vp, lib); } catch (e) { items = []; }
+    labels.forEach(function (l) {
+      var r = { x: fr[l].x * vp.width, y: fr[l].y * vp.height, w: fr[l].w * vp.width, h: fr[l].h * vp.height }, px = r.w * 0.6, py = r.h * 0.2; /* ページごとに位置が少しずれていても拾えるよう、横に広めに見る */
+      var ins = items.filter(function (it) { if (!String(it.s).trim()) return false; var cx = it.x + it.w / 2, cy = it.y + it.h / 2; return cx >= r.x - px && cx <= r.x + r.w + px && cy >= r.y - py && cy <= r.y + r.h + py; });
+      /* 行にまとめてから、枠に重なる行を採る（重なる行が無ければ、いちばん近い行） */
+      var lines = DD.mergeItems(ins), tol = r.h * 0.12, hit = lines.filter(function (q) { return q.x < r.x + r.w + tol && q.x + q.w > r.x - tol && q.y < r.y + r.h + tol && q.y + q.h > r.y - tol; });
+      if (!hit.length && lines.length) {
+        var best = null, bd = 1e9; lines.forEach(function (q) { var d = Math.abs(q.x + q.w / 2 - (r.x + r.w / 2)) + Math.abs(q.y + q.h / 2 - (r.y + r.h / 2)); if (d < bd) { bd = d; best = q; } }); hit = [best];
+      }
+      by[l].push(fixVal(l, hit.sort(function (a, b) { return a.y - b.y || a.x - b.x; }).map(function (x) { return x.text; }).join(' ')));
+    });
+  }
+  M.rosterN = n; return by;
+}
+async function pageCanvasAt(i) {
+  if (M.kind === 'pdf') return (await renderPdfPage(i + 1, M.pdfSc)).cv;
+  return (await fileCanvas(M.files[i])).cv;
+}
+/* OCRで（全ページの、割り当てた場所だけ）→ 確認画面 */
+async function readRosterOcr() {
+  var tg = rosterTargets(), labels = Object.keys(tg), n = rosterPages(), token = M, rows = [];
+  if (!labels.length) return {};
+  var fr = {}; labels.forEach(function (l) { fr[l] = pageFrac(elOf(tg[l])); });
+  M.rosterCancel = false;
+  showBusy('名簿を読み取り中… 0 / ' + n + 'ページ', null, function () { M.rosterCancel = true; DD.cancelOcr(); }, ocrNote());
+  try {
+    for (var i = 0; i < n; i++) {
+      if (!OV || M !== token) return null;
+      setBusyMsg('名簿を読み取り中… ' + (i + 1) + ' / ' + n + 'ページ');
+      var cv = await pageCanvasAt(i), row = { vals: [], conf: [] };
+      for (var j = 0; j < labels.length; j++) {
+        var f = fr[labels[j]], r = await DD.ocrRegion(cv, { x: f.x * cv.width, y: f.y * cv.height, w: f.w * cv.width, h: f.h * cv.height }, labels[j], function (m) { if (m && /loading|download/i.test(m.status || '')) ocrProg(m); });
+        row.vals.push(r.text); row.conf.push(r.conf);
+      }
+      rows.push(row);
+    }
+  } catch (e) {
+    if (M !== token || !OV) return null;
+    showMap();
+    if (!(e && e.message === 'cancel')) H.toast((e && e.message) || '名簿を読み取れませんでした');
+    return null;
+  }
+  return await confirmRoster(labels, rows);
+}
+function confirmRoster(labels, rows) {
+  return new Promise(function (ok) {
+    var token = M; OV.textContent = '';
+    OV.appendChild(header('名簿の確認', { label: '戻る', fn: function () { ok(null); if (M === token) showMap(); } }));
+    var box = el('div', 'dp-conf'), h2 = el('h2', null, '読み取った名簿を確認してください'); h2.style.cssText = 'font-size:16px;margin:0 0 4px'; box.appendChild(h2);
+    box.appendChild(el('p', 'dp-sub', '黄色い欄は、自信がない（または読み取れなかった）ところです。直してから「名簿に入れる」を押してください。この端末内だけで処理され、保存・送信されません。'));
+    var tb = document.createElement('table'), th = el('tr'), inputs = [], low = 0;
+    th.appendChild(el('th', null, M.kind === 'images' ? '画像' : 'ページ')); labels.forEach(function (l) { th.appendChild(el('th', null, l)); }); tb.appendChild(th);
+    rows.forEach(function (r, i) {
+      var tr = el('tr'); tr.appendChild(el('td', null, (i + 1) + (M.kind === 'images' ? '枚目' : 'ページ'))); var ri = [];
+      labels.forEach(function (l, j) {
+        var td = el('td'), inp = el('input'); inp.type = 'text'; inp.value = r.vals[j]; inp.setAttribute('aria-label', (i + 1) + '番目の' + l);
+        if (!r.vals[j] || r.conf[j] < 70) { td.className = 'low'; low++; inp.oninput = function () { td.className = ''; }; }
+        td.appendChild(inp); tr.appendChild(td); ri.push(inp);
+      });
+      inputs.push(ri); tb.appendChild(tr);
+    });
+    box.appendChild(tb); OV.appendChild(box);
+    var ft = el('div', 'dp-cf'), go = btn('この内容で名簿に入れる', null, 'pri');
+    go.onclick = function () {
+      var by = {}; labels.forEach(function (l, j) { by[l] = inputs.map(function (ri) { return ri[j].value.replace(/^[ 　]+|[ 　]+$/g, ''); }); });
+      M.rosterN = rows.length; ok(by);
+    };
+    var lw = el('span', 'dp-sub', low ? '要確認：' + low + 'か所' : '要確認の欄はありません'); lw.style.margin = '0';
+    ft.appendChild(go); ft.appendChild(lw); OV.appendChild(ft);
   });
-  var items = itemsForDraft(), rosterLines = null;
-  if (M.wantRoster && M.kind === 'pptx' && Object.keys(M.map).length) {
+}
+async function finish() {
+  var items = itemsForDraft(), idOf = {}; items.forEach(function (it) { idOf[it.label] = it.id; });
+  var elements = [];
+  M.elements.forEach(function (e) {
+    var l = M.map[e.id];
+    if (M.det[e.id]) {
+      if (!l) return;
+      elements.push(coverEl(e));
+      elements.push({ type: 'field', id: e.id, x: e.x, y: e.y, w: e.w, h: e.h, name: l, itemId: idOf[l], showLabel: false, font: e.font, size: e.size, weight: 400, color: e.color, align: e.align, valign: 'middle', fit: 'shrink', lineHeight: 1.2, padding: 0, groupId: 'g_' + e.id });
+      return;
+    }
+    if (M.custom[e.id] && !l) return;
+    var c = JSON.parse(JSON.stringify(e));
+    if (l) { c.text = '{{' + l + '}}'; if (!c.vertical) c.fit = 'shrink'; }
+    elements.push(c);
+  });
+  var rosterLines = null;
+  if (M.wantRoster && Object.keys(M.map).length && rosterPages() > 1) {
     var side = M.side && M.side.querySelector('.dp-sf'); if (side) side.querySelectorAll('button').forEach(function (b) { b.disabled = true; });
-    rosterLines = await readRoster(false); if (!rosterLines) return;
+    if (M.kind === 'pptx') rosterLines = await readRoster(false);
+    else if (M.kind === 'pdf' && M.method === 'text') rosterLines = await readRosterPdf();
+    else rosterLines = await readRosterOcr();
+    if (!rosterLines) { if (OV && M && M.side) M.side.querySelectorAll('.dp-sf button').forEach(function (b) { b.disabled = false; }); return; }
   }
   var info = { name: M.name, elements: elements, bg: M.bg, items: items, rosterLines: rosterLines, kind: M.kind };
   var nRows = rosterLines ? M.rosterN : 0;
@@ -600,8 +847,8 @@ async function finish() {
 /* ---------- ステップ①のカード・ファイル選択 ---------- */
 function pickFile(accept) {
   var inp = document.createElement('input'); inp.type = 'file'; inp.accept = accept || '.pptx,.pdf,.png,.jpg,.jpeg,.gif,.webp,application/pdf,image/*,application/vnd.openxmlformats-officedocument.presentationml.presentation';
-  inp.style.display = 'none'; document.body.appendChild(inp);
-  inp.onchange = function () { var f = inp.files[0]; inp.remove(); if (f) { if (OV && M) { closeOverlay(); } handleFile(f); } };
+  inp.multiple = !accept; inp.style.display = 'none'; document.body.appendChild(inp);
+  inp.onchange = function () { var fs = Array.prototype.slice.call(inp.files || []); inp.remove(); if (fs.length) { if (OV && M) { closeOverlay(); } handleFile(fs); } };
   inp.click();
 }
 function makeCard() {
@@ -612,7 +859,7 @@ function makeCard() {
   b.onclick = function () { pickFile(); };
   ['dragenter', 'dragover'].forEach(function (t) { b.addEventListener(t, function (e) { if (e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], 'Files') >= 0) { e.preventDefault(); b.classList.add('over'); } }); });
   b.addEventListener('dragleave', function () { b.classList.remove('over'); });
-  b.addEventListener('drop', function (e) { e.preventDefault(); b.classList.remove('over'); if (e.dataTransfer.files && e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
+  b.addEventListener('drop', function (e) { e.preventDefault(); b.classList.remove('over'); if (e.dataTransfer.files && e.dataTransfer.files[0]) handleFile(Array.prototype.slice.call(e.dataTransfer.files)); });
   s.appendChild(b); return s;
 }
 
