@@ -113,4 +113,6 @@ JukenTemplates.register({
 - `ctx.fitText` の対象に `e._fitBase`（縮小前のfont-size）・`e._fitH=true`（高さのはみ出しも縮小）を設定できます。
 - `editor/free-convert.js`: `JukenFree.convert(templateId, V, student)` → Promise<`{elements, bg, wm:{y}|null, count}`>。既存テンプレートをA4で画面外に描画してDOMを要素に変換します（内容は `DESIGN_FORMAT.md` §7末尾）。**変換に強いテンプレートの書き方**：項目は `C.item(el, it)`、ヘッダー・バッジ・マークは `C.edit(el, 'hdr'|'badge'|'mark')`、折り線は `C.fold(V)`、透かしは `C.watermark(V, …)` のフックを使う（`data-item`/`data-edit`/`.jt-fold`/`.jt-wm` を手がかりにします）。注意事項は、各行が1つの要素になっていれば `notes` 要素になります。疑似要素（`::before`/`::after`）は本物の要素に置き換えて測定します。
 - 差し込みの表示：`render('free', st, V)` の `st._edit=true` で編集用の描画、`st._raw=true` で全部 `{{項目名}}`（チップ）表示、`st._rawIds={要素id:1}` でその要素だけチップ表示。それ以外は実データ。
-- エディタの画面状態（左パネルの開閉・右の詳細の折りたたみ・タブ・グリッド・スナップ）は `localStorage` の `juken-free-ui` に保存されます。
+- エディタ（`editor/free-editor.js`）はPowerPoint風のUI：タイトルバー（クイックアクセス）・リボン（ファイル／ホーム／挿入／デザイン／差し込み／表示＋選択に応じた「図形の書式」「図の形式」「テーブル デザイン」）・左サムネイル（生徒ごと）・キャンバス・右の作業ウィンドウ（書式設定／選択）・ステータスバー。要素モデルとホスト連携（`FreeEditor.init` の引数）は従来どおりで、操作の名前付き履歴のため任意のホスト関数 `hlabel(text)` `histList()` `histTo(i)` と、ファイルタブ用の `act('saveas'|'pdf'|'print'|'json'|'roster')` を使います。
+- グループ化は要素の `groupId` で表します（`DESIGN_FORMAT.md` §7）。文字の `italic` `underline` `strike` と `align:'justify'` は `text`/`field` の追加プロパティ（無いデータは既定値に正規化）。
+- エディタの画面状態（リボンの折りたたみ・サムネイル欄の幅と表示・ルーラー・グリッド・ガイド・スナップ・書式設定ウィンドウの各セクションの開閉・縦横比の固定）は `localStorage` の `juken-free-ui` に保存されます（作業ウィンドウ自体は毎回閉じた状態で開始）。ダークモードは端末の設定に追従します。
