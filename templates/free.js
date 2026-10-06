@@ -22,7 +22,7 @@ function loadFonts() {
 }
 
 /* ---------- 要素の既定値（キー＝要素が持つプロパティ。型は既定値の型で決まる） ---------- */
-var TXT = { font: 'gothic', size: 14, weight: 400, color: '#111827', align: 'left', valign: 'top', lineHeight: 1.4, letterSpacing: 0, vertical: false, fit: 'none', bg: '', padding: 0 };
+var TXT = { font: 'gothic', size: 14, weight: 400, italic: false, underline: false, strike: false, color: '#111827', align: 'left', valign: 'top', lineHeight: 1.4, letterSpacing: 0, vertical: false, fit: 'none', bg: '', padding: 0 };
 var DEF = {
   text: Object.assign({ x: 15, y: 15, w: 80, h: 12, text: 'テキストを入力' }, TXT),
   field: Object.assign({}, TXT, { x: 15, y: 15, w: 80, h: 20, itemId: '', showLabel: true, labelText: '', labelSize: 8, labelColor: '#6b7280', labelPos: 'top', size: 20, weight: 700, valign: 'middle', lineHeight: 1.3, fit: 'shrink', vertical: false }),
@@ -34,7 +34,7 @@ var DEF = {
   table: { x: 15, y: 60, w: 180, h: 60, itemIds: [], borderColor: 'accent', labelBg: '#f3f4f6', labelColor: '#374151', color: '#111827', size: 12, rowGap: 1.5, itemSize: false },
   fold: { x: 0, y: 148.5, w: 210, h: 0, label: '＜山折り＞', size: 11, color: '#111827', strokeWidth: 1, dash: 'dashed' }
 };
-var SEL = { font: ['gothic', 'mincho', 'maru', 'sans-en'], align: ['left', 'center', 'right'], valign: ['top', 'middle', 'bottom'], dash: ['solid', 'dashed', 'dotted'], bullet: ['number', 'dot', 'none'], labelPos: ['top', 'left'] };
+var SEL = { font: ['gothic', 'mincho', 'maru', 'sans-en'], align: ['left', 'center', 'right', 'justify'], valign: ['top', 'middle', 'bottom'], dash: ['solid', 'dashed', 'dotted'], bullet: ['number', 'dot', 'none'], labelPos: ['top', 'left'] };
 var COLK = { color: 1, bg: 1, fill: 1, stroke: 1, labelColor: 1, accentColor: 1, borderColor: 1, labelBg: 1 };
 var RANGE = { size: [1, 500], weight: [100, 900], lineHeight: [0.5, 5], letterSpacing: [-1, 10], padding: [0, 100], strokeWidth: [0, 50], radius: [0, 200], labelSize: [1, 200], rowGap: [0, 50] };
 
@@ -72,12 +72,15 @@ function normElement(x, seen) {
   e.locked = x.locked === true; e.hidden = x.hidden === true;
   e.name = typeof x.name === 'string' && x.name ? x.name.slice(0, 60) : TYPE_NAMES[t];
   Object.keys(d).forEach(function (k) { if (k === 'x' || k === 'y' || k === 'w' || k === 'h') return; e[k] = normProp(t, k, x[k], d[k]); });
+  if (typeof x.groupId === 'string' && x.groupId) e.groupId = x.groupId.slice(0, 40);   /* 同じ groupId を持つ要素が1つのグループ */
   return e;
 }
 function normElements(arr) {
   if (!Array.isArray(arr)) return [];
   var seen = {}, out = [];
   arr.slice(0, 400).forEach(function (x) { var e = normElement(x, seen); if (e) out.push(e); });
+  var gn = {}; out.forEach(function (e) { if (e.groupId) gn[e.groupId] = (gn[e.groupId] || 0) + 1; });
+  out.forEach(function (e) { if (e.groupId && gn[e.groupId] < 2) delete e.groupId; });   /* 1つだけのグループは解除 */
   return out;
 }
 function normGuides(arr) {
@@ -124,6 +127,8 @@ function textStyle(n, e, V) {
   n.style.fontFamily = FONTS[e.font] || FONTS.gothic; n.style.fontSize = e.size + 'pt'; n.style.fontWeight = e.weight;
   n.style.color = rc(e.color, V); n.style.textAlign = e.align; n.style.lineHeight = e.lineHeight;
   if (e.letterSpacing) n.style.letterSpacing = e.letterSpacing + 'em';
+  if (e.italic) n.style.fontStyle = 'italic';
+  if (e.underline || e.strike) n.style.textDecoration = (e.underline ? 'underline ' : '') + (e.strike ? 'line-through' : '');
 }
 function chips(n, text, V) {
   var last = 0, m, re = new RegExp(PH.source, 'g');

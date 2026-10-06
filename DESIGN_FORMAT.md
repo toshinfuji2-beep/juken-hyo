@@ -539,12 +539,12 @@ A4縦1枚。上半分に枠線付きの項目表、折り線、下半分に注�
 A4（210×297mm）に要素を絶対配置するテンプレート。`data.tpl.free = { "bg": "#ffffff", "elements": [ … ], "guides": [ {"axis":"x"|"y","pos":mm} ] }`。
 項目（`items`）・注意事項・画像・透かし（`wm*`）は共通設定（§3）をそのまま使い、要素から参照します。座標・サイズはすべて **mm、左上原点**。`elements` は **配列の後ろほど前面**。不正な値は読み込み時に既定値へ（`JukenFree.normElement`）。
 
-**共通キー**: `id`(string) `type` `x` `y` `w` `h` `rot`(度) `opacity`(0〜1) `locked` `hidden` `name`。`line`/`fold` は `h` を持たず、`y` が線の位置（当たり判定は±1.5mm）。
+**共通キー**: `id`(string) `type` `x` `y` `w` `h` `rot`(度) `opacity`(0〜1) `locked` `hidden` `name` `groupId`(任意。下記「グループ」)。`line`/`fold` は `h` を持たず、`y` が線の位置（当たり判定は±1.5mm）。
 **色**: `#rrggbb` / `#rgb` / `"transparent"`(または空=なし) / `"accent"`・`"secondary"`（デザインの色に追従するトークン）。
 
 | type | 固有キー（既定値） |
 |---|---|
-| `text` | `text`（`{{項目名}}` `{{ヘッダー}}` `{{バッジ}}` `{{マーク}}` を生徒ごとに差し込み）`font`(gothic/mincho/maru/sans-en) `size`(pt) `weight` `color` `align`(left/center/right) `valign`(top/middle/bottom) `lineHeight` `letterSpacing`(em) `vertical`(縦書き) `fit`(none/shrink=1行で自動縮小) `bg` `padding`(mm) |
+| `text` | `text`（`{{項目名}}` `{{ヘッダー}}` `{{バッジ}}` `{{マーク}}` を生徒ごとに差し込み）`font`(gothic/mincho/maru/sans-en) `size`(pt) `weight` `italic` `underline` `strike`(真偽。既定false) `color` `align`(left/center/right/justify=両端揃え) `valign`(top/middle/bottom) `lineHeight` `letterSpacing`(em) `vertical`(縦書き) `fit`(none/shrink=1行で自動縮小) `bg` `padding`(mm) |
 | `field` | `itemId`（項目の `id`）`showLabel` `labelText` `labelSize` `labelColor` `labelPos`(top/left) ＋ text と同じ文字スタイル。時間割項目は行で表示 |
 | `rect` / `ellipse` | `fill` `stroke` `strokeWidth`(pt) `dash`(solid/dashed/dotted) `radius`(mm・rectのみ) |
 | `line` | `stroke` `strokeWidth` `dash`（長さ=`w`、回転=`rot`） |
@@ -552,6 +552,8 @@ A4（210×297mm）に要素を絶対配置するテンプレート。`data.tpl.f
 | `notes` | `title` `size` `color` `accentColor` `bullet`(number/dot/none) `lineHeight` `fit`。本文は共通設定の `notes`（行頭`!`で強調） |
 | `table` | `itemIds[]`（半幅2つは横並び）`borderColor` `labelBg` `labelColor` `color` `size` `rowGap`(セル上下余白mm) `itemSize`(true=各項目の `size` S/M/L/XL を倍率0.8/1/1.2/1.4で反映。既定false)。行の高さは枠の高さを等分 |
 | `fold` | `label` `size` `color` `strokeWidth` `dash`（既定 x=0,w=210,y=148.5） |
+
+**グループ**: 要素の `groupId`（文字列）が同じ要素どうしを1つのグループとして扱います（PowerPointのグループ化に相当）。要素は平らな配列のまま、グループのメンバーは重なり順で連続して並べます。`groupId` は任意で、無い（旧データ）要素は単独です。グループは一緒に移動・拡大縮小・回転・複製・コピーされ、ページ上のクリックはグループ全体を、もう一度クリックすると中の1つを選びます。メンバーが1つだけのグループは読み込み時（`normElements`）に解除されます。入れ子のグループはなく、グループ化し直すと平らな1グループになります。
 
 透かしは共通設定 `wmOn` 等を使い、ページ全体（`wmAnchor` の top/mid/bot＝用紙の上端/中央/下端）に最前面で描画されます。
 フリーデザインのJSON例は、アプリで作って「ファイルに書き出し」したものを参照してください。
