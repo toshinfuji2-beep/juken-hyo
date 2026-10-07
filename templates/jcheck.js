@@ -186,6 +186,8 @@ function loadFor(fam, weight, style, text) {
   var t = Array.from(new Set(Array.from(text))).join('');
   return document.fonts.load((style === 'italic' ? 'italic ' : '') + weight + ' 16px "' + fam + '"', t).catch(function () { });
 }
+/* family 名 → 一覧での表示名（持ち込みフォントの内部名 'JF …' を見せない） */
+function famLabel(fam) { var R = g.JukenFonts && g.JukenFonts.REG; if (R) for (var k in R) if (R[k].family === fam) return R[k].name; return fam; }
 function withTimeout(p, ms) { return Promise.race([p, new Promise(function (r) { setTimeout(r, ms); })]); }
 
 /* roots の中の全テキストを検査する。opts.label(i) … i番目のroot の呼び名（例「3番 山田」）。
@@ -316,13 +318,13 @@ function gate(res, o) {
     var cantFix = res.missing.some(function (m) { return !m.fb; });
     c.appendChild($el('h3', null, res.ok ? '文字チェックOK' : '文字を確認してください'));
     if (res.ok) {
-      c.appendChild($el('p', null, res.count + '名・文字チェックOK（使用フォント：' + (res.fonts.join('、') || '—') + '）'));
+      c.appendChild($el('p', null, res.count + '名・文字チェックOK（使用フォント：' + (res.fonts.map(famLabel).join('、') || '—') + '）'));
       c.appendChild($el('p', null, '全員の全文字が、選んだ書体で表示されることを確認しました。'));
-      res.subst.forEach(function (x) { c.appendChild(warnBox(x.from + ' はこのパソコンにないため、代わりに ' + x.to + ' で表示・出力します。')); });
+      res.subst.forEach(function (x) { c.appendChild(warnBox(famLabel(x.from) + ' はこのパソコンにないため、代わりに ' + famLabel(x.to) + ' で表示・出力します。')); });
       var bb = $el('div', 'mb'); bb.appendChild(mkBtn('やめる', null, function () { done('cancel'); })); bb.appendChild(mkBtn(o.ok || 'OK', 'pri', function () { done('go'); })); c.appendChild(bb); return;
     }
-    res.subst.forEach(function (x) { c.appendChild(warnBox(x.from + ' はこのパソコンにないため、代わりに ' + x.to + ' で表示・出力します。')); });
-    if (res.notLoaded.length) c.appendChild(warnBox('選んだフォントが読み込めていません：' + res.notLoaded.join('、') + '。このままだと別の書体（明朝など）で出力されます。通信状況を確認して「もう一度確認」を押すか、別のフォントを選んでください。', true));
+    res.subst.forEach(function (x) { c.appendChild(warnBox(famLabel(x.from) + ' はこのパソコンにないため、代わりに ' + famLabel(x.to) + ' で表示・出力します。')); });
+    if (res.notLoaded.length) c.appendChild(warnBox('選んだフォントが読み込めていません：' + res.notLoaded.map(famLabel).join('、') + '。このままだと別の書体（明朝など）で出力されます。通信状況を確認して「もう一度確認」を押すか、別のフォントを選んでください。', true));
     if (res.missing.length) {
       c.appendChild($el('p', null, '次の文字は、選んだ書体に字形がありません。'));
       var ul = $el('div'); ul.style.cssText = 'max-height:34vh;overflow:auto;border:1px solid var(--bd);border-radius:6px;padding:4px 8px';
@@ -330,7 +332,7 @@ function gate(res, o) {
         var r = $el('div'); r.style.cssText = 'display:flex;gap:8px;align-items:baseline;padding:3px 0;font-size:13px;border-bottom:1px solid var(--bd)';
         var ch = $el('span', null, m.ch); ch.style.cssText = 'font-size:20px;min-width:1.6em;text-align:center;font-family:' + (m.fb ? '"' + m.fb.fam + '",' : '') + '"Noto Sans JP","Yu Gothic","Meiryo",sans-serif'; r.appendChild(ch);
         var tx = $el('div'); tx.style.cssText = 'min-width:0;overflow-wrap:anywhere';
-        tx.appendChild(document.createTextNode(m.cp + '（' + m.who.slice(0, 4).join('・') + (m.who.length > 4 ? ' ほか' + (m.who.length - 4) + '名' : '') + '）は ' + m.fams.join('・') + ' にありません → '));
+        tx.appendChild(document.createTextNode(m.cp + '（' + m.who.slice(0, 4).join('・') + (m.who.length > 4 ? ' ほか' + (m.who.length - 4) + '名' : '') + '）は ' + m.fams.map(famLabel).join('・') + ' にありません → '));
         var s = $el('b', null, m.fb ? m.fb.label + ' で補います' : '補える書体がありません（□になります）'); if (!m.fb) s.style.color = '#b91c1c'; tx.appendChild(s);
         r.appendChild(tx); ul.appendChild(r);
       });

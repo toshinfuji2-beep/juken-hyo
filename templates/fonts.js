@@ -408,7 +408,7 @@ function openPicker(o) {
   ls.style.maxHeight = (mh - 40) + 'px';
   el.style.left = Math.max(6, Math.min(r.left, innerWidth - W - 6)) + 'px';
   el.style.top = up ? Math.max(6, r.top - el.offsetHeight - 2) + 'px' : (r.bottom + 2) + 'px';
-  function md(e) { if (!el.contains(e.target) && !(o.anchor && o.anchor.contains(e.target))) closePicker(); }
+  function md(e) { if (!el.contains(e.target) && !(o.anchor && o.anchor.contains(e.target)) && !(e.target.closest && e.target.closest('#jfm,#jfc'))) closePicker(); }
   function rz() { closePicker(); }
   document.addEventListener('mousedown', md, true); window.addEventListener('resize', rz);
   pk = { el: el, o: o, cleanup: function () { document.removeEventListener('mousedown', md, true); window.removeEventListener('resize', rz); if (io) io.disconnect(); } };
