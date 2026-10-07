@@ -390,7 +390,7 @@ JT.register({
     return t;
   },
   styles: [
-    '.tpl-free{padding:0;display:block}',
+    '.tpl-free{padding:0;display:block;font-family:"Noto Sans JP","Yu Gothic","Hiragino Sans",Meiryo,sans-serif}',
     '.tpl-free .fz{position:absolute;box-sizing:border-box;transform-origin:50% 50%}',
     '.tpl-free .fz *{box-sizing:border-box}',
     '.tpl-free .fz-img img{-webkit-user-drag:none;user-select:none}',

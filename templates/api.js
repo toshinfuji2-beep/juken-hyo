@@ -258,7 +258,7 @@ var ctx = {
 };
 
 var BASE_CSS =
-  '.ticket{position:relative;width:210mm;height:297mm;padding:15mm;background:#fff;color:#000;font-family:"Hiragino Mincho ProN","Yu Mincho","MS PMincho",serif;font-size:10.5pt;line-height:1.5;display:flex;flex-direction:column;overflow:hidden}' +
+  '.ticket{position:relative;width:210mm;height:297mm;padding:15mm;background:#fff;color:#000;font-family:"Noto Sans JP","Yu Gothic","Hiragino Sans","Meiryo",sans-serif;font-size:10.5pt;line-height:1.5;display:flex;flex-direction:column;overflow:hidden}' +
   '.ticket *{box-sizing:border-box}' +
   '.jt-wm{position:absolute;left:105mm;white-space:nowrap;line-height:1;pointer-events:none;-webkit-print-color-adjust:exact;print-color-adjust:exact;-webkit-user-select:none;user-select:none}' +
   '.jt-wm span{display:inline-block}' +

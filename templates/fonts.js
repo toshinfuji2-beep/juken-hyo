@@ -104,7 +104,10 @@ SYS.forEach(function (r) {
 function resolve(id) { if (typeof id !== 'string') return null; return REG[id] || REG[ALIAS[id]] || null; }
 function valid(id) { return !!resolve(id); }
 function get(id) { return resolve(id) || REG['noto-sans-jp']; }
-function css(id) { return get(id).css; }
+/* どの書体でも末尾に総称（sans-serif / serif）を必ず付ける。無いと該当書体が使えないとき、ブラウザ既定の明朝（MS 明朝など）になってしまう */
+var SANS_TAIL = '"Noto Sans JP","Yu Gothic","Hiragino Sans","Meiryo",sans-serif';
+function generic(c) { c = String(c || '').trim(); return /(^|,)\s*(sans-serif|serif|monospace|cursive)\s*$/i.test(c) ? c : (c ? c + ',' : '') + SANS_TAIL; }
+function css(id) { return generic(get(id).css); }
 function list() { var out = []; CATS.forEach(function (c) { ORDER.forEach(function (id) { if (REG[id].cat === c) out.push(REG[id]); }); }); return out; }
 /* 旧 FONT_NAMES 形式 [[id, 表示名], …] */
 function names() { return list().map(function (f) { return [f.id, f.name]; }); }
