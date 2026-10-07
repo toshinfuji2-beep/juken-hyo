@@ -89,11 +89,19 @@ function color(node, cx) {
 }
 
 /* ---------- パッケージ ---------- */
-async function readText(zip, p) { var f = zip.file(p); if (!f) return null; return f.async('string'); }
+/* XMLは必ずバイト列から自分で復号する（UTF-8／BOM／UTF-16 を判定。JSZipの文字列化に任せない） */
+async function readText(zip, p) { var f = zip.file(p); if (!f) return null; var u8 = await f.async('uint8array'); return g.JukenText ? g.JukenText.decodeBytes(u8).text : new TextDecoder('utf-8').decode(u8); }
+/* Wingdings / Symbol など記号フォントの文字は、そのままでは文字化けして見えるので「・」にする */
+var SYMF = /wingdings|webdings|symbol|monotype sorts|zapf|dingbats/i;
+function symText(rPr, t) {
+  var sy = rPr && kid(rPr, 'sym'), face = sy ? at(sy, 'typeface', '') : '';
+  if (face && SYMF.test(face)) { t = t.replace(/[\uf000-\uf0ff]/g, '・'); if (/^[A-Za-z\u00a7\u00a8\u00d8\u00db\u00dc\u00fc\u00e9\u00ed\u00f1\u00f3\u00fa\u00fb\u00fe]$/.test(t)) t = '・'; }
+  return t;
+}
 async function readXml(pkg, p) {
   if (pkg.cache[p]) return pkg.cache[p];
   var s = await readText(pkg.zip, p); if (s == null) return null;
-  return (pkg.cache[p] = parseXml(s.replace(/^﻿/, '')));
+  return (pkg.cache[p] = parseXml(s));
 }
 async function readRels(pkg, p) {
   var rp = dirOf(p) + '/_rels/' + p.slice(p.lastIndexOf('/') + 1) + '.rels', key = 'rels:' + rp;
@@ -191,14 +199,9 @@ function xfrmOf(spPr) {
 }
 
 /* ---------- 書体の対応付け ---------- */
-function isCjk(s) { return /[　-ヿ㐀-鿿＀-￯]/.test(s); }
-function fontKey(face, cjk) {
-  face = face || '';
-  if (/明朝|mincho|serif|times|georgia|garamond|century|cambria|palatino|book antiqua|ming|song/i.test(face) && !/sans/i.test(face)) return 'mincho';
-  if (/丸|maru|rounded|ゴシックＭ?ＰＲ?|comic/i.test(face) && /丸|maru|rounded/i.test(face)) return 'maru';
-  if (!cjk && /^(inter|arial|helvetica|calibri|segoe|verdana|tahoma|roboto|open sans|lato)/i.test(face)) return 'sans-en';
-  return 'gothic';
-}
+function isCjk(s) { return /[\u3000-\u30ff\u3400-\u9fff\uf900-\ufaff\uff00-\uffef\u{20000}-\u{3134F}]/u.test(s); }
+/* 元の書体名 → フォント一覧のid（MS ゴシック→パソコンのMS ゴシック（無ければBIZ UDPゴシック）、游ゴシック、メイリオ、明朝系、Arial/Calibri→Inter/Lato など） */
+function fontKey(face, cjk) { return g.JukenFonts ? g.JukenFonts.fromName(face, cjk) : 'gothic'; }
 
 /* ---------- 塗り・線 ---------- */
 function fillOf(spPr, style, cx) {
@@ -303,7 +306,7 @@ function textElems(txBody, frame, o) {
     var runs = [], text = '';
     kids(p).forEach(function (c) {
       var n = c.localName;
-      if (n === 'r' || n === 'fld') { var t = kid(c, 't'); runs.push({ rPr: kid(c, 'rPr'), t: t ? t.textContent : '' }); }
+      if (n === 'r' || n === 'fld') { var t = kid(c, 't'), rp0 = kid(c, 'rPr'); runs.push({ rPr: rp0, t: t ? symText(rp0, t.textContent) : '' }); }
       else if (n === 'br') runs.push({ rPr: kid(c, 'rPr'), t: '\n' });
     });
     runs.forEach(function (r) { text += r.t; });
@@ -313,7 +316,7 @@ function textElems(txBody, frame, o) {
     var first = pPr && kids(pPr).filter(function (k) { return /^bu(None|Char|AutoNum)$/.test(k.localName); })[0];
     if (first) { bnone = first.localName === 'buNone' ? first : null; bch = first.localName === 'buChar' ? first : null; bnum = first.localName === 'buAutoNum' ? first : null; }
     if (text && !bnone) {
-      if (bch) bu = at(bch, 'char', '・').replace(/[•●▪■]/, '・');
+      if (bch) { var bf = pchild('buFont'), bfc = bf ? at(bf, 'typeface', '') : ''; bu = (bfc && SYMF.test(bfc)) ? '・' : at(bch, 'char', '・').replace(/[•●▪■]/, '・'); }
       else if (bnum) { counters[l] = (counters[l] || 0) + 1; bu = counters[l] + '.'; }
     }
     if (!bnum || !text) { if (!bnum) counters[l] = 0; }
@@ -365,7 +368,7 @@ function textElems(txBody, frame, o) {
     else r = sub(frame, il, ly, tw, lh2);
     var el = { type: 'text', id: o.base + 't' + k, x: r.x, y: r.y, w: r.w, h: r.h, rot: r.rot, text: txt, font: e.font, size: e.sz * T.S, weight: e.bold ? 700 : 400, italic: e.italic, underline: e.underline, strike: e.strike, color: e.col,
       align: e.algn === 'ctr' ? 'center' : e.algn === 'r' ? 'right' : /^(just|dist|justLow)$/.test(e.algn) ? 'justify' : 'left',
-      valign: groups.length > 1 ? 'top' : anchor === 'ctr' ? 'middle' : anchor === 'b' ? 'bottom' : 'top', lineHeight: e.lh, letterSpacing: e.spc ? e.spc / 100 / Math.max(1, e.sz / fontScale) : 0, vertical: vert === 'vert' || vert === 'eaVert', fit: (wrapNone || (groups.length === 1 && gp.paras.length === 1 && txt.indexOf('\n') < 0 && estLines(txt, e.sz * T.S, tw * 1.25) <= 1)) ? 'shrink' : 'none', padding: 0, name: txt.replace(/\s+/g, ' ').slice(0, 20) || 'テキスト' };
+      valign: groups.length > 1 ? 'top' : anchor === 'ctr' ? 'middle' : anchor === 'b' ? 'bottom' : 'top', lineHeight: e.lh, letterSpacing: e.spc ? e.spc / 100 / Math.max(1, e.sz / fontScale) : 0, vertical: vert === 'vert' || vert === 'eaVert', fit: (wrapNone || (groups.length === 1 && gp.paras.length === 1 && txt.indexOf('\n') < 0 && estLines(txt, e.sz * T.S, tw * 1.25) <= 1)) ? 'shrink' : 'none', padding: 0, name: (g.JukenText ? g.JukenText.first(txt.replace(/\s+/g, ' '), 20) : txt.replace(/\s+/g, ' ').slice(0, 20)) || 'テキスト' };
     if (o.locked) el.locked = true;
     if (o.groupId) el.groupId = o.groupId;
     out.push(el);
@@ -386,7 +389,7 @@ function loadImg(url) { return new Promise(function (ok, ng) { var i = new Image
 function mimeOf(p) { var e = (p.split('.').pop() || '').toLowerCase(); return { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', bmp: 'image/bmp', webp: 'image/webp', svg: 'image/svg+xml' }[e] || ''; }
 function placeholderSvg(w, h, label) {
   var W = 400, H = Math.max(40, Math.round(400 * h / Math.max(1, w))), lines = [], cur = '';
-  Array.from(label).forEach(function (ch) { if (cur.length >= 22 && /[。、）（\s]/.test(ch) || cur.length >= 26) { lines.push(cur); cur = ''; } cur += ch; });
+  (g.JukenText ? g.JukenText.seg(label) : Array.from(label)).forEach(function (ch) { if (cur.length >= 22 && /[。、）（\s]/.test(ch) || cur.length >= 26) { lines.push(cur); cur = ''; } cur += ch; });
   if (cur) lines.push(cur);
   var fs = 15, y0 = H / 2 - (lines.length - 1) * fs * 0.7;
   var t = lines.map(function (l, i) { return '<text x="' + W / 2 + '" y="' + (y0 + i * fs * 1.4) + '" font-size="' + fs + '" text-anchor="middle" fill="#475569" font-family="sans-serif">' + l.replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }) + '</text>'; }).join('');

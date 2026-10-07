@@ -45,7 +45,7 @@ JukenTemplates.register({
   uses: ['header', 'badge', 'mark', 'accent', 'secondary', 'font', 'fold', 'notes', 'swap', 'images', 'wm'],
   render: function (st, V, C) {
     var t = C.page('navy-exec', V, (V.swap ? 'sw ' : '') + (V.font === 'mincho' ? 'mi' : ''));
-    t.style.fontFamily = V.font === 'mincho' ? SERIF : SANS;
+    t.style.fontFamily = C.pickFont(V, SANS, SERIF);
 
     /* ---- 紺の帯 ---- */
     var band = C.el('div', 'n-band'); t.appendChild(band);

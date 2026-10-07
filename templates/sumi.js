@@ -44,7 +44,7 @@ JukenTemplates.register({
   uses: ['header', 'badge', 'mark', 'accent', 'font', 'fold', 'notes', 'swap', 'images', 'wm'],
   render: function (st, V, C) {
     var t = C.page('sumi', V, (V.swap ? 'sw ' : '') + (V.font === 'gothic' ? 'g' : ''));
-    t.style.fontFamily = V.font === 'gothic' ? SANS : SERIF;
+    t.style.fontFamily = C.pickFont(V, SANS, SERIF);
 
     /* ---- header ---- */
     var hasSeal = V.markOn && V.mark;

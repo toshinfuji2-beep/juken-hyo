@@ -4,13 +4,17 @@
 (function (g) {
 'use strict';
 var JT = g.JukenTemplates, C = JT.ctx, el = C.el, PXMM = C.PXMM;
-var H = null, M = null, OV = null, DD = g.DesignDetect;
+var H = null, M = null, OV = null, DD = g.DesignDetect, JTX = g.JukenText;
 var MAX_BYTES = 30 * 1024 * 1024;
 var LIB = {
   jszip: 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
   pdf: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
-  pdfw: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'
+  pdfw: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js',
+  /* 日本語PDF（CIDフォント）の文字を正しく読むための CMap と標準フォント。pdf.js と同じバージョン（cdnjs には cmaps が無いので jsDelivr の pdfjs-dist） */
+  cmaps: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/cmaps/',
+  fonts: 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/standard_fonts/'
 };
+var PDF_OPTS = { cMapUrl: LIB.cmaps, cMapPacked: true, standardFontDataUrl: LIB.fonts };
 var STD = ['受験番号', '氏名', 'カナ氏名', '志望学部', '教室', '学校名', '学年'];
 var libP = {};
 function loadScript(u) {
@@ -226,6 +230,7 @@ async function detectText(mode) {
       M.detectNote = (e && e.message === 'cancel') ? '文字の自動判定をやめました。「差し込み枠を追加」で指定できます。' : ((e && e.message) || '文字の自動判定ができませんでした。') ;
     }
     if (M.method === 'ocr' && M.noTextLayer) M.detectNote = 'このPDFには文字情報が無い（スキャン画像）ため、画像として文字を読み取りました。';
+    else if (M.method === 'ocr' && M.garbleAll) M.detectNote = M.garbleNote;
   }
   if (!M || M.cancelled) return;
   await buildDetected(lines, ocr);
@@ -249,7 +254,7 @@ async function rescueLabels(boxes) {
       if (!empty(rg)) continue;
       var ink = DD.inkBox(M.pix, toPx(rg)); if (!ink) continue;
       var r = await DD.ocrRegion(M.pix, ink, L.label, ocrProg), t = r.text;
-      var okTxt = t && (L.label === '受験番号' ? /^[0-9]{1,10}$/.test(t) : (t.length <= 20 && r.conf >= 45 && !DD.labelOf(t, true)));
+      var okTxt = t && (L.label === '受験番号' ? /^[0-9]{1,10}$/.test(t) : (JTX.len(t) <= 20 && r.conf >= 45 && !DD.labelOf(t, true)));
       if (!okTxt) continue;
       var hh = ink.h * G.k, isNum = /^[0-9A-Za-z.\-]+$/.test(t), bx = { text: t, x: G.ox + ink.x * G.k, y: G.oy + ink.y * G.k, w: ink.w * G.k, h: hh, size: hh * 2.8346 / (isNum ? 0.74 : 0.92), conf: r.conf };
       out.push(bx); sb.push({ id: 'r' + out.length, text: t, x: bx.x, y: bx.y, w: bx.w, h: bx.h, size: bx.size }); break;
@@ -262,7 +267,7 @@ async function buildDetected(lines, ocr) {
   var G = M.geo, boxes = [];
   lines.forEach(function (l) {
     var b = { text: DD.cleanText(l.text), x: G.ox + l.x * G.k, y: G.oy + l.y * G.k, w: l.w * G.k, h: l.h * G.k, size: l.fh * G.k * 2.8346, conf: l.conf };
-    if (!b.text || b.text.length > 40 || b.size < 3 || b.size > 90 || b.w < 1) return;
+    if (!b.text || JTX.len(b.text) > 40 || b.size < 3 || b.size > 90 || b.w < 1) return;
     var sp = DD.splitLabelValue(b, ocr); if (sp) { boxes.push(sp[0]); boxes.push(sp[1]); } else boxes.push(b);
   });
   if (boxes.length > 300) boxes = boxes.slice(0, 300);
@@ -306,7 +311,7 @@ async function loadPdfLib() {
 async function startPdf(f) {
   showBusy('PDFを読み込んでいます…');
   var lib = await loadPdfLib(), buf = await readBuf(f), doc;
-  try { doc = await lib.getDocument({ data: new Uint8Array(buf) }).promise; }
+  try { doc = await lib.getDocument(Object.assign({ data: new Uint8Array(buf) }, PDF_OPTS)).promise; }
   catch (e) {
     if (e && e.name === 'PasswordException') throw new Error('このPDFはパスワードで保護されています。パスワードを外してからもう一度お試しください。');
     throw new Error('PDFを開けませんでした。壊れているか、PDFではない可能性があります。');
@@ -327,6 +332,21 @@ async function renderPdfPage(n, sc) {
   await pg.render({ canvasContext: x, viewport: v }).promise;
   return { pg: pg, v: v, cv: cv, ratio: v0.width / v0.height, sc: sc };
 }
+/* PDFの文字情報に文字化け（私用領域・置換文字・Latin-1の化け等）があれば、その部分は画像から読み取り直す。大半が化けていればページ全体をOCRに切り替える */
+async function fixGarbled(items, cv) {
+  var bad = items.filter(function (i) { return i.bad; }), real = items.filter(function (i) { return String(i.s).trim(); });
+  if (!bad.length) return { items: items, note: '', all: false };
+  if (bad.length >= 0.4 * real.length || bad.length > 10) return { items: [], note: 'このPDFの文字情報が文字化けしていた（' + bad.length + 'か所）ため、画像として文字を読み取りました。', all: true };
+  var out = items.filter(function (i) { return !i.bad; }), fixed = 0;
+  showBusy('文字化けしている部分を読み取り直しています…', null, null, ocrNote());
+  for (var k = 0; k < bad.length; k++) {
+    try {
+      var r = await DD.ocrRegion(cv, { x: bad[k].x, y: bad[k].y, w: bad[k].w, h: bad[k].h }, '', ocrProg), t = DD.cleanText(r.text);
+      if (t && !JTX.isGarbage(t)) { out.push(Object.assign({}, bad[k], { s: t, bad: false, ocr: true })); fixed++; }
+    } catch (e) { if (M && M.cancelled) throw e; }
+  }
+  return { items: out, note: 'PDFの文字情報のうち' + bad.length + 'か所が文字化けしていたため、その部分は画像から読み取り直しました（' + fixed + 'か所で成功）。読み間違いがないか確認してください。', all: false };
+}
 async function pickPdfPage(n) {
   showBusy('ページを取り込んでいます…');
   var r = await renderPdfPage(n), cv = r.cv;
@@ -334,6 +354,8 @@ async function pickPdfPage(n) {
   M.pdfSc = r.sc; M.pdfPage = n; M.noTextLayer = false; M.textItems = null;
   var items = [];
   try { items = await DD.pdfItems(r.pg, r.v, g.pdfjsLib); } catch (e) { items = []; }
+  M.garbleNote = ''; M.garbleAll = false;
+  var fx = await fixGarbled(items, r.cv); items = fx.items; M.garbleNote = fx.note; M.garbleAll = fx.all;
   var real = items.filter(function (i) { return String(i.s).trim(); });
   var mode = 'ocr';
   if (real.length >= 3) { M.textItems = items; mode = 'text'; } else M.noTextLayer = true;
@@ -484,7 +506,7 @@ function drawStage() {
     else if (sg[e.id]) { h.classList.add('sug'); h.appendChild(el('span', 'chip', '候補：' + sg[e.id].label)); }
     else if (M.det[e.id]) h.classList.add('det');
     if (M.sel === e.id) { h.classList.add('cur'); if (M.custom[e.id]) { var rz = el('span', 'rz'); rz.setAttribute('data-rz', '1'); h.appendChild(rz); } }
-    h.title = map ? '「' + map + '」に差し込み（クリックで変更）' : (M.det[e.id] ? '『' + String(e.text).slice(0, 20) + '』をクリックして、何にするか選ぶ' : 'クリックして、この文字を何にするか選ぶ');
+    h.title = map ? '「' + map + '」に差し込み（クリックで変更）' : (M.det[e.id] ? '『' + JTX.first(String(e.text), 20) + '』をクリックして、何にするか選ぶ' : 'クリックして、この文字を何にするか選ぶ');
     hits.appendChild(h);
   });
   hits.onpointerdown = onDown;
@@ -549,7 +571,7 @@ function openPop(eid) {
   var hit = M.hits.querySelector('[data-eid="' + eid + '"]'); if (hit) { M.hits.querySelectorAll('.hit.cur').forEach(function (n) { n.classList.remove('cur'); }); hit.classList.add('cur'); }
   var pop = el('div', 'dp-pop'); M.pop = pop; pop.onpointerdown = function (ev) { ev.stopPropagation(); };
   pop.appendChild(el('h4', null, 'この文字を何にしますか？'));
-  var org = M.custom[eid] ? '差し込み枠' : '元の文字：『' + String(M.orig[eid] != null ? M.orig[eid] : e.text).replace(/\s+/g, ' ').trim().slice(0, 30) + '』';
+  var org = M.custom[eid] ? '差し込み枠' : '元の文字：『' + JTX.first(String(M.orig[eid] != null ? M.orig[eid] : e.text).replace(/\s+/g, ' ').trim(), 30) + '』';
   pop.appendChild(el('p', 'org', org));
   var cur = M.map[eid], sg = (M.sugg || []).filter(function (s) { return s.eid === eid; })[0], bt = el('div', 'bt');
   var done = function () { drawStage(); drawSide(); };
@@ -580,7 +602,7 @@ function openPop(eid) {
 }
 function styleRow(pop, e) {
   pop.appendChild(el('div', 'sm', '文字の見た目'));
-  var st = el('div', 'st'), fs = el('select'); JukenFree.FONT_NAMES.forEach(function (f) { var o = el('option', null, f[1]); o.value = f[0]; fs.appendChild(o); }); fs.value = e.font; fs.setAttribute('aria-label', '書体');
+  var st = el('div', 'st'), fs = el('select'); JukenFonts.fillSelect(fs, e.font); fs.setAttribute('aria-label', '書体');
   fs.onchange = function () { e.font = fs.value; drawStage(); };
   var mi = btn('−', '小さく'), pl = btn('＋', '大きく'), nm = el('span', 'num', String(Math.round(e.size * 10) / 10));
   var ch = function (d) { e.size = Math.max(4, Math.min(200, Math.round((e.size + d) * 10) / 10)); nm.textContent = String(e.size); redrawKeep(); };
@@ -621,7 +643,7 @@ function drawSide() {
     var all = btn('おすすめを全部適用', '候補をまとめて割り当てます', 'pri'); all.style.width = '100%'; all.style.marginBottom = '6px';
     all.onclick = function () { pend.forEach(function (x) { mapEl(x.eid, x.label); }); drawStage(); drawSide(); H.toast(pend.length + '件を割り当てました'); }; sec.appendChild(all);
     pend.forEach(function (x) {
-      var r = el('div', 'dp-sg'), tx = el('span', 'tx'); tx.appendChild(el('b', null, x.label)); tx.appendChild(document.createTextNode('　←『' + String(M.orig[x.eid] || '').replace(/\s+/g, ' ').trim().slice(0, 14) + '』（' + x.why + '）'));
+      var r = el('div', 'dp-sg'), tx = el('span', 'tx'); tx.appendChild(el('b', null, x.label)); tx.appendChild(document.createTextNode('　←『' + JTX.first(String(M.orig[x.eid] || '').replace(/\s+/g, ' ').trim(), 14) + '』（' + x.why + '）'));
       tx.title = x.why + '（確度：' + DD.confWord(x.conf == null ? 0.7 : x.conf) + '）'; r.appendChild(tx); if (x.conf != null) r.appendChild(el('span', 'cf', '確度' + DD.confWord(x.conf))); var ok = btn('適用'); ok.onclick = function (ev) { ev.stopPropagation(); mapEl(x.eid, x.label); drawStage(); drawSide(); }; r.appendChild(ok);
       r.onclick = function () { M.sel = x.eid; var h = M.hits && M.hits.querySelector('[data-eid="' + x.eid + '"]'); if (h) h.scrollIntoView({ block: 'center', behavior: 'smooth' }); openPop(x.eid); };
       sec.appendChild(r);
@@ -635,7 +657,7 @@ function drawSide() {
   keys.forEach(function (k) {
     var r = el('div', 'dp-mp'), l = M.map[k], fx = M.fixedLbl[l] !== undefined;
     r.appendChild(el('b', null, (fx ? '固定：' : '') + l));
-    var tx = el('span', 'tx', M.custom[k] ? '（差し込み枠）' : '←『' + String(M.orig[k] || '').replace(/\s+/g, ' ').trim().slice(0, 16) + '』'); r.appendChild(tx);
+    var tx = el('span', 'tx', M.custom[k] ? '（差し込み枠）' : '←『' + JTX.first(String(M.orig[k] || '').replace(/\s+/g, ' ').trim(), 16) + '』'); r.appendChild(tx);
     var de = M.det[k] && elOf(k); if (de && de.cover && !de.cover.uniform) { var wb = el('div', 'dp-wb', '背景が模様のため消し跡が見える可能性'); wb.style.marginLeft = '0'; r.style.flexWrap = 'wrap'; r.appendChild(wb); }
     var go = btn('選択', '位置を表示'); go.onclick = function () { M.sel = k; var h = M.hits && M.hits.querySelector('[data-eid="' + k + '"]'); if (h) h.scrollIntoView({ block: 'center', behavior: 'smooth' }); openPop(k); }; r.appendChild(go);
     var x = btn('✕', '割り当てをやめる'); x.setAttribute('aria-label', '割り当てをやめる'); x.onclick = function () { mapEl(k, null); drawStage(); drawSide(); }; r.appendChild(x);
@@ -670,10 +692,17 @@ function drawSide() {
 function methodNote(box) {
   if (!M.stats || !M.stats.bgOnly || !M.method) return;
   var d = el('div', 'dp-meth');
-  if (M.method === 'text') { d.classList.add('mok'); d.appendChild(el('b', null, 'PDFの文字情報から自動判定しました（正確）')); d.appendChild(document.createTextNode('文字の位置と大きさをPDFから直接読み取っています。')); }
+  if (M.method === 'text') {
+    d.classList.add('mok'); d.appendChild(el('b', null, 'PDFの文字情報から自動判定しました（正確）')); d.appendChild(document.createTextNode('文字の位置と大きさをPDFから直接読み取っています。'));
+    /* 文字情報が見た目と違う（化けている）ときの手動の逃げ道：画像として読み取り直す */
+    var rb = btn('文字がおかしいときは、画像から読み取り直す', 'PDFの文字情報を使わず、見た目の文字を画像として読み取ります'); rb.style.cssText = 'display:block;margin-top:6px;padding:2px 8px;font-size:12px';
+    rb.onclick = async function () { var tk = M; try { M.garbleNote = '読み取り直しを指定したため、画像として文字を読み取りました。'; M.garbleAll = true; await startBackground(M.elements[0].src, M.geo.cw / M.geo.ch, 'PDF', M.pix, 'ocr'); } catch (e) { if (M === tk && !M.cancelled) showMap(); } };
+    d.appendChild(rb);
+  }
   else if (M.method === 'ocr') { d.classList.add('mck'); d.appendChild(el('b', null, '画像の文字を読み取って判定しました（要確認）')); d.appendChild(document.createTextNode((M.detectNote ? M.detectNote + ' ' : '') + '読み間違いがないか、候補をよく確認してください。画像はこの端末のブラウザ内だけで処理され、外部には送られません。')); }
   else if (M.detectNote) { d.classList.add('mck'); d.appendChild(document.createTextNode(M.detectNote)); }
-  else return;
+  else if (!(M.garbleNote && !M.garbleAll)) return;
+  if (M.garbleNote && !M.garbleAll) { d.classList.remove('mok'); d.classList.add('mck'); var gp = el('div'); gp.style.marginTop = '4px'; gp.appendChild(el('b', null, '文字化けを検出しました')); gp.appendChild(document.createTextNode('　' + M.garbleNote)); d.appendChild(gp); }
   box.appendChild(d);
 }
 function summary(box) {
@@ -743,16 +772,22 @@ async function readRosterPdf() {
     sideProg('名簿を読み取っています… ' + i + ' / ' + n); if (i % 3 === 1) await nextFrame();
     var pg = await M.pdf.getPage(i), vp = pg.getViewport({ scale: M.pdfSc }), items = [];
     try { items = await DD.pdfItems(pg, vp, lib); } catch (e) { items = []; }
-    labels.forEach(function (l) {
+    var pcv = null;
+    for (var li = 0; li < labels.length; li++) {
+      var l = labels[li];
       var r = { x: fr[l].x * vp.width, y: fr[l].y * vp.height, w: fr[l].w * vp.width, h: fr[l].h * vp.height }, px = r.w * 0.6, py = r.h * 0.2; /* ページごとに位置が少しずれていても拾えるよう、横に広めに見る */
       var ins = items.filter(function (it) { if (!String(it.s).trim()) return false; var cx = it.x + it.w / 2, cy = it.y + it.h / 2; return cx >= r.x - px && cx <= r.x + r.w + px && cy >= r.y - py && cy <= r.y + r.h + py; });
+      if (ins.some(function (it) { return it.bad; })) {   /* 文字化けしている → この場所だけ画像から読む */
+        try { if (!pcv) pcv = (await renderPdfPage(i, M.pdfSc)).cv; var oc = await DD.ocrRegion(pcv, r, l, function () { }); by[l].push(fixVal(l, oc.text)); M.garbleHit = (M.garbleHit || 0) + 1; continue; }
+        catch (e2) { if (M !== token) return null; ins = ins.filter(function (it) { return !it.bad; }); }
+      }
       /* 行にまとめてから、枠に重なる行を採る（重なる行が無ければ、いちばん近い行） */
       var lines = DD.mergeItems(ins), tol = r.h * 0.12, hit = lines.filter(function (q) { return q.x < r.x + r.w + tol && q.x + q.w > r.x - tol && q.y < r.y + r.h + tol && q.y + q.h > r.y - tol; });
       if (!hit.length && lines.length) {
         var best = null, bd = 1e9; lines.forEach(function (q) { var d = Math.abs(q.x + q.w / 2 - (r.x + r.w / 2)) + Math.abs(q.y + q.h / 2 - (r.y + r.h / 2)); if (d < bd) { bd = d; best = q; } }); hit = [best];
       }
       by[l].push(fixVal(l, hit.sort(function (a, b) { return a.y - b.y || a.x - b.x; }).map(function (x) { return x.text; }).join(' ')));
-    });
+    }
   }
   M.rosterN = n; return by;
 }
@@ -838,10 +873,10 @@ async function finish() {
     if (!rosterLines) { if (OV && M && M.side) M.side.querySelectorAll('.dp-sf button').forEach(function (b) { b.disabled = false; }); return; }
   }
   var info = { name: M.name, elements: elements, bg: M.bg, items: items, rosterLines: rosterLines, kind: M.kind };
-  var nRows = rosterLines ? M.rosterN : 0;
+  var nRows = rosterLines ? M.rosterN : 0, gh = M.garbleHit || 0;
   closeOverlay();
   H.apply(info);
-  H.toast('『' + info.name + '』を取り込みました。' + (nRows ? nRows + '名分の名簿も入れました。' : '次は名簿を入れます。'));
+  H.toast('『' + info.name + '』を取り込みました。' + (nRows ? nRows + '名分の名簿も入れました。' : '次は名簿を入れます。') + (gh ? '（PDFの文字化けがあった' + gh + 'か所は画像から読み取りました。内容を確認してください）' : ''));
 }
 
 /* ---------- ステップ①のカード・ファイル選択 ---------- */

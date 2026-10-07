@@ -169,10 +169,10 @@ var TYPE_ICON = { text: 'text', field: 'ph', rect: 'rect', ellipse: 'circle', li
 
 
 /* ---------- プロパティ定義（右の「詳細」と上のツールバーを同じ定義から作る） ---------- */
-var FONT_OPTS = JF.FONT_NAMES;
+var JFN = window.JukenFonts;
 var DASH_OPTS = [['solid', '実線'], ['dashed', '破線'], ['dotted', '点線']];
 var TXT_S = [
-  { k: 'font', t: 'sel', l: 'フォント', opts: FONT_OPTS, ctx: 1, w: 118 },
+  { k: 'font', t: 'font', l: 'フォント', ctx: 1, w: 118 },
   { k: 'size', t: 'num', l: 'サイズ', u: 'pt', min: 1, max: 500, step: 0.5, ctx: 1, stp: 1, w: 50 },
   { k: 'weight', t: 'bold', l: '太字', ctx: 1 },
   { k: 'italic', t: 'chk', l: '斜体' }, { k: 'underline', t: 'chk', l: '下線' }, { k: 'strike', t: 'chk', l: '取り消し線' },
@@ -188,7 +188,7 @@ var TXT_S = [
 ];
 var SCHEMA = {
   text: [{ k: 'text', t: 'area', l: '内容（{{項目名}} で差し込み）' }].concat(TXT_S),
-  field: [{ k: 'itemId', t: 'item', l: '項目' }, { k: 'showLabel', t: 'chk', l: '項目名を表示' }, { k: 'labelText', t: 'text', l: '項目名の文字（空なら項目名）' },
+  field: [{ k: 'itemId', t: 'item', l: '項目' }, { k: 'showLabel', t: 'chk', l: '項目名を表示' }, { k: 'labelText', t: 'text', l: '項目名の文字（空なら項目名）' }, { k: 'ruby', t: 'ruby', l: 'ふりがなを上に小さく' }, { k: 'rubyScale', t: 'num', l: 'ふりがなの大きさ（氏名に対する比）', min: 0.2, max: 1, step: 0.05 },
     { k: 'labelPos', t: 'sel', l: '項目名の位置', opts: [['top', '上'], ['left', '左']] }, { k: 'labelSize', t: 'num', l: '項目名のサイズ', u: 'pt', min: 1, max: 200, step: 0.5 }, { k: 'labelColor', t: 'col', l: '項目名の色' }]
     .concat(TXT_S.filter(function (p) { return p.k !== 'vertical'; })),
   rect: [{ k: 'fill', t: 'col', l: '塗り', none: 1, ctx: 1 }, { k: 'stroke', t: 'col', l: '線の色', none: 1, ctx: 1 }, { k: 'strokeWidth', t: 'num', l: '線の太さ', u: 'pt', min: 0, max: 50, step: 0.25, ctx: 1, cl: '太さ', w: 52 },
@@ -590,11 +590,12 @@ function rangeNum(o) {
   w.appendChild(r); w.appendChild(n); return w;
 }
 var SIZES = [6, 7, 8, 9, 10, 10.5, 11, 12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 44, 48, 54, 60, 66, 72, 80, 88, 96];
-function fontLabel(k) { for (var i = 0; i < JF.FONT_NAMES.length; i++) if (JF.FONT_NAMES[i][0] === k) return JF.FONT_NAMES[i][1]; return ''; }
+function fontLabel(k) { return k ? (JFN.valid(k) ? JFN.get(k).name : String(k)) : ''; }
 function fontCombo(cur, on, dis) {
   var w = h('span', 'fe-combo f'), i = h('input'), b = h('button', 'fe-cba', '<i class="fe-dd"></i>'); i.type = 'text'; i.readOnly = true; i.value = cur ? fontLabel(cur) : ''; i.setAttribute('aria-label', 'フォント'); b.type = 'button'; b.tabIndex = -1;
-  w.setAttribute('data-tip', tipOf('フォント', '文字の書体を変更します。'));
-  function open() { openMenu(0, 0, JF.FONT_NAMES.map(function (f) { return { l: f[1], st: 'font-family:' + JF.FONTS[f[0]] + ';font-size:13px', ck: cur === f[0], fn: function () { on(f[0]); } }; }), w); }
+  if (cur && JFN.valid(cur)) { i.style.fontFamily = JF.fcss(cur); JFN.use(cur); }
+  w.setAttribute('data-tip', tipOf('フォント', '文字の書体を変更します。種類別・検索つきの一覧から選べます。'));
+  function open() { closePop(); JFN.openPicker({ anchor: w, value: cur, theme: 'light', onPick: on }); }
   i.onclick = open; b.onclick = open; i.disabled = b.disabled = !!dis; w.appendChild(i); w.appendChild(b); return w;
 }
 function sizeCombo(cur, on, dis) {
@@ -1026,7 +1027,7 @@ function expandGroups(ids) {
 function selChanged() { drawFrame(); if (rawKey() !== S.rawKey) drawPage(); drawOv(); drawTabs(); drawRibbon(); drawPane(); }
 function restyleEdit(e) {
   var n = S.editing && S.editing.node; if (!n || !e) return; var s = n.style;
-  s.fontFamily = JF.FONTS[e.font] || JF.FONTS.gothic; s.fontSize = e.size + 'pt'; s.fontWeight = e.weight; s.fontStyle = e.italic ? 'italic' : 'normal';
+  s.fontFamily = JF.fcss(e.font); s.fontSize = e.size + 'pt'; s.fontWeight = e.weight; s.fontStyle = e.italic ? 'italic' : 'normal';
   s.textDecoration = [e.underline ? 'underline' : '', e.strike ? 'line-through' : ''].join(' ').trim() || 'none';
   s.color = resolveColor(e.color); s.textAlign = e.align; s.lineHeight = e.lineHeight; s.letterSpacing = e.letterSpacing ? e.letterSpacing + 'em' : '';
 }
@@ -1041,6 +1042,9 @@ function eachProp(label, fn) {
   if (editingOnly(es)) { lbl(label); fn(es[0]); H.changed(true); restyleEdit(es[0]); drawOv(); drawRibbon(); drawPane(); return; }
   mut(function () { es.forEach(fn); }, { label: label });
 }
+/* 太字：フォントにある太さのうち近いものを使う（太い太さが無い書体は 700 を指定してブラウザの擬似太字） */
+function setBold(on) { eachProp('太字の変更', function (e) { if ('weight' in e) e.weight = JFN.snap(e.font, on ? 700 : 400); }); }
+function setFont(v) { JFN.use(v); eachProp('フォントの変更', function (e) { if ('font' in e) { e.font = v; if ('weight' in e) e.weight = JFN.snap(v, e.weight); } }); }
 function forGeom(fn, label) { var es = selEls().filter(function (e) { return !e.locked; }); if (!es.length) return; mut(function () { es.forEach(fn); }, { label: label || '位置とサイズの変更' }); }
 function addEl(type, props) {
   var e = JF.newElement(type, props); if (!e) return null;
@@ -1345,7 +1349,7 @@ function resizeKey(e, k, v) {
 var RT = {};
 RT.home = function (X1) {
   var n = X1.n, txt = X1.has('size'), fnt = X1.has('font'), has = X1.has;
-  function tog(k, i, t, k2, on) { return rb({ i: i, t: t, d: '', k: k2, on: on, dis: !has(k), fn: function () { setProp(k, k === 'weight' ? (on ? 400 : 700) : !on); } }); }
+  function tog(k, i, t, k2, on) { return rb({ i: i, t: t, d: '', k: k2, on: on, dis: !has(k), fn: function () { if (k === 'weight') setBold(!on); else setProp(k, !on); } }); }
   var bold = X1.val('weight') >= 600, it = X1.val('italic') === true, ul = X1.val('underline') === true, st = X1.val('strike') === true;
   var al = X1.val('align'), lh = X1.val('lineHeight'), ls = X1.val('letterSpacing');
   var fillOn = !!X1.fillKey;
@@ -1357,7 +1361,7 @@ RT.home = function (X1) {
         rb({ i: 'fpaint', l: '書式のコピー/貼り付け', t: '書式のコピー/貼り付け', d: '選んだ要素の書式をコピーして、ほかの要素にクリックで貼り付けます。ダブルクリックで続けて貼り付けられます。', k: 'Ctrl+Shift+C / V', on: !!S.fp, dis: !n && !S.fp, fn: function () { fpToggle(false); }, dbl: function () { if (S.fp) { S.fpSticky = true; } else { fpToggle(true); } } }))
     ]),
     grp('フォント', [col(
-      rrow(fontCombo(fnt ? X1.val('font') : '', function (v) { setProp('font', v); }, !fnt), sizeCombo(txt ? X1.val('size') : null, function (v) { setProp('size', v); }, !txt),
+      rrow(fontCombo(fnt ? X1.val('font') : '', setFont, !fnt), sizeCombo(txt ? X1.val('size') : null, function (v) { setProp('size', v); }, !txt),
         rb({ i: 'fontup', t: 'フォント サイズの拡大', d: '文字を大きくします。', k: 'Ctrl+Shift+>', dis: !txt, fn: function () { stepSize(1); } }), rb({ i: 'fontdown', t: 'フォント サイズの縮小', d: '文字を小さくします。', k: 'Ctrl+Shift+<', dis: !txt, fn: function () { stepSize(-1); } })),
       rrow(tog('weight', 'bold', '太字', 'Ctrl+B', bold), tog('italic', 'italic', '斜体', 'Ctrl+I', it), tog('underline', 'underline', '下線', 'Ctrl+U', ul), tog('strike', 'strike', '取り消し線', '', st),
         rb({ i: 'spacing', drop: 1, t: '文字の間隔', d: '文字と文字の間隔を変えます。', dis: !has('letterSpacing'), fn: function (e, b) {
@@ -1500,10 +1504,12 @@ function drawRibbon() {
 function prow(label, ctl, wide) { var d = h('div', 'fe-pr'); if (label) d.appendChild(tx('label', null, label)); if (wide || !label) { ctl.classList.add('fe-wide'); } d.appendChild(ctl); return d; }
 function propControl(p, es) {
   var e0 = es[0], P = h('div'), same = function (k) { return es.every(function (e) { return e[k] === e0[k]; }); };
+  if (p.t === 'font') return prow(p.l, fontCombo(e0.font, setFont, false));
+  if (p.t === 'ruby') { var ro = [['', 'なし']].concat(V().items.filter(function (it) { return it.source !== 'schedule' && it.id !== e0.itemId; }).map(function (it) { return [it.id, it.label || '（無題）']; })); return prow(p.l, selInput(ro, e0.ruby || '', function (v) { setProp('ruby', v); })); }
   if (p.t === 'sel') return prow(p.l, selInput(p.opts, e0[p.k], function (v) { setProp(p.k, v); }));
   if (p.t === 'num') { var no = { v: e0[p.k], min: p.min, max: p.max, step: p.step, label: p.l, on: function (v) { setProp(p.k, v); } }, n; if (p.u) { n = h('div', 'fe-nl u'); var ni = numInput(no); n.appendChild(ni); n.appendChild(tx('span', 'fe-u', p.u)); } else n = numInput(no); return prow(p.l, n); }
   if (p.t === 'col') return prow(p.l, swatch(e0[p.k], p.none, function (v, lv) { setProp(p.k, v, lv); }, e0[p.k] === 'accent' ? 'アクセント色' : e0[p.k] === 'secondary' ? 'サブカラー' : (!e0[p.k] || e0[p.k] === 'transparent') ? 'なし' : e0[p.k]));
-  if (p.t === 'bold') return chkInput('太字', e0.weight >= 600, function (v) { setProp('weight', v ? 700 : 400); });
+  if (p.t === 'bold') return chkInput('太字', e0.weight >= 600, function (v) { setBold(v); });
   if (p.t === 'vert') return chkInput('縦書き', e0.vertical, function (v) { setProp('vertical', v); });
   if (p.t === 'chk') {
     if (p.tv) return chkInput(p.l, e0[p.k] === p.tv[1], function (v) { setProp(p.k, v ? p.tv[1] : p.tv[0]); });
@@ -1663,7 +1669,7 @@ function colorName(c) {
 /* 名前を付けていない要素は、中身から自動で名前を付ける */
 function autoName(e) {
   var Vv = V();
-  if (e.type === 'text') { var t = JF.resolveText(e.text, Vv, H.students()[0] || H.sample()).replace(/\s+/g, ' ').trim(); return t ? (t.length > 12 ? t.slice(0, 12) + '…' : t) : '（空のテキスト）'; }
+  if (e.type === 'text') { var t = JF.resolveText(e.text, Vv, H.students()[0] || H.sample()).replace(/\s+/g, ' ').trim(); return t ? window.JukenText.cut(t, 13) : '（空のテキスト）'; }
   if (e.type === 'field') { var it = JF.itemById(Vv, e.itemId); return it ? (it.label || '（無題の項目）') : '（項目が未選択）'; }
   if (e.type === 'image') return e.src === 'map' ? '地図' : e.src === 'logo' ? 'ロゴ' : /^assets\//.test(e.src) ? e.src.split('/').pop() : e.src ? '画像' : '画像（未設定）';
   if (e.type === 'rect') return '四角（' + colorName(e.fill) + '）';
@@ -1746,14 +1752,16 @@ function drawFmtPane(P) {
   if (S.ptab === 'text' && textTab) {
     if (t === 'text' && one) psec(pb, 'content', 'テキスト', function (b) { addCtl(b, es, 'text'); b.appendChild(tx('p', null, '「{{項目名}}」は印刷のとき生徒ごとの値に置き換わります。')).style.cssText = 'margin:0;font-size:11px;color:var(--mut)'; });
     if (t === 'field' && one) {
-      psec(pb, 'field', 'フィールド', function (b) { ['itemId', 'showLabel', 'labelText', 'labelPos', 'labelSize', 'labelColor'].forEach(function (k) { addCtl(b, es, k); }); var fit = JF.itemById(V(), e0.itemId); if (fit) b.appendChild(itemBox(fit, false)); });
+      psec(pb, 'field', 'フィールド', function (b) { ['itemId', 'showLabel', 'labelText', 'labelPos', 'labelSize', 'labelColor', 'ruby'].concat(e0.ruby ? ['rubyScale'] : []).forEach(function (k) { addCtl(b, es, k); }); var fit = JF.itemById(V(), e0.itemId); if (fit) b.appendChild(itemBox(fit, false)); });
     }
     psec(pb, 'font', 'フォント', function (b) {
       addCtl(b, es, 'font'); addCtl(b, es, 'size');
+      var wsv = JFN.weights(e0.font || 'gothic');
+      if (e0.font && 'weight' in e0 && wsv.length > 2) b.appendChild(prow('太さ', selInput(wsv.map(function (x) { return [x, JFN.weightLabel(x)]; }), JFN.nearest(e0.font, e0.weight), function (v) { setProp('weight', +v); })));
       var d = h('div'); d.style.cssText = 'display:flex;gap:6px;align-items:center;margin-bottom:6px';
       var bold = es.every(function (e) { return e.weight >= 600; });
       d.appendChild(seg([['b', 'bold', '太字'], ['i', 'italic', '斜体'], ['u', 'underline', '下線'], ['s', 'strike', '取り消し線']].map(function (x) { return x; }), '', function () { }));
-      var sg = d.firstChild; Array.prototype.forEach.call(sg.children, function (btn, i) { var k = ['weight', 'italic', 'underline', 'strike'][i], on = k === 'weight' ? bold : es.every(function (e) { return e[k]; }); btn.classList.toggle('on', on); btn.onclick = function () { setProp(k, k === 'weight' ? (on ? 400 : 700) : !on); }; });
+      var sg = d.firstChild; Array.prototype.forEach.call(sg.children, function (btn, i) { var k = ['weight', 'italic', 'underline', 'strike'][i], on = k === 'weight' ? bold : es.every(function (e) { return e[k]; }); btn.classList.toggle('on', on); btn.onclick = function () { if (k === 'weight') setBold(!on); else setProp(k, !on); }; });
       b.appendChild(d); addCtl(b, es, 'color');
     });
     psec(pb, 'para', '段落', function (b) {
@@ -2260,9 +2268,9 @@ function refreshMini() {
   if (!miniPos) return; var es = selEls();
   if (!es.length || !es.every(function (e) { return 'font' in e; })) { if (mini) { mini.remove(); mini = null; } return; }
   var X1 = X(), has = X1.has, m = h('div', 'fe-mini'), bold = X1.val('weight') >= 600, al = X1.val('align');
-  m.appendChild(fontCombo(X1.val('font'), function (v) { setProp('font', v); }, false)); m.appendChild(sizeCombo(X1.val('size'), function (v) { setProp('size', v); }, false));
+  m.appendChild(fontCombo(X1.val('font'), setFont, false)); m.appendChild(sizeCombo(X1.val('size'), function (v) { setProp('size', v); }, false));
   m.appendChild(rb({ i: 'fontup', t: 'フォント サイズの拡大', k: 'Ctrl+Shift+>', fn: function () { stepSize(1); } })); m.appendChild(rb({ i: 'fontdown', t: 'フォント サイズの縮小', k: 'Ctrl+Shift+<', fn: function () { stepSize(-1); } }));
-  m.appendChild(rb({ i: 'bold', t: '太字', k: 'Ctrl+B', on: bold, fn: function () { setProp('weight', bold ? 400 : 700); } }));
+  m.appendChild(rb({ i: 'bold', t: '太字', k: 'Ctrl+B', on: bold, fn: function () { setBold(!bold); } }));
   m.appendChild(rb({ i: 'italic', t: '斜体', k: 'Ctrl+I', on: X1.val('italic') === true, fn: function () { setProp('italic', X1.val('italic') !== true); } }));
   m.appendChild(rb({ i: 'underline', t: '下線', k: 'Ctrl+U', on: X1.val('underline') === true, fn: function () { setProp('underline', X1.val('underline') !== true); } }));
   m.appendChild(splitBtn({ i: 'fcolor', t: '文字の色', color: X1.val('color') || S.lastCol.font, apply: function () { setProp('color', S.lastCol.font); }, pick: function (a) { openColor(a, X1.val('color'), function (v, live) { S.lastCol.font = v; setProp('color', v, live); }, {}); } }));
@@ -2295,7 +2303,7 @@ function showHelp() {
 function fmtKey(ev) {
   var k = ev.key, lk = k.toLowerCase(), X1 = X(); if (!X1.n) return false;
   var sh = ev.shiftKey, tog = function (key) { if (!X1.has(key)) return false; setProp(key, !X1.val(key)); return true; };
-  if (!sh && lk === 'b') { if (!X1.has('weight')) return false; setProp('weight', X1.val('weight') >= 600 ? 400 : 700); return true; }
+  if (!sh && lk === 'b') { if (!X1.has('weight')) return false; setBold(!(X1.val('weight') >= 600)); return true; }
   if (!sh && lk === 'i') return tog('italic');
   if (!sh && lk === 'u') return tog('underline');
   var al = { l: 'left', e: 'center', r: 'right', j: 'justify' }[lk];

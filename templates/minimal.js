@@ -45,7 +45,7 @@ JukenTemplates.register({
   uses: ['header', 'badge', 'mark', 'accent', 'secondary', 'font', 'fold', 'notes', 'swap', 'images', 'wm'],
   render: function (st, V, C) {
     var t = C.page('minimal', V, (V.swap ? 'sw ' : '') + (V.font === 'mincho' ? 'mi' : ''));
-    t.style.fontFamily = V.font === 'mincho' ? SERIF : SANS;
+    t.style.fontFamily = C.pickFont(V, SANS, SERIF);
 
     /* ---- 上部：見出し（左）と受験番号（右） ---- */
     var vis = C.visible(V);

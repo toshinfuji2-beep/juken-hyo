@@ -53,7 +53,7 @@
     uses: ['header', 'badge', 'mark', 'accent', 'secondary', 'fold', 'notes', 'swap', 'images', 'wm'],
     render: function (st, V, C) {
       var t = C.page(ID, V, V.swap ? 'sw' : ''); t._shr = [];
-      t.style.fontFamily = FF; t.style.setProperty('--ink', INK); t.style.setProperty('--on-ac', onCol(V.accent)); t.style.setProperty('--on-sc', onCol(V.secondary));
+      t.style.fontFamily = C.pickFont(V, FF, FF); t.style.setProperty('--ink', INK); t.style.setProperty('--on-ac', onCol(V.accent)); t.style.setProperty('--on-sc', onCol(V.secondary));
       var PAL = [V.accent, MINT, YEL, V.secondary];
       function fitT(e, min) { e._fs0 = e.style.fontSize; return C.fitText(t, e, min); }
       var num = pickVis(V, /受験番号|^番号$|^No\.?$/i, /カナ|氏名/);

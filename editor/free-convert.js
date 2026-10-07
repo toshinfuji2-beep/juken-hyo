@@ -38,7 +38,7 @@ function convert(tid, V, st) {
     host.appendChild(page);
     function fits() { (page._fits || []).forEach(function (e) { C.fit(e, e._fitMin); }); }
     fits();
-    return fontsReady.then(function () { fits(); return new Promise(function (r) { setTimeout(r, 120); }); }).then(function () {
+    return (window.JukenFonts ? window.JukenFonts.prepare(page) : fontsReady).then(function () { fits(); return new Promise(function (r) { setTimeout(r, 120); }); }).then(function () {
       fits();
       try { return walkPage(page, V, stu); } finally { host.remove(); }
     });
@@ -175,6 +175,8 @@ function walkPage(page, V, st) {
 
   /* ---------- 文字 ---------- */
   function fontKey(cs) {
+    var rid = window.JukenFonts ? window.JukenFonts.fromCss(cs.fontFamily) : '';
+    if (rid) return rid;
     var fams = String(cs.fontFamily).split(',').map(function (x) { return x.replace(/["']/g, '').trim().toLowerCase(); });
     for (var i = 0; i < fams.length; i++) {
       var f = fams[i];

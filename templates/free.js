@@ -8,24 +8,18 @@ var JT = g.JukenTemplates, C = JT.ctx, el = C.el;
 
 var TYPES = ['text', 'field', 'rect', 'ellipse', 'line', 'image', 'notes', 'table', 'fold'];
 var TYPE_NAMES = { text: 'テキスト', field: '項目', rect: '四角形', ellipse: '円', line: '線', image: '画像', notes: '注意事項', table: '情報テーブル', fold: '折り線' };
-var FONTS = {
-  gothic: '"Noto Sans JP","Yu Gothic","Hiragino Sans","Meiryo",sans-serif',
-  mincho: '"Shippori Mincho","Yu Mincho","Hiragino Mincho ProN","MS PMincho",serif',
-  maru: '"Zen Maru Gothic","Yu Gothic","Hiragino Maru Gothic ProN","Meiryo",sans-serif',
-  'sans-en': '"Inter","Noto Sans JP","Yu Gothic",sans-serif'
-};
-var FONT_NAMES = [['gothic', 'ゴシック'], ['mincho', '明朝'], ['maru', '丸ゴシック'], ['sans-en', '英字 Inter']];
-var FONT_HREF = 'https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&family=Shippori+Mincho:wght@400;700&family=Zen+Maru+Gothic:wght@400;700&family=Inter:wght@400;700&display=swap';
-function loadFonts() {
-  if (document.getElementById('jt-free-fonts')) return;
-  var l = document.createElement('link'); l.id = 'jt-free-fonts'; l.rel = 'stylesheet'; l.href = FONT_HREF; document.head.appendChild(l);
-}
+var JF_ = g.JukenFonts, JTX = g.JukenText;
+/* 書体：フォント一覧（templates/fonts.js）から。旧id（gothic/mincho/maru/sans-en）も一覧の別名として同じ見た目で使える */
+function fcss(id) { return JF_.css(JF_.valid(id) ? id : 'gothic'); }
+var FONTS = {}; ['gothic', 'mincho', 'maru', 'sans-en'].forEach(function (k) { FONTS[k] = JF_.css(k); });
+var FONT_NAMES = JF_.names();
+function loadFonts() { }   /* 互換：読み込みは描画時に使うフォントだけ JukenFonts.use で行う */
 
 /* ---------- 要素の既定値（キー＝要素が持つプロパティ。型は既定値の型で決まる） ---------- */
 var TXT = { font: 'gothic', size: 14, weight: 400, italic: false, underline: false, strike: false, color: '#111827', align: 'left', valign: 'top', lineHeight: 1.4, letterSpacing: 0, vertical: false, fit: 'none', bg: '', padding: 0 };
 var DEF = {
   text: Object.assign({ x: 15, y: 15, w: 80, h: 12, text: 'テキストを入力' }, TXT),
-  field: Object.assign({}, TXT, { x: 15, y: 15, w: 80, h: 20, itemId: '', showLabel: true, labelText: '', labelSize: 8, labelColor: '#6b7280', labelPos: 'top', size: 20, weight: 700, valign: 'middle', lineHeight: 1.3, fit: 'shrink', vertical: false }),
+  field: Object.assign({}, TXT, { x: 15, y: 15, w: 80, h: 20, itemId: '', showLabel: true, labelText: '', labelSize: 8, labelColor: '#6b7280', labelPos: 'top', size: 20, weight: 700, valign: 'middle', lineHeight: 1.3, fit: 'shrink', vertical: false, ruby: '', rubyScale: 0.45 }),
   rect: { x: 15, y: 15, w: 60, h: 30, fill: '#e5e7eb', stroke: '#1f2937', strokeWidth: 0, radius: 0, dash: 'solid' },
   ellipse: { x: 15, y: 15, w: 40, h: 40, fill: '#e5e7eb', stroke: '#1f2937', strokeWidth: 0, dash: 'solid' },
   line: { x: 15, y: 15, w: 60, h: 0, stroke: '#1f2937', strokeWidth: 1, dash: 'solid' },
@@ -34,9 +28,9 @@ var DEF = {
   table: { x: 15, y: 60, w: 180, h: 60, itemIds: [], borderColor: 'accent', labelBg: '#f3f4f6', labelColor: '#374151', color: '#111827', size: 12, rowGap: 1.5, itemSize: false },
   fold: { x: 0, y: 148.5, w: 210, h: 0, label: '＜山折り＞', size: 11, color: '#111827', strokeWidth: 1, dash: 'dashed' }
 };
-var SEL = { font: ['gothic', 'mincho', 'maru', 'sans-en'], align: ['left', 'center', 'right', 'justify'], valign: ['top', 'middle', 'bottom'], dash: ['solid', 'dashed', 'dotted'], bullet: ['number', 'dot', 'none'], labelPos: ['top', 'left'] };
+var SEL = { align: ['left', 'center', 'right', 'justify'], valign: ['top', 'middle', 'bottom'], dash: ['solid', 'dashed', 'dotted'], bullet: ['number', 'dot', 'none'], labelPos: ['top', 'left'] };
 var COLK = { color: 1, bg: 1, fill: 1, stroke: 1, labelColor: 1, accentColor: 1, borderColor: 1, labelBg: 1 };
-var RANGE = { size: [1, 500], weight: [100, 900], lineHeight: [0.5, 5], letterSpacing: [-1, 10], padding: [0, 100], strokeWidth: [0, 50], radius: [0, 200], labelSize: [1, 200], rowGap: [0, 50] };
+var RANGE = { size: [1, 500], weight: [100, 900], lineHeight: [0.5, 5], letterSpacing: [-1, 10], padding: [0, 100], strokeWidth: [0, 50], radius: [0, 200], labelSize: [1, 200], rowGap: [0, 50], rubyScale: [0.2, 1] };
 
 function num(v, d, lo, hi) { v = +v; if (typeof v !== 'number' || !isFinite(v)) v = d; if (lo != null && v < lo) v = lo; if (hi != null && v > hi) v = hi; return v; }
 function pick(v, list, d) { return list.indexOf(v) >= 0 ? v : d; }
@@ -50,6 +44,7 @@ var seq = 0;
 function newId() { return 'e' + Math.random().toString(36).slice(2, 7) + (seq++).toString(36); }
 
 function normProp(t, k, v, dv) {
+  if (k === 'font') return JF_.valid(v) ? v : (JF_.valid(dv) ? dv : 'gothic');
   if (k === 'fit') return pick(v, t === 'image' ? ['contain', 'cover'] : ['none', 'shrink'], dv);
   if (SEL[k]) return pick(v, SEL[k], dv);
   if (COLK[k]) return col(v, dv);
@@ -57,7 +52,7 @@ function normProp(t, k, v, dv) {
   if (k === 'itemIds') return Array.isArray(v) ? v.filter(function (s) { return typeof s === 'string'; }).slice(0, 60) : [];
   if (typeof dv === 'number') { var r = RANGE[k] || [-1e4, 1e4]; return num(v, dv, r[0], r[1]); }
   if (typeof dv === 'boolean') return typeof v === 'boolean' ? v : dv;
-  if (typeof dv === 'string') return typeof v === 'string' ? v.slice(0, 5000) : dv;
+  if (typeof dv === 'string') return typeof v === 'string' ? (v.length > 5000 ? JTX.first(v, 5000) : v) : dv;
   return dv;
 }
 /* 要素1つを正規化（不正な値は既定値に。型が不明なら null） */
@@ -70,7 +65,7 @@ function normElement(x, seen) {
   e.w = num(x.w, d.w, 0, 2000); e.h = (t === 'line' || t === 'fold') ? 0 : num(x.h, d.h, 0, 2000);
   e.rot = num(x.rot, 0, -360, 360); e.opacity = num(x.opacity, 1, 0, 1);
   e.locked = x.locked === true; e.hidden = x.hidden === true;
-  e.name = typeof x.name === 'string' && x.name ? x.name.slice(0, 60) : TYPE_NAMES[t];
+  e.name = typeof x.name === 'string' && x.name ? JTX.first(x.name, 60) : TYPE_NAMES[t];
   Object.keys(d).forEach(function (k) { if (k === 'x' || k === 'y' || k === 'w' || k === 'h') return; e[k] = normProp(t, k, x[k], d[k]); });
   if (typeof x.groupId === 'string' && x.groupId) e.groupId = x.groupId.slice(0, 40);   /* 同じ groupId を持つ要素が1つのグループ */
   return e;
@@ -124,7 +119,7 @@ function base(e, cls) {
 }
 var JUST = { top: 'flex-start', middle: 'center', bottom: 'flex-end' };
 function textStyle(n, e, V) {
-  n.style.fontFamily = FONTS[e.font] || FONTS.gothic; n.style.fontSize = e.size + 'pt'; n.style.fontWeight = e.weight;
+  n.style.fontFamily = fcss(e.font); n.style.fontSize = e.size + 'pt'; n.style.fontWeight = e.weight;
   n.style.color = rc(e.color, V); n.style.textAlign = e.align; n.style.lineHeight = e.lineHeight;
   if (e.letterSpacing) n.style.letterSpacing = e.letterSpacing + 'em';
   if (e.italic) n.style.fontStyle = 'italic';
@@ -146,7 +141,7 @@ function vText(n, text, e) {
   var jc = { left: 'flex-start', center: 'center', right: 'flex-end' }[e.align] || 'flex-start';
   String(text).split(/\n/).forEach(function (ln) {
     var col = el('div', 'fz-vc'); col.style.cssText = 'display:flex;flex-direction:column;justify-content:' + jc + ';width:1em;flex:none;align-items:center';
-    Array.from(ln).forEach(function (ch) {
+    JTX.seg(ln).forEach(function (ch) {
       var c = el('span', null, ch); c.style.cssText = 'display:block;height:1em;width:1em;text-align:center;line-height:1;flex:none;margin-bottom:' + (e.letterSpacing || 0) + 'em';
       if (ROT.test(ch)) c.style.transform = 'rotate(90deg)'; else if (SHIFT.test(ch)) c.style.position = 'relative', c.style.left = '.55em', c.style.top = '-.5em';
       col.appendChild(c);
@@ -178,7 +173,7 @@ function rField(e, V, st, t, edit) {
   if (row) d.style.alignItems = JUST[e.valign]; else d.style.justifyContent = JUST[e.valign];
   if (e.showLabel) {
     var lb = el('div', 'fz-fl', e.labelText || it.label);
-    lb.style.fontFamily = FONTS[e.font] || FONTS.gothic; lb.style.fontSize = e.labelSize + 'pt'; lb.style.color = rc(e.labelColor, V); lb.style.lineHeight = 1.3; lb.style.textAlign = e.align; lb.style.whiteSpace = 'nowrap';
+    lb.style.fontFamily = fcss(e.font); lb.style.fontSize = e.labelSize + 'pt'; lb.style.color = rc(e.labelColor, V); lb.style.lineHeight = 1.3; lb.style.textAlign = e.align; lb.style.whiteSpace = 'nowrap';
     if (row) { lb.style.marginRight = '2.5mm'; lb.style.flex = 'none'; } else lb.style.marginBottom = '0.6mm';
     d.appendChild(lb);
   }
@@ -191,6 +186,16 @@ function rField(e, V, st, t, edit) {
     if (isRaw(st, e)) chips(v, '{{' + it.label + '}}', V); else v.textContent = C.value(it, st);
     v.style.whiteSpace = e.fit === 'shrink' ? 'nowrap' : 'pre-wrap'; v.style.overflowWrap = 'anywhere';
     if (e.fit === 'shrink') { v._fitBase = e.size + 'pt'; C.fitText(t, v, 4); }
+  }
+  var rbIt = e.ruby && e.ruby !== e.itemId ? itemById(V, e.ruby) : null, rbTxt = rbIt && rbIt.source !== 'schedule' ? (isRaw(st, e) ? '' : C.value(rbIt, st)) : '';
+  if (rbIt && (rbTxt || isRaw(st, e)) && it.source !== 'schedule') {
+    /* ふりがな：氏名の上に小さく（氏名と同じ書体・揃え。はみ出すときは縮小） */
+    var wr = el('div', 'fz-fw'), rb = el('div', 'fz-rb');
+    textStyle(rb, e, V); rb.style.fontSize = (e.size * e.rubyScale) + 'pt'; rb.style.fontWeight = 400; rb.style.lineHeight = 1.15; rb.style.marginBottom = '.4mm'; rb.style.whiteSpace = 'nowrap'; rb.style.width = '100%';
+    if (isRaw(st, e)) chips(rb, '{{' + rbIt.label + '}}', V); else rb.textContent = rbTxt;
+    if (e.fit === 'shrink') { rb._fitBase = (e.size * e.rubyScale) + 'pt'; C.fitText(t, rb, 3); }
+    wr.style.cssText = row ? 'flex:1;min-width:0' : 'width:100%'; v.style.width = '100%';
+    wr.appendChild(rb); wr.appendChild(v); d.appendChild(wr); return d;
   }
   if (row) { v.style.flex = '1'; v.style.minWidth = '0'; } else v.style.width = '100%';
   d.appendChild(v);
@@ -209,7 +214,7 @@ function rLine(e, V, label) {
   d.style.display = 'flex'; d.style.alignItems = 'center'; d.style.gap = '3mm';
   var a = el('span'); a.style.cssText = 'display:block;flex:1;height:0;border-top:' + css;
   d.appendChild(a);
-  if (e.label) { var em = el('em', null, e.label); em.style.cssText = 'flex:none;font-style:normal;white-space:nowrap;line-height:1;font-size:' + e.size + 'pt;color:' + rc(e.color, V) + ';font-family:' + (FONTS[V.font] || FONTS.gothic); d.appendChild(em); var b = el('span'); b.style.cssText = a.style.cssText; d.appendChild(b); }
+  if (e.label) { var em = el('em', null, e.label); em.style.cssText = 'flex:none;font-style:normal;white-space:nowrap;line-height:1;font-size:' + e.size + 'pt;color:' + rc(e.color, V) + ';font-family:' + fcss(V.font); d.appendChild(em); var b = el('span'); b.style.cssText = a.style.cssText; d.appendChild(b); }
   return d;
 }
 function rImage(e, V, st, t, edit) {
@@ -274,17 +279,27 @@ function renderEl(e, V, st, t, edit) {
   return null;
 }
 
+/* 受験番号・氏名（漢字）・カナ氏名の拾い方。漢字の氏名が表示されていればそれを主役にし、カナも表示されていれば「ふりがな」として上に小さく付ける */
+var KANA_RE = /カナ|ｶﾅ|フリガナ|ふりがな/;
+function nameItems(V) {
+  var find = function (re, not) { return C.findItem(V, re, not); };
+  var no = find(/受験番号/), nm = find(/氏名|名前/, KANA_RE), kana = find(KANA_RE), vis = function (i) { return i && !i.hidden; }, kn, ruby = null;
+  if (vis(nm)) { kn = nm; if (vis(kana)) ruby = kana; } else kn = kana || nm;
+  if (kn === no) kn = null;
+  return { no: no, kn: kn, ruby: ruby };
+}
+
 /* ---------- 初期レイアウト（新しい白紙のフリーデザインに入れる、ほどよい見本） ---------- */
 function starter(V) {
-  var els = [], ft = V.font === 'mincho' ? 'mincho' : 'gothic';
+  var els = [], ft = JF_.valid(V.font) ? V.font : 'gothic';
   function add(t, p) { var e = newElement(t, p); if (e) els.push(e); return e; }
   function find(re, not) { return C.findItem(V, re, not); }
-  var no = find(/受験番号/), kn = find(/カナ|ｶﾅ|フリガナ|ふりがな/) || find(/氏名|名前/);
+  var nmI = nameItems(V), no = nmI.no, kn = nmI.kn, ruby = nmI.ruby;
   add('text', { name: 'タイトル', x: 15, y: 11, w: 180, h: 14, text: '{{ヘッダー}}', size: 20, weight: 700, color: 'accent', valign: 'middle', font: ft, fit: 'shrink' });
   add('line', { name: 'タイトル罫線', x: 15, y: 27.5, w: 180, stroke: 'accent', strokeWidth: 1.5 });
   if (no) add('field', { name: no.label, x: 15, y: 33, w: 82, h: 22, itemId: no.id, size: 30, font: ft });
-  if (kn && kn !== no) add('field', { name: kn.label, x: 104, y: 33, w: 91, h: 22, itemId: kn.id, size: 20, font: ft });
-  var rest = V.items.filter(function (i) { return !i.hidden && i !== no && i !== kn; });
+  if (kn && kn !== no) add('field', { name: kn.label, x: 104, y: 33, w: 91, h: 22, itemId: kn.id, size: 20, font: ft, ruby: ruby ? ruby.id : '' });
+  var rest = V.items.filter(function (i) { return !i.hidden && i !== no && i !== kn && i !== ruby; });
   if (rest.length) {
     var rows = rowsOf(rest), wsum = 0;
     rows.forEach(function (r) { wsum += r.length === 1 && r[0].source === 'schedule' ? Math.max(1, C.sched(r[0]).length) : 1; });
@@ -298,11 +313,9 @@ function starter(V) {
 
 /* ---------- スターターレイアウト（テンプレタブの「ひな形」） ---------- */
 function layoutBase(V) {
-  var find = function (re, not) { return C.findItem(V, re, not); };
-  var no = find(/受験番号/), kn = find(/カナ|ｶﾅ|フリガナ|ふりがな/) || find(/氏名|名前/);
-  if (kn === no) kn = null;
-  var rest = V.items.filter(function (i) { return !i.hidden && i !== no && i !== kn; });
-  return { ft: V.font === 'mincho' ? 'mincho' : 'gothic', no: no, kn: kn, rest: rest, rows: rowsOf(rest) };
+  var nmI = nameItems(V), no = nmI.no, kn = nmI.kn, ruby = nmI.ruby;
+  var rest = V.items.filter(function (i) { return !i.hidden && i !== no && i !== kn && i !== ruby; });
+  return { ft: JF_.valid(V.font) ? V.font : 'gothic', no: no, kn: kn, ruby: ruby, rest: rest, rows: rowsOf(rest) };
 }
 function tableH(rows) { var w = 0; rows.forEach(function (r) { w += r.length === 1 && r[0].source === 'schedule' ? Math.max(1, C.sched(r[0]).length) : 1; }); return Math.max(20, Math.min(78, w * 10.5)); }
 function lowerHalf(els, V, add, o) {
@@ -319,7 +332,7 @@ var LAYOUTS = [
       add('text', { name: 'タイトル', x: 15, y: 12, w: 180, h: 12, text: '{{ヘッダー}}', size: 18, weight: 700, color: 'accent', valign: 'middle', font: b.ft, fit: 'shrink' });
       add('line', { name: 'タイトル罫線', x: 15, y: 27, w: 180, stroke: 'accent', strokeWidth: 1.2 });
       if (b.no) add('field', { name: b.no.label, x: 15, y: 32, w: 180, h: 15, itemId: b.no.id, size: 26, font: b.ft, labelPos: 'left', labelSize: 9 });
-      if (b.kn) add('field', { name: b.kn.label, x: 15, y: 49, w: 180, h: 13, itemId: b.kn.id, size: 18, font: b.ft, labelPos: 'left', labelSize: 9 });
+      if (b.kn) add('field', { name: b.kn.label, x: 15, y: 49, w: 180, h: 13, itemId: b.kn.id, ruby: b.ruby ? b.ruby.id : '', size: 18, font: b.ft, labelPos: 'left', labelSize: 9 });
       if (b.rest.length) add('table', { name: '情報テーブル', x: 15, y: 68, w: 180, h: tableH(b.rows), itemIds: b.rest.map(function (i) { return i.id; }), font: b.ft });
       lowerHalf(els, V, add);
       return els;
@@ -333,7 +346,7 @@ var LAYOUTS = [
       add('rect', { name: '番号カード', x: 15, y: 33, w: 86, h: 26, fill: 'secondary', radius: 4 });
       add('rect', { name: '氏名カード', x: 109, y: 33, w: 86, h: 26, fill: 'secondary', radius: 4 });
       if (b.no) add('field', { name: b.no.label, x: 19, y: 35, w: 78, h: 22, itemId: b.no.id, size: 28, font: b.ft });
-      if (b.kn) add('field', { name: b.kn.label, x: 113, y: 35, w: 78, h: 22, itemId: b.kn.id, size: 18, font: b.ft });
+      if (b.kn) add('field', { name: b.kn.label, x: 113, y: 35, w: 78, h: 22, itemId: b.kn.id, ruby: b.ruby ? b.ruby.id : '', size: 18, font: b.ft });
       if (b.rest.length) {
         add('rect', { name: '情報カード', x: 15, y: 66, w: 180, h: tableH(b.rows) + 6, fill: '#ffffff', stroke: 'accent', strokeWidth: 1, radius: 4 });
         add('table', { name: '情報テーブル', x: 18, y: 69, w: 174, h: tableH(b.rows), itemIds: b.rest.map(function (i) { return i.id; }), font: b.ft, borderColor: '#d1d5db', labelBg: '' });
@@ -348,7 +361,7 @@ var LAYOUTS = [
       add('text', { name: 'タイトル', x: 15, y: 10, w: 180, h: 11, text: '{{ヘッダー}}', size: 16, weight: 700, color: 'accent', valign: 'middle', font: b.ft, fit: 'shrink' });
       add('rect', { name: '番号の枠', x: 15, y: 24, w: 180, h: 38, fill: '#ffffff', stroke: 'accent', strokeWidth: 2.5, radius: 2 });
       if (b.no) add('field', { name: b.no.label, x: 19, y: 26, w: 172, h: 34, itemId: b.no.id, size: 60, font: b.ft, align: 'center', labelPos: 'top', labelSize: 9 });
-      if (b.kn) add('field', { name: b.kn.label, x: 15, y: 66, w: 180, h: 12, itemId: b.kn.id, size: 18, font: b.ft, align: 'center', showLabel: false });
+      if (b.kn) add('field', { name: b.kn.label, x: 15, y: 66, w: 180, h: 12, itemId: b.kn.id, ruby: b.ruby ? b.ruby.id : '', size: 18, font: b.ft, align: 'center', showLabel: false });
       if (b.rest.length) add('table', { name: '情報テーブル', x: 15, y: 82, w: 180, h: Math.min(60, tableH(b.rows)), itemIds: b.rest.map(function (i) { return i.id; }), font: b.ft, size: 11 });
       lowerHalf(els, V, add);
       return els;
@@ -369,9 +382,9 @@ JT.register({
     { k: 'guides', type: 'json', def: [], hidden: true, norm: normGuides }
   ],
   render: function (st, V, Cx) {
-    loadFonts();
     var F = V.tpl.free, edit = !!st._edit, t = Cx.page('free', V);
     t.style.background = F.bg || '#ffffff';
+    JF_.use(V.font); F.elements.forEach(function (e) { if (!e.hidden && e.font) JF_.use(e.font); });
     F.elements.forEach(function (e) { if (e.hidden) return; var n = renderEl(e, V, st, t, edit); if (n) t.appendChild(n); });
     var wm = Cx.watermark(V, { top: 0, height: 297 }); if (wm) t.appendChild(wm);
     return t;
@@ -390,7 +403,7 @@ JT.register({
 });
 
 g.JukenFree = {
-  TYPES: TYPES, TYPE_NAMES: TYPE_NAMES, FONTS: FONTS, FONT_NAMES: FONT_NAMES, DEF: DEF, SEL: SEL,
+  TYPES: TYPES, TYPE_NAMES: TYPE_NAMES, FONTS: FONTS, FONT_NAMES: FONT_NAMES, fcss: fcss, DEF: DEF, SEL: SEL,
   normElement: normElement, normElements: normElements, normGuides: normGuides, newElement: newElement, newId: newId,
   starter: starter, LAYOUTS: LAYOUTS, geom: geom, aabb: aabb, resolveText: resolveText, placeholders: placeholders, itemById: itemById, rowsOf: rowsOf, rc: rc, loadFonts: loadFonts
 };

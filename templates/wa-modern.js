@@ -45,7 +45,7 @@ JukenTemplates.register({
   uses: ['header', 'badge', 'mark', 'accent', 'secondary', 'font', 'fold', 'notes', 'swap', 'images', 'wm'],
   render: function (st, V, C) {
     var t = C.page('wa-modern', V, (V.swap ? 'sw ' : '') + (V.font === 'mincho' ? 'mi' : ''));
-    t.style.fontFamily = V.font === 'mincho' ? SERIF : SANS;
+    t.style.fontFamily = C.pickFont(V, SANS, SERIF);
 
     t.appendChild(C.el('div', 'w-check'));
     /* ---- 縦書きの題字 ---- */

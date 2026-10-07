@@ -8,6 +8,7 @@ var LIB = {
   tess: 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js',
   lang: 'https://cdn.jsdelivr.net/npm/@tesseract.js-data/jpn/4.0.0_best_int'
 };
+var JTX = g.JukenText;
 var libP = {};
 function loadScript(u) {
   return libP[u] || (libP[u] = new Promise(function (ok, ng) {
@@ -18,8 +19,8 @@ function loadScript(u) {
 
 /* ---------- 文字の正規化 ---------- */
 function halfDigits(s) { return String(s).replace(/[０-９]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 0xFEE0); }); }
-var CJK = '\\u3000-\\u30ff\\u3400-\\u9fff\\uff00-\\uffef';
-var RE_CJK_GAP = new RegExp('([' + CJK + '])[ \\u3000]+(?=[' + CJK + '])', 'g');
+var CJK = '\u3000-\u30ff\u3400-\u9fff\uf900-\ufaff\uff00-\uffef\u{20000}-\u{3134F}';
+var RE_CJK_GAP = new RegExp('([' + CJK + '])[ \u3000]+(?=[' + CJK + '])', 'gu');
 /* OCR文字列の整形：全角数字→半角、日本語どうしの間の空白を詰める */
 function cleanText(s) { return halfDigits(String(s == null ? '' : s)).replace(/[\r\n]+/g, ' ').replace(RE_CJK_GAP, '$1').replace(/^[ 　]+|[ 　]+$/g, ''); }
 function normLbl(t) { return String(t || '').replace(/[\s　:：・\/／\-|｜.。,、_＿]/g, ''); }
@@ -39,13 +40,13 @@ var LBL = [
   [/(カナ|ｶﾅ|フリガナ|ふりがな|ﾌﾘｶﾞﾅ|ヨミ|よみ)/, 'カナ氏名'],
   [/^(受験|受検|生徒|会員)?(番号|No\.?|NO\.?|ID)$/i, '受験番号'],
   [/^(受験|受検)(番号|No)/i, '受験番号'],
-  [/^(氏名|名前|お名前|生徒名|受験者名|受験者)$/, '氏名'],
+  [/^(氏名|名前|お名前|生徒名|漢字氏名|氏名漢字|受験者名|受験者|姓名)(\(漢字\)|（漢字）)?$/, '氏名'],
   [/^(志望学部|志望学科|志望|学部|学部名)$/, '志望学部'],
   [/^(試験)?教室$|^座席$|^教室名$/, '教室'],
   [/^(学校名|学校|高校|在籍校|出身校)$/, '学校名'],
   [/^学年$/, '学年']
 ];
-var CANON = [['受験番号', '受験番号'], ['志望学部', '志望学部'], ['志望学科', '志望学部'], ['フリガナ', 'カナ氏名'], ['カナ氏名', 'カナ氏名'], ['氏名カナ', 'カナ氏名'], ['受験者名', '氏名'], ['お名前', '氏名'], ['学校名', '学校名'], ['教室名', '教室']];
+var CANON = [['受験番号', '受験番号'], ['志望学部', '志望学部'], ['志望学科', '志望学部'], ['フリガナ', 'カナ氏名'], ['カナ氏名', 'カナ氏名'], ['氏名カナ', 'カナ氏名'], ['受験者名', '氏名'], ['お名前', '氏名'], ['漢字氏名', '氏名'], ['生徒氏名', '氏名'], ['学校名', '学校名'], ['教室名', '教室']];
 function labelOf(text, fuzzy) {
   var n = normLbl(text), i;
   if (!n || n.length > 9) return '';
@@ -62,14 +63,14 @@ function labelOf(text, fuzzy) {
 function splitLabelValue(b, fuzzy) {
   var t = String(b.text);
   if (labelOf(t, fuzzy)) return null;
-  var s = t.replace(/\s+/g, ' ').trim(), best = null;
-  for (var k = 2; k <= Math.min(7, s.length - 1); k++) {
-    var head = s.slice(0, k), tail = s.slice(k).replace(/^[\s:：|｜]+/, '');
-    var sep = /^[\s:：|｜]/.test(s.slice(k));
-    if (tail && labelOf(head, fuzzy) && (head.length >= 3 || sep) && tail.length <= 24 && !/^[ぁ-んー、。]/.test(tail) && !/^[\s:：]+$/.test(tail)) { best = { k: k, head: head, tail: tail }; }
+  var s = JTX.trim(t.replace(/\s+/g, ' ')), sg = JTX.seg(s), best = null;
+  for (var k = 2; k <= Math.min(7, sg.length - 1); k++) {
+    var head = sg.slice(0, k).join(''), rest = sg.slice(k).join(''), tail = rest.replace(/^[\s:：|｜]+/, '');
+    var sep = /^[\s:：|｜]/.test(rest);
+    if (tail && labelOf(head, fuzzy) && (k >= 3 || sep) && JTX.len(tail) <= 24 && !/^[ぁ-んー、。]/.test(tail) && !/^[\s:：]+$/.test(tail)) { best = { k: k, head: head, tail: tail }; }
   }
   if (!best) return null;
-  var r = best.k / s.length, wl = b.w * r, wr = b.w - wl;
+  var r = best.k / sg.length, wl = b.w * r, wr = b.w - wl;
   return [Object.assign({}, b, { text: best.head, w: wl }), Object.assign({}, b, { text: best.tail, x: b.x + wl + (wr > 4 ? 0 : 0), w: wr })];
 }
 
@@ -107,12 +108,34 @@ function suggest(els, opt) {
     out.push({ eid: P.c.id, label: L.label, why: '「' + String(L.e.text).trim() + '」の' + (P.kind === 'r' ? '右' : '下'), conf: conf });
   });
   var have = function (l) { return out.some(function (o) { return o.label === l; }); };
-  cands.forEach(function (c) {
-    if (used[c.id]) return; var t = halfDigits(String(c.text).trim());
-    if (!have('受験番号') && /^[0-9]{1,10}$/.test(t) && t.length <= 8 && !/^(19|20)[0-9]{2}$/.test(t)) { out.push({ eid: c.id, label: '受験番号', why: '数字だけの文字', conf: 0.55 - pen }); used[c.id] = 1; }
-    else if (!have('カナ氏名') && /^[ァ-ヶー・ 　ｦ-ﾟ]{3,}$/.test(t)) { out.push({ eid: c.id, label: 'カナ氏名', why: 'カタカナだけの文字', conf: 0.55 - pen }); used[c.id] = 1; }
-    else if (!have('氏名') && /^[一-鿿々]{1,4}[ 　][一-鿿々ぁ-んァ-ヶ]{1,4}$/.test(t)) { out.push({ eid: c.id, label: '氏名', why: '名前のような文字', conf: 0.5 - pen }); used[c.id] = 1; }
+  var byId = {}; els.forEach(function (e) { byId[e.id] = e; });
+  /* 値の種類で氏名／カナ氏名を直す：「氏名」の値がカナ・かなだけなら、カナ氏名とみなす（漢字氏名が別に見つかっていないとき） */
+  out.forEach(function (o) {
+    var el0 = byId[o.eid];
+    if (o.label === '氏名' && el0 && JTX.classifyName(el0.text) === 'カナ氏名' && !have('カナ氏名')) { o.label = 'カナ氏名'; o.why += '（値がカナだけなので）'; }
   });
+  var GENV = /(学部|学科|学校|高校|大学|教室|会場|試験|時間|番号|受験|票|科目|制度)$/;
+  cands.forEach(function (c) {
+    if (used[c.id]) return; var t = halfDigits(JTX.trim(c.text)), tn = JTX.len(t), kind = JTX.classifyName(t);
+    if (!have('受験番号') && /^[0-9]{1,10}$/.test(t) && t.length <= 8 && !/^(19|20)[0-9]{2}$/.test(t)) { out.push({ eid: c.id, label: '受験番号', why: '数字だけの文字', conf: 0.55 - pen }); used[c.id] = 1; }
+    else if (!have('カナ氏名') && kind === 'カナ氏名' && tn >= 3 && !/\s\s/.test(t)) { out.push({ eid: c.id, label: 'カナ氏名', why: 'カナ（ひらがな）だけの文字', conf: 0.55 - pen }); used[c.id] = 1; }
+    else if (!have('氏名') && kind === '氏名' && tn <= 12 && !GENV.test(t) && !GEN.test(normLbl(t)) && (/[ \u3000]/.test(t) ? /^[^ \u3000]{1,6}[ \u3000][^ \u3000]{1,6}$/.test(t) : (tn >= 2 && tn <= 5 && !/[A-Za-z・.]/.test(t)))) { out.push({ eid: c.id, label: '氏名', why: '名前のような文字', conf: (/[ \u3000]/.test(t) ? 0.5 : 0.4) - pen }); used[c.id] = 1; }
+  });
+  /* ふりがな（カナ）の直下／直上にある、漢字の氏名（ルビのような2段）も拾う */
+  var kOut = out.filter(function (o) { return o.label === 'カナ氏名'; })[0], nOut = out.filter(function (o) { return o.label === '氏名'; })[0];
+  function pairNear(a, wantKind, above) {
+    var best = null, bd = 1e9;
+    els.forEach(function (c) {
+      if (used[c.id] || isLab[c.id] || c === a) return;
+      var tx = JTX.trim(c.text); if (JTX.classifyName(tx) !== wantKind || JTX.len(tx) > 14 || GEN.test(normLbl(tx)) || GENV.test(tx)) return;
+      var gap = above ? a.y - (c.y + c.h) : c.y - (a.y + a.h), ox = Math.min(a.x + a.w, c.x + c.w) - Math.max(a.x, c.x);
+      if (gap < -0.35 * Math.min(a.h, c.h) || gap > 1.8 * Math.max(a.h, c.h) + 2 || ox < 0.3 * Math.min(a.w, c.w)) return;
+      var d = Math.abs(gap) + Math.abs((c.x + c.w / 2) - (a.x + a.w / 2)) * 0.2; if (d < bd) { bd = d; best = c; }
+    });
+    return best;
+  }
+  if (kOut && !nOut && byId[kOut.eid]) { var nm = pairNear(byId[kOut.eid], '氏名', false); if (nm) { out.push({ eid: nm.id, label: '氏名', why: 'ふりがなの下の漢字', conf: 0.62 - pen }); used[nm.id] = 1; } }
+  else if (nOut && !kOut && byId[nOut.eid]) { var kk = pairNear(byId[nOut.eid], 'カナ氏名', true); if (kk) { out.push({ eid: kk.id, label: 'カナ氏名', why: '氏名の上のふりがな', conf: 0.62 - pen }); used[kk.id] = 1; } }
   return out;
 }
 /* ラベルらしい箱の一覧 */
@@ -144,7 +167,7 @@ function mergeItems(items, opt) {
       if (!cur) { cur = start(it); return; }
       var gap = it.x - (cur.x + cur.w), fh = Math.max(it.fh, cur.fh), ratio = Math.max(it.fh, cur.fh) / Math.max(1, Math.min(it.fh, cur.fh));
       if (gap < (opt && opt.wide ? 1.4 : 0.75) * fh && ratio < 1.7) {
-        var a = cur.text.slice(-1), b = String(it.s).charAt(0), sp = '';
+        var a = JTX.last(cur.text, 1), b = JTX.first(it.s, 1), sp = '';
         if (gap > 0.22 * fh && /[A-Za-z0-9]/.test(a) && /[A-Za-z0-9]/.test(b)) sp = ' ';
         cur.text += sp + it.s; var x2 = Math.max(cur.x + cur.w, it.x + it.w); cur.x = Math.min(cur.x, it.x); cur.w = x2 - cur.x;
         cur.y = Math.min(cur.y, it.y); cur.y2 = Math.max(cur.y2, it.y + it.h); cur.fh = Math.max(cur.fh, it.fh); cur.cs.push(it.conf == null ? 100 : it.conf); cur.n++;
@@ -160,14 +183,14 @@ function mergeItems(items, opt) {
 /* ---------- PDFの文字情報 ----------
    page: pdf.js のページ、vp: 描画に使った viewport。戻り値: 文字片（px）。回転した文字は除く。 */
 async function pdfItems(page, vp, lib) {
-  var tc = await page.getTextContent(), out = [];
+  var tc = await page.getTextContent({ disableNormalization: true }), out = [];
   tc.items.forEach(function (it) {
     if (!it || typeof it.str !== 'string' || !it.transform) return;
     var t = lib.Util.transform(vp.transform, it.transform);
     if (Math.abs(t[1]) > Math.abs(t[0]) * 0.2 || Math.abs(t[2]) > Math.abs(t[3]) * 0.2) return;
     var fh = Math.hypot(t[2], t[3]), w = Math.abs(it.width * (vp.scale || 1));
     if (!(fh > 1)) return;
-    out.push({ s: it.str, x: t[4], y: t[5] - 0.88 * fh, w: w, h: 1.1 * fh, fh: fh });
+    out.push({ s: it.str, x: t[4], y: t[5] - 0.88 * fh, w: w, h: 1.1 * fh, fh: fh, bad: !!it.str.trim() && JTX.isGarbage(it.str) });
   });
   return out;
 }

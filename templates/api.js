@@ -9,7 +9,8 @@ var PXMM = 96 / 25.4;
 function el(tag, cls, txt) { var e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; }
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 function clone(o) { return JSON.parse(JSON.stringify(o)); }
-function lines(s) { return (s || '').split(/\r?\n/).map(function (x) { return x.trim(); }).filter(Boolean); }
+var JTX = g.JukenText || { trim: function (x) { return String(x == null ? '' : x).trim(); }, seg: function (x) { return Array.from(String(x == null ? '' : x)); } };
+function lines(s) { return String(s || '').split(/\r?\n/).map(function (x) { return JTX.trim(x); }).filter(Boolean); }
 function fmtDate(s) {
   if (!s) return '';
   var m = /^(\d+)-(\d+)-(\d+)$/.exec(s); if (!m) return s;
@@ -40,6 +41,7 @@ function defItems() {
   return [
     mkItem('受験番号', 'column', { column: '受験番号', width: 'half', size: 'L' }),
     mkItem('試験場', 'fixed', { value: '東進HS 藤沢校', width: 'half', size: 'XL', color: 'accent' }),
+    mkItem('氏名', 'column', { column: '氏名', width: 'half', size: 'L', hidden: true }),   /* 漢字氏名：既定では非表示（必要なら「表示」に） */
     mkItem('カナ氏名', 'column', { column: 'カナ氏名', width: 'half' }),
     mkItem('教室', 'fixed', { value: 'レクチャールーム', width: 'half' }),
     mkItem('試験日', 'date', { value: '2023-07-02', size: 'L' }),
@@ -76,7 +78,7 @@ var FIELDS = [
   { k: 'markOn', type: 'check', label: 'マークを表示', def: true, u: 'mark', tab: 'items', half: 1 },
   { k: 'accent', type: 'color', label: 'アクセント色', def: '#C00000', u: 'accent', tab: 'look', g: '色・書体', half: 1 },
   { k: 'secondary', type: 'color', label: 'サブカラー', def: '#444444', u: 'secondary', tab: 'look', half: 1 },
-  { k: 'font', type: 'select', label: '基本フォント', opts: [['gothic', 'ゴシック'], ['mincho', '明朝']], def: 'gothic', u: 'font', tab: 'look', half: 1 },
+  { k: 'font', type: 'font', label: '基本フォント', def: 'gothic', u: 'font', tab: 'look' },
   { k: 'foldOn', type: 'check', label: '折り線を表示', def: true, u: 'fold', tab: 'look', g: '折り線', half: 1 },
   { k: 'foldPos', type: 'number', label: '位置（mm）', def: 148.5, u: 'fold', tab: 'look', half: 1 },
   { k: 'foldLabel', type: 'text', label: '折り線の文字', def: '＜山折り＞', u: 'fold', tab: 'look' },
@@ -108,6 +110,7 @@ function normField(f, s, def) {
   var ok = f.type === 'image' ? (typeof s === 'object' && !Array.isArray(s)) : f.type === 'check' ? typeof s === 'boolean' : f.type === 'number' ? (typeof s === 'number' && isFinite(s)) : typeof s === 'string';
   if (f.type === 'color' && ok) ok = /^#[0-9a-fA-F]{6}$/.test(s);
   if (f.type === 'select' && ok) ok = f.opts.some(function (o) { return o[0] === s; });
+  if (f.type === 'font' && ok) ok = !g.JukenFonts || g.JukenFonts.valid(s) || s === 'gothic' || s === 'mincho';
   if (ok) { x = clone(s); if (f.type === 'image') { x.d = typeof x.d === 'string' ? x.d : ''; x.hide = !!x.hide; } }
   return x;
 }
@@ -193,9 +196,16 @@ var ctx = {
   page: function (id, V, extraCls) {
     var t = el('div', 'ticket tpl-' + id + (extraCls ? ' ' + extraCls : ''));
     t.style.setProperty('--tac', V.accent); t.style.setProperty('--tac2', V.secondary);
-    t.style.fontFamily = FONT[V.font] || FONT.gothic; t._fits = []; return t;
+    t.style.fontFamily = ctx.font(V); t._fits = []; return t;
   },
-  font: function (V) { return FONT[V.font] || FONT.gothic; },
+  /* 基本フォント。gothic / mincho は各テンプレート本来の書体のまま、それ以外（フォント一覧のid）はその書体 */
+  font: function (V) { return FONT[V.font] || (g.JukenFonts && g.JukenFonts.valid(V.font) ? (g.JukenFonts.use(V.font), g.JukenFonts.css(V.font)) : FONT.gothic); },
+  isStdFont: function (V) { return V.font === 'gothic' || V.font === 'mincho' || !(g.JukenFonts && g.JukenFonts.valid(V.font)); },
+  /* テンプレート固有の書体（sans / serif）と、V.font の選択を合わせる。serifIf=true の書体を明朝系とみなす */
+  pickFont: function (V, sans, serif) {
+    if (ctx.isStdFont(V)) return V.font === 'mincho' ? serif : sans;
+    return ctx.font(V);
+  },
   /* 1行に収まるまで縮める対象として登録（表示後にアプリが fit を実行） */
   fitText: function (page, e, min) { e._fitMin = min; page._fits.push(e); return e; },
   fit: fit,
@@ -230,7 +240,7 @@ var ctx = {
     y += V.wmY; wm.style.top = y + 'mm'; wm.style.fontSize = V.wmSize + 'mm'; wm.style.fontWeight = V.wmBold ? '700' : '400';
     wm.style.color = V.wmAcc ? V.accent : V.wmColor; wm.style.opacity = Math.max(0, Math.min(100, V.wmOp)) / 100;
     wm.style.transform = 'translate(calc(-50% + ' + V.wmX + 'mm),-50%) rotate(' + V.wmRot + 'deg)';
-    Array.from(V.wmText).forEach(function (ch, i, a) { var sp = el('span', null, ch); if (i < a.length - 1) sp.style.marginRight = V.wmSp + 'em'; wm.appendChild(sp); });
+    JTX.seg(V.wmText).forEach(function (ch, i, a) { var sp = el('span', null, ch); if (i < a.length - 1) sp.style.marginRight = V.wmSp + 'em'; wm.appendChild(sp); });
     return ctx.edit(wm, 'wmText');
   },
   /* 折り線（foldOn が false なら null） */
