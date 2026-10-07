@@ -190,7 +190,8 @@ async function pdfItems(page, vp, lib) {
     if (Math.abs(t[1]) > Math.abs(t[0]) * 0.2 || Math.abs(t[2]) > Math.abs(t[3]) * 0.2) return;
     var fh = Math.hypot(t[2], t[3]), w = Math.abs(it.width * (vp.scale || 1));
     if (!(fh > 1)) return;
-    out.push({ s: it.str, x: t[4], y: t[5] - 0.88 * fh, w: w, h: 1.1 * fh, fh: fh, bad: !!it.str.trim() && JTX.isGarbage(it.str) });
+    var fn = ''; try { var fo = it.fontName && page.commonObjs && page.commonObjs.has(it.fontName) ? page.commonObjs.get(it.fontName) : null; fn = (fo && (fo.name || fo.fallbackName)) || ''; } catch (e) { fn = ''; }
+    out.push({ s: it.str, x: t[4], y: t[5] - 0.88 * fh, w: w, h: 1.1 * fh, fh: fh, font: fn, bad: !!it.str.trim() && JTX.isGarbage(it.str) });
   });
   return out;
 }

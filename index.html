@@ -26,6 +26,7 @@
 <script src="editor/free-editor.js"></script>
 <script src="editor/pptx-import.js"></script>
 <script src="editor/design-detect.js"></script>
+<script src="editor/font-match.js"></script>
 <script src="editor/design-import.js"></script>
 <style>
 :root{--bg:#f3f4f6;--panel:#fff;--fg:#1f2937;--mut:#6b7280;--bd:#d1d5db;--ac:#1d4ed8;--acfg:#fff;--inp:#fff;--pv:#e5e7eb;--warn:#b45309;--warnbg:#fef3c7;--ok:#15803d;--err:#dc2626}
@@ -145,6 +146,20 @@ summary .rs{font-weight:400;font-size:12px;color:var(--mut);margin-left:6px}
 .sl textarea{min-height:82px;max-height:190px;overflow:auto;white-space:pre;font:12px/1.4 ui-monospace,Consolas,"Meiryo",monospace;resize:vertical;padding:4px 6px}
 .sl-m{grid-column:2;min-width:0}
 .sl-m div{font-size:11px;margin:2px 0 0;line-height:1.4;overflow-wrap:anywhere}
+details.sfs{grid-column:1/-1;margin:6px 0 0;border:1px dashed var(--bd);background:transparent}
+details.sfs>summary{padding:3px 8px;font-size:12px;color:var(--mut);cursor:pointer;background:transparent}
+.sfs-b{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 8px 8px}
+.sfs-b>*{margin:0}
+.sfs-b button,.sfs-b select,.sfs-b input[type=number]{width:auto;min-height:30px;padding:2px 8px;font-size:12px}
+.sfs-b .fontbtn{flex:1 1 100%;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sfs-b input[type=number]{width:62px}
+.sfs-b input[type=color]{width:34px;min-height:30px;padding:1px}
+.sfs-b label{display:inline-flex;gap:4px;align-items:center;font-size:12px;margin:0;white-space:nowrap}
+.sfs-b button.on{background:var(--ac);color:var(--acfg);border-color:var(--ac)}
+#qact{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:12px 0 4px;padding-top:10px;border-top:1px solid var(--bd)}
+#qact .bigbtn{flex:1 1 140px;min-height:46px;font-size:15px;font-weight:700}
+#qstat{flex:1 1 100%;font-size:12px;color:var(--mut)}
+#qstat.ng{color:var(--err,#b91c1c);font-weight:600}
 .sl-m .w{color:var(--warn)}
 .sl-m .e{color:var(--err,#b91c1c);font-weight:600}
 #list label.bad{color:var(--err,#b91c1c);font-weight:600}
@@ -490,6 +505,7 @@ button.dg,.dg{color:var(--err)}
 <h2 class="wh">名簿を入れる</h2><p class="wsub">項目ごとにExcelの1列をコピーして、下の欄に貼り付けます。1行が1人分です。</p>
 <div class="hintbox"><table class="xl" aria-hidden="true"><tr><th></th><th>A</th><th>B</th></tr><tr><th>1</th><td class="hl">受験番号</td><td>氏名</td></tr><tr><th>2</th><td class="hl">101</td><td>藤沢 太郎</td></tr><tr><th>3</th><td class="hl">102</td><td>湘南 花子</td></tr></table><div><b>Excelの列をまるごとコピー</b>して、同じ項目の欄に貼り付けてください。1行目の見出しは自動で除きます。</div></div>
 <div id="s3host"></div>
+<div id="qact" hidden><button id="qprint" type="button" class="pri bigbtn">印刷</button><button id="qpdf" type="button" class="bigbtn">PDFを保存</button><div id="qstat"></div></div>
 </div>
 <div class="wstep" id="ws4" data-s="4" hidden></div>
 </div>
@@ -618,7 +634,7 @@ d2.appendChild(pv);d2.appendChild(up);d2.appendChild(pk);d2.appendChild(ad);d2.a
 if(f.type==='font'){var fb2=btn('');fb2.className='fontbtn';
 var STD2=[['gothic','ゴシック（デザイン標準）'],['mincho','明朝（デザイン標準）']].map(function(x){return [x[0],x[1],C.font({font:x[0]}),'受験票 Abc 0123']});
 var upF=function(){var v=obj[k],sd=STD2.filter(function(x){return x[0]===v})[0],r=JukenFonts.resolve(v);fb2.textContent=sd?sd[1]:(r?r.name:v);fb2.style.fontFamily=sd?sd[2]:JukenFonts.css(v);JukenFonts.use(v)};
-fb2.onclick=function(){JukenFonts.openPicker({anchor:fb2,value:obj[k],std:STD2,onPick:function(id){obj[k]=id;upF();chg()}})};upF();P.appendChild(fb2);return}
+fb2.onclick=function(){JukenFonts.openPicker({anchor:fb2,value:obj[k],std:STD2,sample:nameSample(),onPick:function(id){obj[k]=id;upF();chg()}})};upF();P.appendChild(fb2);return}
 if(f.type==='select'){var sl=el('select');f.opts.forEach(function(o){var op=el('option',null,o[1]);op.value=o[0];sl.appendChild(op)});sl.value=obj[k];sl.onchange=function(){obj[k]=sl.value;chg()};P.appendChild(sl);return}
 if(f.type==='number'){var ni=el('input');ni.type='number';ni.step=f.step||'any';ni.value=obj[k];ni.oninput=function(){var n=parseFloat(ni.value);obj[k]=isFinite(n)?n:f.def;chg()};P.appendChild(ni);return}
 if(f.type==='color'){var ci=el('input');ci.type='color';ci.value=obj[k];ci.oninput=function(){obj[k]=ci.value;chg()};P.appendChild(ci);return}
@@ -742,7 +758,14 @@ async function loadPresets(){if(!sb||busy)return;setBusy(true);pstat('共有デ�
 try{await loadPresetsQuiet();pstat(presets.length?'':'共有デザインはまだありません。')}catch(e){pstat(pErr(e&&e.message?e:{message:'network'}),true);presetsErr=pErr(e&&e.message?e:{message:'network'})}setBusy(false);checkDraft()}
 var presetsErr='';
 function sizeOk(vals){var n=JSON.stringify(vals).length;if(n>PMAX)return confirm('このデザインのデータが大きめです（約'+(n/1e6).toFixed(1)+'MB）。画像を小さくすることをおすすめします。それでも保存しますか？');return true}
-function afterDesignChange(){save();drawTplSel();drawPreSel();drawFields();drawItems();render();if(UI.mode==='easy'&&step===2)drawInfo()}
+var warnedFont={};
+function nameSample(){try{var st=current()[0],it=V.items.filter(function(x){return /氏名|名前/.test(x.label)&&!/カナ|ｶﾅ|フリガナ|ふりがな/.test(x.label)})[0];var t=it?String(itemVal(it,st)||'').trim():'';return t||'山田 太郎'}catch(e){return '山田 太郎'}}
+/* デザインが使う書体がこのPCに無いとき（PCのフォント・持ち込みフォント）知らせる */
+function fontWarn(){if(!window.JukenFonts)return;var m=JSON.stringify(V).match(/"(local:[^"]+|up:[^"]+)"/g)||[];
+m.forEach(function(q){var id=q.slice(1,-1);if(warnedFont[id])return;var f=JukenFonts.resolve(id);if(!f)return;
+if(f.kind==='local'){if(!JukenFonts.has(id)){warnedFont[id]=1;toast('このデザインは「'+f.family+'」を使っていますが、このパソコンにはありません。近い書体の「'+JukenFonts.suggest(f.family)+'」で表示します。',null,null,14000)}}
+else if(f.kind==='up'){JukenFonts.ensureUp(id).then(function(r){if(!r&&!warnedFont[id]){warnedFont[id]=1;toast('このデザインが使う持ち込みフォント「'+f.name+'」が見つかりません。フォント一覧の「フォントを追加」から入れてください。',null,null,14000)}})}})}
+function afterDesignChange(){save();drawTplSel();drawPreSel();drawFields();drawItems();render();if(UI.mode==='easy'&&step===2)drawInfo();fontWarn()}
 function openPreset(id){var p=byId(id);if(!p)return false;
 if(dirtyNow()&&!confirm('保存していない変更があります。破棄して「'+p.name+'」を開きますか？'))return false;
 S.tpl=p.tpl;V=JT.mkVals(p.tpl,p.vals);setCur(p.id,p.name,p.at);afterDesignChange();resetBase();hideDraft();return true}
@@ -1167,6 +1190,38 @@ toast('「'+sl.label+'」を1列目だけにしました','元に戻す',functio
 if(mm&&c>0&&c!==R.n){e.m.appendChild(el('div','w',sl.label+'は'+c+'件、'+mm.mx.label+'は'+R.n+'件です。行がずれていないか確認してください'))}
 else if(mm&&sl===mm.mx){e.m.appendChild(el('div','w',sl.label+'は'+c+'件、'+mm.mn.label+'は'+R.cnt[mm.mn.key]+'件です。行がずれていないか確認してください'))}
 inputCheck(sl,e)})}
+/* 取り込んだ（フリー）デザインで、この項目を表示している枠の文字設定を、名簿の貼り付け欄のそばで直す */
+function slotElsFor(sl){if(S.tpl!=='free')return [];var fr=V.tpl&&V.tpl.free;if(!fr||!fr.elements)return [];var ph='{{'+sl.label+'}}';
+return fr.elements.filter(function(e){return !e.det&&((e.type==='field'&&e.itemId===sl.key)||(e.type==='text'&&String(e.text||'').indexOf(ph)>=0))})}
+function slotSample(sl){var v=(R.vals[sl.key]||[])[0];return v||(function(){var g=groupOf(sl.label);return g?SAMPLE[g]:sl.label})()}
+function slotStyle(sl){var els=slotElsFor(sl);if(!els.length)return null;var e0=els[0];
+var det=document.createElement('details');det.className='sfs';det.setAttribute('data-slot',sl.key);
+var fnm=function(){var r=JukenFonts.resolve(e0.font);return r?r.name:'ゴシック'};
+var sm=el('summary',null,'文字の設定（'+fnm()+'・'+e0.size+'pt）');det.appendChild(sm);
+var b=el('div','sfs-b');det.appendChild(b);
+var all=function(fn){els.forEach(fn);save();render();sm.textContent='文字の設定（'+fnm()+'・'+e0.size+'pt）'};
+var fb=btn('');fb.className='fontbtn';fb.setAttribute('aria-label','書体');
+var upF=function(){fb.textContent=fnm();fb.style.fontFamily=JukenFonts.css(e0.font);JukenFonts.use(e0.font)};upF();
+var ws=el('select');ws.setAttribute('aria-label','太さ');
+var drawW=function(){ws.textContent='';JukenFonts.weights(e0.font).forEach(function(w){var o=el('option',null,JukenFonts.weightLabel(w));o.value=w;ws.appendChild(o)});ws.value=String(JukenFonts.snap(e0.font,e0.weight))};drawW();
+fb.onclick=function(){JukenFonts.openPicker({anchor:fb,value:e0.font,sample:slotSample(sl),weight:e0.weight,onPick:function(id){all(function(e){e.font=id;e.weight=JukenFonts.snap(id,e.weight)});upF();drawW()}})};
+ws.onchange=function(){all(function(e){e.weight=+ws.value})};
+var mi=btn('−','小さく'),pl=btn('＋','大きく'),sz=el('input');sz.type='number';sz.min=4;sz.max=200;sz.step=0.5;sz.value=e0.size;sz.setAttribute('aria-label','文字の大きさ（pt）');
+var setSz=function(v){v=Math.max(4,Math.min(200,Math.round(v*10)/10));sz.value=v;all(function(e){e.size=v})};
+mi.onclick=function(){setSz(+sz.value-1)};pl.onclick=function(){setSz(+sz.value+1)};sz.onchange=function(){setSz(+sz.value||e0.size)};
+var fl=el('label'),fc=el('input');fc.type='checkbox';fc.checked=e0.fit==='shrink';fl.appendChild(fc);fl.appendChild(document.createTextNode('枠に合わせて自動で縮小'));fc.onchange=function(){all(function(e){e.fit=fc.checked?'shrink':'none'})};
+var co=el('input');co.type='color';co.value=/^#[0-9a-f]{6}$/i.test(e0.color)?e0.color:'#111111';co.setAttribute('aria-label','文字の色');co.oninput=function(){all(function(e){e.color=co.value})};
+var al=[['left','左'],['center','中'],['right','右']].map(function(a){var x=btn(a[1],'位置');if(e0.align===a[0])x.className='on';x.onclick=function(){all(function(e){e.align=a[0]});al.forEach(function(y){y.className=''});x.className='on'};return x});
+var ls=el('input');ls.type='number';ls.min=-0.2;ls.max=1;ls.step=0.02;ls.value=e0.letterSpacing||0;ls.title='字間（em）';ls.setAttribute('aria-label','字間');ls.onchange=function(){all(function(e){e.letterSpacing=Math.max(-0.2,Math.min(1,+ls.value||0))})};
+var lb=el('label');lb.appendChild(document.createTextNode('字間'));lb.appendChild(ls);
+var vl=el('label'),vc=el('input');vc.type='checkbox';vc.checked=!e0.hidden;vl.appendChild(vc);vl.appendChild(document.createTextNode('表示する'));
+vc.onchange=function(){var fr=V.tpl.free.elements;els.forEach(function(e){e.hidden=!vc.checked;fr.forEach(function(c){if(c.id==='cv_'+e.id)c.hidden=!vc.checked})});save();render()};
+var cm=btn('書体を見比べる','実際の名前で並べて選ぶ');cm.onclick=function(){JukenFonts.openCompare({text:slotSample(sl),value:e0.font,w:e0.weight,onPick:function(id,w){all(function(e){e.font=id;e.weight=w||JukenFonts.snap(id,e.weight)});upF();drawW()}})};
+[fb,cm,ws,mi,sz,pl,co].forEach(function(x){b.appendChild(x)});al.forEach(function(x){b.appendChild(x)});b.appendChild(lb);b.appendChild(fl);b.appendChild(vl);
+return det}
+function updQact(){var q=$('qact');if(!q)return;var on=UI.mode==='easy'&&step===3&&S.tpl==='free'&&rows.length>0;q.hidden=!on;if(!on)return;
+var n=current().length;$('qprint').disabled=!n;$('qpdf').disabled=!n;var nb=Object.keys(badRows).length,st=$('qstat');
+st.className=nb?'ng':'';st.textContent=nb?'⚠ 文字化けの疑いが'+nb+'名分あります。上の赤い欄を確認してください。':n+'名分・入力の文字チェック問題なし（印刷・PDFの前に、字形の有無も自動で確認します）'}
 function drawRoster(){var box=$('slots');
 var ns=getSlots(),keys={};ns.forEach(function(s){keys[s.key]=1});
 ns.forEach(function(s){if(texts[s.key]!==undefined)return;for(var i=0;i<lastSlots.length;i++){var o=lastSlots[i];if(o.label===s.label&&!keys[o.key]&&texts[o.key]!==undefined){texts[s.key]=texts[o.key];break}}});
@@ -1179,10 +1234,10 @@ ta.placeholder='ここに'+sl.label+'を1行に1人ずつ貼り付け';
 ta.oninput=function(){texts[sl.key]=ta.value;delete keepHdr[sl.key];growTa(ta);rosterInput()};
 cb.onclick=function(){var prev=texts[sl.key]||'';if(!prev)return;texts[sl.key]='';ta.value='';delete keepHdr[sl.key];growTa(ta);rosterInput();
 toast('「'+sl.label+'」をクリアしました','元に戻す',function(){texts[sl.key]=prev;ta.value=prev;growTa(ta);rosterInput()})};
-d.appendChild(ta);var m=el('div','sl-m');d.appendChild(m);box.appendChild(d);slotEls[sl.key]={ta:ta,n:n,m:m};growTa(ta)});
+d.appendChild(ta);var m=el('div','sl-m');d.appendChild(m);var ss=slotStyle(sl);if(ss)d.appendChild(ss);box.appendChild(d);slotEls[sl.key]={ta:ta,n:n,m:m};growTa(ta)});
 rosterInfo()}
 function rosterInfo(){computeRoster();updRosterUI();var has=rows.length>0;$('loaded').hidden=!has;
-$('cnt').textContent=rows.length+'名';$('rsum').textContent=has?rows.length+'名':'';drawList()}
+$('cnt').textContent=rows.length+'名';$('rsum').textContent=has?rows.length+'名':'';drawList();updQact()}
 var rdT=null;
 function rosterInput(){rosterInfo();clearTimeout(rdT);rdT=setTimeout(render,120)}
 function rosterChanged(){drawRoster();render()}
@@ -1258,7 +1313,7 @@ if(rows.length&&!current().length){alert('印刷する生徒が選択されて�
 try{await JukenFonts.prepare($('pages'));Array.prototype.forEach.call($('pages').querySelectorAll('.ticket'),fitAll)}catch(e){}
 if(!(await fontGate('印刷する')))return;
 window.print()}
-$('print').onclick=doPrint;
+$('print').onclick=doPrint;$('qprint').onclick=doPrint;$('qpdf').onclick=function(){makePdf()};
 var rt;window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(render,100)});
 zoom=UI.zoom;showAll=UI.all;
 /* ---------- トースト ---------- */
@@ -1343,7 +1398,7 @@ function setStep(n,quiet){step=Math.max(1,Math.min(4,n));
 if(step===1)drawGallery();else if(step===2)drawInfo();else if(step===4)drawFinal();
 moveRoster();drawProg();
 $('wnext').disabled=false;$('wback').hidden=step===1;$('wnext').textContent=NEXT[step-1];$('wnext').classList.toggle('pri',true);
-updFinal();
+updFinal();updQact();
 if(!quiet){$('editor').scrollTop=0;if(innerWidth<1024)window.scrollTo({top:0})}}
 $('wback').onclick=function(){setStep(step-1)};
 $('wnext').onclick=function(){if(step<4)setStep(step+1);else doPrint()};
@@ -1531,6 +1586,8 @@ ensureFree:function(){if(S.tpl!=='free')applyTemplate('free')},onClose:function(
 var fontEvt=function(){clearTimeout(rt);rt=setTimeout(function(){if(FreeEditor.isOpen())return;if(S.tpl==='free')render();else Array.prototype.forEach.call($('pages').querySelectorAll('.ticket'),fitAll)},150)};
 if(document.fonts&&document.fonts.addEventListener)document.fonts.addEventListener('loadingdone',fontEvt);window.addEventListener('juken-fonts',fontEvt);
 DesignImport.init({sample:function(){return mkStu(0,null)},fitAll:fitAll,toast:toast,
+lastExt:function(){var c=presets.filter(function(p){return p.tpl==='free'&&p.vals&&JSON.stringify(p.vals).indexOf('"id":"bg"')>=0}).sort(function(a,b){return tsNum(b.at)-tsNum(a.at)})[0];return c?{id:c.id,name:c.name}:null},
+openLast:function(id){if(openPreset(id)){setStep(3);toast('前回のデザインを開きました。名簿を貼り付けてください')}},
 apply:function(o){var nv=JT.mkVals('free',{items:o.items,tpl:{free:{bg:o.bg,elements:o.elements,guides:[]}}});
 S.tpl='free';V=nv;clearCur();importName=o.name;lastFile='';selId='';navPos=0;afterDesignChange();resetBase();hideDraft();
 if(o.rosterLines){V.items.forEach(function(it){var ls=o.rosterLines[it.label];if(ls)texts[it.id]=ls.join('\n')});drawRoster()}

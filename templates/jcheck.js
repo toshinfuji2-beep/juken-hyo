@@ -218,7 +218,7 @@ function verify(roots, opts) {
         if (!famAvailable(G.fam, G.w, G.st)) {
           /* パソコンの書体が無いPCでは、書体リストに決めてある代替（Webフォント）で表示される。それは想定どおりなので注意書きだけ */
           var rg = g.JukenFonts && g.JukenFonts.fromCss ? g.JukenFonts.fromCss(G.css) : null, alt = '';
-          if (rg && rg.kind === 'sys') { var fl = famList(G.css); for (var q = 1; q < fl.length; q++) { if (!GENERIC.test(fl[q]) && famAvailable(fl[q], G.w, G.st)) { alt = fl[q]; break; } } }
+          if (rg && (rg.kind === 'sys' || rg.kind === 'local')) { var fl = famList(G.css); for (var q = 1; q < fl.length; q++) { if (!GENERIC.test(fl[q]) && famAvailable(fl[q], G.w, G.st)) { alt = fl[q]; break; } } }
           if (alt) { eff = alt; res.subst.push({ from: G.fam, to: alt }); }
           else { if (res.notLoaded.indexOf(G.fam) < 0) res.notLoaded.push(G.fam); return; }
         }

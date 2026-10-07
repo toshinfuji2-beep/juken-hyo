@@ -168,10 +168,10 @@ async function handleFile(arg) {
 
 /* ---------- 画像（背景＋差し込み枠＋OCRで自動判定） ---------- */
 function loadImg(url) { return new Promise(function (ok, ng) { var i = new Image(); i.onload = function () { ok(i); }; i.onerror = function () { ng(new Error('img')); }; i.src = url; }); }
-async function fileCanvas(f) {
+async function fileCanvas(f, maxPx) {
   var url = URL.createObjectURL(f), im;
   try { im = await loadImg(url); } catch (e) { URL.revokeObjectURL(url); throw new Error('画像を読み込めませんでした。壊れていないか確認してください。'); }
-  var s = Math.min(1, 2000 / Math.max(im.naturalWidth, im.naturalHeight)), cv = document.createElement('canvas');
+  var s = Math.min(1, (maxPx || 2000) / Math.max(im.naturalWidth, im.naturalHeight)), cv = document.createElement('canvas');
   cv.width = Math.max(1, Math.round(im.naturalWidth * s)); cv.height = Math.max(1, Math.round(im.naturalHeight * s));
   var x = cv.getContext('2d', { willReadFrequently: true }); x.fillStyle = '#fff'; x.fillRect(0, 0, cv.width, cv.height); x.drawImage(im, 0, 0, cv.width, cv.height); URL.revokeObjectURL(url);
   return { cv: cv, ratio: im.naturalWidth / im.naturalHeight };
@@ -179,8 +179,8 @@ async function fileCanvas(f) {
 async function startImage(f) {
   showBusy('画像を読み込んでいます…');
   var r = await fileCanvas(f), cv = r.cv;
-  var src = /png|gif|webp/i.test(f.type) ? cv.toDataURL('image/png') : cv.toDataURL('image/jpeg', 0.9);
-  if (src.length > 1.6e6) src = cv.toDataURL('image/jpeg', 0.85);
+  var png = /png|gif|webp/i.test(f.type), src;
+  try { var hi = await fileCanvas(f, 3508); src = encodeBg(hi.cv, png); hi.cv.width = hi.cv.height = 0; } catch (e) { src = encodeBg(cv, png); }
   await startBackground(src, r.ratio, '画像', cv, 'ocr');
 }
 /* 複数の画像：生徒ごとに1枚ずつ。どれか1枚をデザインにして、全部から名簿を読み取れる */
@@ -191,6 +191,31 @@ async function startImages(files) {
   }, label: function (i) { return (i + 1) + '枚目'; }, pick: async function (i) {
     try { M.imgIdx = i; await startImage(files[i]); } catch (e) { if (M && M.cancelled) return; showBusy(null, (e && e.message) || '取り込めませんでした。'); }
   } });
+}
+/* 背景画像の保存形式：印刷に耐える解像度（A4で約300dpi＝長辺3508px）を保ちつつ、共有保存の上限に収まるよう画質→大きさの順に下げる */
+function encodeBg(cv, png) {
+  var LIM = 1.3e6, c = cv, src;
+  if (png) { src = c.toDataURL('image/png'); if (src.length <= LIM) return src; }
+  for (var k = 0; k < 6; k++) {
+    var qs = [0.92, 0.85, 0.78, 0.7];
+    for (var j = 0; j < qs.length; j++) { src = c.toDataURL('image/jpeg', qs[j]); if (src.length <= LIM) return src; }
+    var w = Math.round(c.width * 0.85), h = Math.round(c.height * 0.85); if (Math.max(w, h) < 1500) break;
+    var c2 = document.createElement('canvas'); c2.width = w; c2.height = h; var x = c2.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, w, h); x.drawImage(c, 0, 0, w, h); c = c2;
+  }
+  return src;
+}
+/* 元の書体が英字用（Calibri・Arial など）でも、名前など日本語が入る項目には日本語が描ける書体にする */
+function jpSafeFont(font, label) {
+  var f = JukenFonts.resolve(font);
+  if (f && f.cat === '英字' && !/番号|No/i.test(label || '')) return /serif/.test(f.tail || '') ? 'noto-serif-jp' : 'noto-sans-jp';
+  return font;
+}
+/* PDFの文字情報から、この枠の位置にある文字の元の書体名 */
+function pdfFontAt(b) {
+  if (!M || !M.textItems || !M.geo) return '';
+  var G = M.geo, cx = (b.x + b.w / 2 - G.ox) / G.k, cy = (b.y + b.h / 2 - G.oy) / G.k, i, it;
+  for (i = 0; i < M.textItems.length; i++) { it = M.textItems[i]; if (it.font && cx >= it.x && cx <= it.x + it.w && cy >= it.y && cy <= it.y + it.h) return it.font; }
+  return '';
 }
 function geoOf(cv) { var k = Math.min(210 / cv.width, 297 / cv.height); return { k: k, ox: (210 - cv.width * k) / 2, oy: (297 - cv.height * k) / 2, cw: cv.width, ch: cv.height }; }
 async function startBackground(src, ratio, what, cv, mode) {
@@ -290,7 +315,8 @@ async function buildDetected(lines, ocr) {
     else if (al === 'right') { var m1 = Math.max(0, Math.min(extra, gl - 1.5)); ex -= m1; ew += m1; }
     else { var m2 = Math.max(0, Math.min(extra / 2, gl / 2 - 0.75, gr / 2 - 0.75)); ex -= m2; ew += m2 * 2; }
     var size = Math.max(4, Math.min(120, Math.round(b.size * 10) / 10));
-    M.elements.push({ type: 'text', id: b.id, det: 1, x: ex, y: b.y, w: ew, h: b.h, text: b.text, name: '読み取った文字', font: 'gothic', size: size, weight: 400, color: sm.fg, align: al, valign: 'middle', fit: 'shrink', lineHeight: 1.2, padding: 0, conf: b.conf,
+    var pf = pdfFontAt(b), pm = pf && g.FontMatch ? g.FontMatch.fromPdfName(pf) : null;
+    M.elements.push({ type: 'text', id: b.id, det: 1, pdfFont: pf || '', x: ex, y: b.y, w: ew, h: b.h, text: b.text, name: '読み取った文字', font: pm ? pm.id : 'gothic', size: size, weight: pm ? pm.weight : 400, color: sm.fg, align: al, valign: 'middle', fit: 'shrink', lineHeight: 1.2, padding: 0, conf: b.conf,
       gl: gl, gr: gr, ax: b.x, aw: b.w, cover: { x: b.x - padMm, y: b.y - padMm, w: b.w + padMm * 2, h: b.h + padMm * 2, fill: sm.bg, uniform: sm.uniform } });
     M.det[b.id] = 1; M.orig[b.id] = b.text;
   });
@@ -323,8 +349,9 @@ async function startPdf(f) {
     cv.width = Math.round(v.width); cv.height = Math.round(v.height); await pg.render({ canvasContext: cv.getContext('2d'), viewport: v }).promise; box.appendChild(cv);
   }, label: function (i) { return (i + 1) + 'ページ'; }, pick: function (i) { pickPdfPage(i + 1); } });
 }
-async function renderPdfPage(n, sc) {
+async function renderPdfPage(n, sc, longSide) {
   var pg = await M.pdf.getPage(n), v0 = pg.getViewport({ scale: 1 });
+  if (longSide) sc = longSide / Math.max(v0.width, v0.height);
   if (!sc) sc = Math.min(4, 1800 / Math.max(v0.width, v0.height));
   var v = pg.getViewport({ scale: sc }), cv = document.createElement('canvas');
   cv.width = Math.round(v.width); cv.height = Math.round(v.height);
@@ -350,7 +377,8 @@ async function fixGarbled(items, cv) {
 async function pickPdfPage(n) {
   showBusy('ページを取り込んでいます…');
   var r = await renderPdfPage(n), cv = r.cv;
-  var src = cv.toDataURL('image/jpeg', 0.9); if (src.length > 1.6e6) src = cv.toDataURL('image/jpeg', 0.8);
+  var src;
+  try { var hi = await renderPdfPage(n, null, 3508); src = encodeBg(hi.cv, false); hi.cv.width = hi.cv.height = 0; } catch (e) { src = encodeBg(cv, false); }
   M.pdfSc = r.sc; M.pdfPage = n; M.noTextLayer = false; M.textItems = null;
   var items = [];
   try { items = await DD.pdfItems(r.pg, r.v, g.pdfjsLib); } catch (e) { items = []; }
@@ -611,6 +639,39 @@ function styleRow(pop, e) {
   st.appendChild(fs); st.appendChild(mi); st.appendChild(nm); st.appendChild(pl); st.appendChild(co);
   [['left', '左'], ['center', '中'], ['right', '右']].forEach(function (a) { var b = btn(a[1], '文字位置'); if (e.align === a[0]) b.className = 'on'; b.onclick = function () { e.align = a[0]; redrawKeep(); st.querySelectorAll('button').forEach(function (x) { if (/^[左中右]$/.test(x.textContent)) x.className = ''; }); b.className = 'on'; }; st.appendChild(b); });
   pop.appendChild(st);
+  var fm = el('div', 'fm'); fm.style.cssText = 'margin-top:6px;font-size:12px';
+  var pick = btn('書体を見比べる', '実際の文字で書体を並べて選ぶ'); pick.onclick = function () { JukenFonts.openCompare({ text: sampleText(e), value: e.font, w: e.weight, onPick: function (id, w) { e.font = id; e.weight = w || e.weight; fs.value = JukenFonts.resolve(id) ? JukenFonts.resolve(id).id : fs.value; redrawKeep(); } }); };
+  fm.appendChild(pick);
+  if (M.pix && e.cover && g.FontMatch && M.det[e.id]) {
+    var mb = btn('元の文字に合わせる', '元の文字と見た目が近い書体を探します'); mb.style.marginLeft = '6px';
+    var res = el('div', 'fmr'); res.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;margin-top:6px';
+    mb.onclick = function () { matchOriginal(e, mb, res, fs); };
+    fm.appendChild(mb); fm.appendChild(res);
+    if (e.pdfFont) { var pn = el('div', 'org', 'PDFの元の書体：' + String(e.pdfFont).replace(/^[A-Z]{6}\+/, '') + '（近い書体を自動で選びました）'); pn.style.marginTop = '4px'; fm.appendChild(pn); }
+  }
+  pop.appendChild(fm);
+}
+/* 見本表示に使う文字：割り当てた項目に合わせた例（氏名なら名前、番号なら数字）。無ければ元の文字 */
+function sampleText(e) {
+  var l = M.map[e.id] || '', o = String(M.orig[e.id] != null ? M.orig[e.id] : e.text).replace(/\{\{[^}]*\}\}/g, '').trim();
+  if (/カナ|フリガナ|ふりがな/.test(l)) return 'ヤマダ タロウ'; if (/氏名|名前/.test(l)) return '山田 太郎'; if (/番号/.test(l)) return '0123456'; return JTX.first(o, 12) || '山田 太郎';
+}
+/* 元の画像の文字と比べて近い書体を上位5件出す */
+function matchOriginal(e, btnEl, box, fs) {
+  var G = M.geo, c = e.cover, r = { x: (c.x - G.ox) / G.k, y: (c.y - G.oy) / G.k, w: c.w / G.k, h: c.h / G.k }, txt = String(M.orig[e.id] != null ? M.orig[e.id] : e.text).replace(/\{\{[^}]*\}\}/g, '').trim();
+  if (!txt) { box.textContent = '元の文字が読み取れていません。'; return; }
+  btnEl.disabled = true; box.textContent = '書体を調べています…';
+  var cancelled = function () { return !M || M.pop === null; };
+  g.FontMatch.rank(M.pix, r, txt, { cancelled: cancelled, onProgress: function (i, n) { if (box.isConnected) box.textContent = '書体を調べています… ' + i + '/' + n; } }).then(function (rs) {
+    btnEl.disabled = false; if (!box.isConnected) return; box.textContent = '';
+    if (!rs.length) { box.textContent = '近い書体を判定できませんでした。「書体を見比べる」で選んでください。'; return; }
+    var seen = {}, top = rs.filter(function (x) { if (seen[x.id]) return false; seen[x.id] = 1; return true; }).slice(0, 5);
+    top.forEach(function (x, i) {
+      var b = el('button', null, (i + 1) + '. ' + JukenFonts.get(x.id).name); b.type = 'button'; b.title = 'この書体にする'; b.style.cssText = 'padding:2px 8px;font-size:12px;font-family:' + JukenFonts.css(x.id) + ';font-weight:' + x.weight;
+      b.onclick = function () { e.font = x.id; e.weight = x.weight; JukenFonts.pushRecent(x.id); redrawKeep(); };
+      box.appendChild(b);
+    });
+  });
 }
 function redrawKeep() { var sel = M.sel, pop = M.pop, top = M.stage.scrollTop; /* ポップオーバーを残したまま、ページだけ描き直す */
   var inner = M.inner, t = inner.querySelector('.ticket'); if (!t) return;
@@ -856,7 +917,7 @@ async function finish() {
     if (M.det[e.id]) {
       if (!l) return;
       elements.push(coverEl(e));
-      elements.push({ type: 'field', id: e.id, x: e.x, y: e.y, w: e.w, h: e.h, name: l, itemId: idOf[l], showLabel: false, font: e.font, size: e.size, weight: 400, color: e.color, align: e.align, valign: 'middle', fit: 'shrink', lineHeight: 1.2, padding: 0, groupId: 'g_' + e.id });
+      elements.push({ type: 'field', id: e.id, x: e.x, y: e.y, w: e.w, h: e.h, name: l, itemId: idOf[l], showLabel: false, font: jpSafeFont(e.font, l), size: e.size, weight: 400, color: e.color, align: e.align, valign: 'middle', fit: 'shrink', lineHeight: 1.2, padding: 0, groupId: 'g_' + e.id });
       return;
     }
     if (M.custom[e.id] && !l) return;
@@ -888,14 +949,17 @@ function pickFile(accept) {
 }
 function makeCard() {
   ensureCss();
-  var s = el('section', 'gsec dimp-card'), h = el('h3', null, '自分のデザインを使う'); h.appendChild(el('span', 'gl')); s.appendChild(h);
+  var s = el('section', 'gsec dimp-card'), h = el('h3', null, '外部で作ったデザインに名前を入れる（PDF・画像・PowerPoint）'); h.appendChild(el('span', 'gl')); s.appendChild(h);
   var b = el('button', 'dimp-big'); b.type = 'button'; b.id = 'dimpcard';
-  b.innerHTML = '<span class="di-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg></span><span><b>自分のデザインを取り込む</b><span class="t">PowerPointやPDF、画像で作った受験票を取り込めます。名前や番号を入れる場所をクリックして指定すれば、名簿を貼り付けるだけで全員分が一括でできます。</span><span class="ex"><span class="chip">PowerPoint（.pptx）</span><span class="chip">PDF</span><span class="chip">画像（PNG・JPEG）</span><span class="chip">ここにドロップ</span></span></span>';
+  b.innerHTML = '<span class="di-ic" aria-hidden="true"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg></span><span><b>ファイルをここにドロップ（または選ぶ）</b><span class="t">Canva・Illustrator・PowerPoint などで作った受験票を、見た目そのまま取り込みます。受験番号や氏名の場所は自動で見つけます。名簿を貼り付けるだけで、全員分を印刷・PDFにできます。PowerPointは「PDFとして保存」したものを取り込むと、見た目がいちばん正確です。</span><span class="ex"><span class="chip">PowerPoint（.pptx）</span><span class="chip">PDF</span><span class="chip">画像（PNG・JPEG）</span><span class="chip">ここにドロップ</span></span></span>';
   b.onclick = function () { pickFile(); };
   ['dragenter', 'dragover'].forEach(function (t) { b.addEventListener(t, function (e) { if (e.dataTransfer && Array.prototype.indexOf.call(e.dataTransfer.types || [], 'Files') >= 0) { e.preventDefault(); b.classList.add('over'); } }); });
   b.addEventListener('dragleave', function () { b.classList.remove('over'); });
   b.addEventListener('drop', function (e) { e.preventDefault(); b.classList.remove('over'); if (e.dataTransfer.files && e.dataTransfer.files[0]) handleFile(Array.prototype.slice.call(e.dataTransfer.files)); });
-  s.appendChild(b); return s;
+  s.appendChild(b);
+  var le = H && H.lastExt ? H.lastExt() : null;
+  if (le) { var lb = el('button', 'dimp-last'); lb.type = 'button'; lb.style.cssText = 'margin-top:8px;padding:8px 12px;text-align:left;width:100%'; lb.appendChild(el('b', null, '前回のデザインで始める')); lb.appendChild(document.createTextNode('　『' + le.name + '』を開いて、名簿の貼り付けへ')); lb.onclick = function () { H.openLast(le.id); }; s.appendChild(lb); }
+  return s;
 }
 
 g.DesignImport = {

@@ -1,60 +1,117 @@
-/* フリーデザイン エディタ（PowerPoint風）。window.FreeEditor
-   使い方：index.html が FreeEditor.init(host) でホスト機能（V・保存・履歴・画像選択など）を渡し、
-   「デザイン編集」ボタンから FreeEditor.open() を呼ぶ。描画は templates/free.js（JT.render('free')）をそのまま使うので、
-   エディタ上の見た目と印刷・PDF・サムネイルは同じ。要素モデルは DESIGN_FORMAT.md 参照。
-   画面の構成：タイトルバー（クイックアクセス）／リボン（ファイル・ホーム・挿入・デザイン・差し込み・表示＋選択に応じたコンテキストタブ）／
-   左サムネイル／キャンバス／右の作業ウィンドウ（書式設定・選択）／ステータスバー。
-   グループ化は要素の groupId（同じ文字列を持つ要素が1グループ）で表す。 */
-(function (g) {
-'use strict';
-var FE = g.FreeEditor = {};
-var JF = g.JukenFree, JT = g.JukenTemplates, C = JT.ctx;
-var PXMM = 96 / 25.4, PW = 210, PH = 297;
-var H = null, root = null, R = {}, pop = null, mini = null;
-var S = {
-  open: false, sel: [], zoom: 1, fit: 'c', grid: false, snap: true, raw: false, preview: false, pidx: 0, clip: null, editing: null, ro: false, addN: 0, pasteN: 0,
-  st: { s: '', t: '' }, hover: '', rowSel: null, rawKey: '', nt: '', hb: null,
-  rtab: 'home', rcol: false, rpeek: false, bs: '', pane: '', ptab: 'shape', secs: {}, thumbs: true, thw: 150, rulers: true, guides: true,
-  lockAR: false, draw: null, fp: null, fpSticky: false, lastCol: { font: 'accent', hl: '#fff200', fill: 'accent', line: 'accent' }
-};
-var drag = null, layDrag = '';
-var RECENT_KEY = 'juken-free-recent', UI_KEY = 'juken-free-ui';
-var CTAB = { shape: ['図形の書式', '描画ツール', '#c4572e'], pic: ['図の形式', '図ツール', '#2f7d6d'], tbl: ['テーブル デザイン', '表ツール', '#5b6bb5'] };
-
-/* ---------- 小道具 ---------- */
-function esc(s) { return C.esc(s); }
-function h(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
-function tx(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
-function $(s, r) { return (r || root).querySelector(s); }
-function V() { return H.V(); }
-function F() { return H.V().tpl.free; }
-function elems() { return F().elements; }
-function find(id) { var a = elems(); for (var i = 0; i < a.length; i++) if (a[i].id === id) return a[i]; return null; }
-function selEls() { return S.sel.map(find).filter(Boolean); }
-function sz() { return PXMM * S.zoom; }
-function r2(n) { return Math.round(n * 100) / 100; }
-function clamp(v, lo, hi) { if (lo != null && v < lo) v = lo; if (hi != null && v > hi) v = hi; return v; }
-function nodeOf(id) { return R.pg ? R.pg.querySelector('[data-eid="' + id + '"]') : null; }
-function ic(n) { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (IC[n] || '') + '</svg>'; }
-function ibtn(icon, title, fn, cls) { var b = h('button', 'fe-ib' + (cls ? ' ' + cls : ''), ic(icon)); b.type = 'button'; b.setAttribute('data-tip', title); b.setAttribute('aria-label', title.split('\n')[0]); if (fn) b.onclick = fn; return b; }
-function lbl(t) { if (H && H.hlabel) H.hlabel(t); }
-function loadUI() { try { var o = JSON.parse(localStorage.getItem(UI_KEY) || 'null'); return o && typeof o === 'object' ? o : null; } catch (e) { return null; } }
-function saveUI() { try { localStorage.setItem(UI_KEY, JSON.stringify({ rcol: S.rcol, pane: S.pane, ptab: S.ptab, secs: S.secs, thumbs: S.thumbs, thw: S.thw, rulers: S.rulers, guides: S.guides, grid: S.grid, snap: S.snap, lockAR: S.lockAR })); } catch (e) {} }
-/* Office 風ツールヒント：1行目=太字の名前、2行目=説明、3行目=ショートカット（data-tip を「\n」でつなぐ） */
-function tipOf(t, d, k) { return t + '\n' + (d || '') + (k ? '\n' + k : ''); }
-var TT = null, ttTimer = 0;
-function ttHide() { clearTimeout(ttTimer); if (TT) { TT.remove(); TT = null; } }
-function ttShow(el) {
-  var t = el.getAttribute('data-tip'); if (!t || !el.isConnected) return; ttHide();
-  var p = t.split('\n'); TT = h('div', 'fe-tt'); TT.appendChild(tx('b', null, p[0])); if (p[1]) TT.appendChild(tx('span', null, p[1])); if (p[2]) TT.appendChild(tx('em', null, p[2]));
-  root.appendChild(TT); var r = el.getBoundingClientRect(), w = TT.offsetWidth, hh = TT.offsetHeight;
-  TT.style.left = clamp(r.left + 4, 6, innerWidth - w - 6) + 'px'; TT.style.top = (r.bottom + 6 + hh < innerHeight - 4 ? r.bottom + 6 : Math.max(4, r.top - hh - 6)) + 'px';
-}
-function tipify(c) { Array.prototype.forEach.call((c || root).querySelectorAll('[title]'), function (e) { e.setAttribute('data-tip', e.getAttribute('title')); e.removeAttribute('title'); if (!e.getAttribute('aria-label') && e.tagName === 'BUTTON' && !e.textContent.trim()) e.setAttribute('aria-label', e.getAttribute('data-tip').split('\n')[0]); }); }
-function tbtn(icon, label, fn, cls) { var b = h('button', 'fe-bt' + (cls ? ' ' + cls : ''), (icon ? ic(icon) : '') + '<span>' + esc(label) + '</span>'); b.type = 'button'; if (fn) b.onclick = fn; return b; }
-function resolveColor(c) { return JF.rc(c, V()); }
-function isHex(c) { return /^#[0-9a-f]{6}$/i.test(c); }
-
+/* フリーデザイン エディタ（PowerPoint風）。window.FreeEditor
+
+   使い方：index.html が FreeEditor.init(host) でホスト機能（V・保存・履歴・画像選択など）を渡し、
+
+   「デザイン編集」ボタンから FreeEditor.open() を呼ぶ。描画は templates/free.js（JT.render('free')）をそのまま使うので、
+
+   エディタ上の見た目と印刷・PDF・サムネイルは同じ。要素モデルは DESIGN_FORMAT.md 参照。
+
+   画面の構成：タイトルバー（クイックアクセス）／リボン（ファイル・ホーム・挿入・デザイン・差し込み・表示＋選択に応じたコンテキストタブ）／
+
+   左サムネイル／キャンバス／右の作業ウィンドウ（書式設定・選択）／ステータスバー。
+
+   グループ化は要素の groupId（同じ文字列を持つ要素が1グループ）で表す。 */
+
+(function (g) {
+
+'use strict';
+
+var FE = g.FreeEditor = {};
+
+var JF = g.JukenFree, JT = g.JukenTemplates, C = JT.ctx;
+
+var PXMM = 96 / 25.4, PW = 210, PH = 297;
+
+var H = null, root = null, R = {}, pop = null, mini = null;
+
+var S = {
+
+  open: false, sel: [], zoom: 1, fit: 'c', grid: false, snap: true, raw: false, preview: false, pidx: 0, clip: null, editing: null, ro: false, addN: 0, pasteN: 0,
+
+  st: { s: '', t: '' }, hover: '', rowSel: null, rawKey: '', nt: '', hb: null,
+
+  rtab: 'home', rcol: false, rpeek: false, bs: '', pane: '', ptab: 'shape', secs: {}, thumbs: true, thw: 150, rulers: true, guides: true,
+
+  lockAR: false, draw: null, fp: null, fpSticky: false, lastCol: { font: 'accent', hl: '#fff200', fill: 'accent', line: 'accent' }
+
+};
+
+var drag = null, layDrag = '';
+
+var RECENT_KEY = 'juken-free-recent', UI_KEY = 'juken-free-ui';
+
+var CTAB = { shape: ['図形の書式', '描画ツール', '#c4572e'], pic: ['図の形式', '図ツール', '#2f7d6d'], tbl: ['テーブル デザイン', '表ツール', '#5b6bb5'] };
+
+
+
+/* ---------- 小道具 ---------- */
+
+function esc(s) { return C.esc(s); }
+
+function h(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
+
+function tx(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; }
+
+function $(s, r) { return (r || root).querySelector(s); }
+
+function V() { return H.V(); }
+
+function F() { return H.V().tpl.free; }
+
+function elems() { return F().elements; }
+
+function find(id) { var a = elems(); for (var i = 0; i < a.length; i++) if (a[i].id === id) return a[i]; return null; }
+
+function selEls() { return S.sel.map(find).filter(Boolean); }
+
+function sz() { return PXMM * S.zoom; }
+
+function r2(n) { return Math.round(n * 100) / 100; }
+
+function clamp(v, lo, hi) { if (lo != null && v < lo) v = lo; if (hi != null && v > hi) v = hi; return v; }
+
+function nodeOf(id) { return R.pg ? R.pg.querySelector('[data-eid="' + id + '"]') : null; }
+
+function ic(n) { return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (IC[n] || '') + '</svg>'; }
+
+function ibtn(icon, title, fn, cls) { var b = h('button', 'fe-ib' + (cls ? ' ' + cls : ''), ic(icon)); b.type = 'button'; b.setAttribute('data-tip', title); b.setAttribute('aria-label', title.split('\n')[0]); if (fn) b.onclick = fn; return b; }
+
+function lbl(t) { if (H && H.hlabel) H.hlabel(t); }
+
+function loadUI() { try { var o = JSON.parse(localStorage.getItem(UI_KEY) || 'null'); return o && typeof o === 'object' ? o : null; } catch (e) { return null; } }
+
+function saveUI() { try { localStorage.setItem(UI_KEY, JSON.stringify({ rcol: S.rcol, pane: S.pane, ptab: S.ptab, secs: S.secs, thumbs: S.thumbs, thw: S.thw, rulers: S.rulers, guides: S.guides, grid: S.grid, snap: S.snap, lockAR: S.lockAR })); } catch (e) {} }
+
+/* Office 風ツールヒント：1行目=太字の名前、2行目=説明、3行目=ショートカット（data-tip を「\n」でつなぐ） */
+
+function tipOf(t, d, k) { return t + '\n' + (d || '') + (k ? '\n' + k : ''); }
+
+var TT = null, ttTimer = 0;
+
+function ttHide() { clearTimeout(ttTimer); if (TT) { TT.remove(); TT = null; } }
+
+function ttShow(el) {
+
+  var t = el.getAttribute('data-tip'); if (!t || !el.isConnected) return; ttHide();
+
+  var p = t.split('\n'); TT = h('div', 'fe-tt'); TT.appendChild(tx('b', null, p[0])); if (p[1]) TT.appendChild(tx('span', null, p[1])); if (p[2]) TT.appendChild(tx('em', null, p[2]));
+
+  root.appendChild(TT); var r = el.getBoundingClientRect(), w = TT.offsetWidth, hh = TT.offsetHeight;
+
+  TT.style.left = clamp(r.left + 4, 6, innerWidth - w - 6) + 'px'; TT.style.top = (r.bottom + 6 + hh < innerHeight - 4 ? r.bottom + 6 : Math.max(4, r.top - hh - 6)) + 'px';
+
+}
+
+function tipify(c) { Array.prototype.forEach.call((c || root).querySelectorAll('[title]'), function (e) { e.setAttribute('data-tip', e.getAttribute('title')); e.removeAttribute('title'); if (!e.getAttribute('aria-label') && e.tagName === 'BUTTON' && !e.textContent.trim()) e.setAttribute('aria-label', e.getAttribute('data-tip').split('\n')[0]); }); }
+
+function tbtn(icon, label, fn, cls) { var b = h('button', 'fe-bt' + (cls ? ' ' + cls : ''), (icon ? ic(icon) : '') + '<span>' + esc(label) + '</span>'); b.type = 'button'; if (fn) b.onclick = fn; return b; }
+
+function resolveColor(c) { return JF.rc(c, V()); }
+
+function isHex(c) { return /^#[0-9a-f]{6}$/i.test(c); }
+
+
+
 var IC = {
   tpl: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>',
   text: '<path d="M5 6V4h14v2M12 4v16M9 20h6"/>',
@@ -595,7 +652,8 @@ function fontCombo(cur, on, dis) {
   var w = h('span', 'fe-combo f'), i = h('input'), b = h('button', 'fe-cba', '<i class="fe-dd"></i>'); i.type = 'text'; i.readOnly = true; i.value = cur ? fontLabel(cur) : ''; i.setAttribute('aria-label', 'フォント'); b.type = 'button'; b.tabIndex = -1;
   if (cur && JFN.valid(cur)) { i.style.fontFamily = JF.fcss(cur); JFN.use(cur); }
   w.setAttribute('data-tip', tipOf('フォント', '文字の書体を変更します。種類別・検索つきの一覧から選べます。'));
-  function open() { closePop(); JFN.openPicker({ anchor: w, value: cur, theme: 'light', onPick: on }); }
+  function nameSample() { try { var st = H.students()[0] || H.sample(), t = JF.resolveText('{{氏名}}', H.V(), st) || JF.resolveText('{{カナ氏名}}', H.V(), st); return String(t || '').trim() || '山田 太郎'; } catch (e) { return '山田 太郎'; } }
+  function open() { closePop(); JFN.openPicker({ anchor: w, value: cur, theme: 'light', sample: nameSample(), onPick: on }); }
   i.onclick = open; b.onclick = open; i.disabled = b.disabled = !!dis; w.appendChild(i); w.appendChild(b); return w;
 }
 function sizeCombo(cur, on, dis) {
@@ -1007,498 +1065,987 @@ function nodeGeom(e) {
   var n = nodeOf(e.id); if (!n) return; var q = JF.geom(e);
   n.style.left = q.x + 'mm'; n.style.top = q.y + 'mm'; n.style.width = q.w + 'mm'; n.style.height = q.h + 'mm'; n.style.transform = e.rot ? 'rotate(' + e.rot + 'deg)' : '';
 }
-
-/* ---------- 操作の共通入口 ---------- */
-var PROP_LBL = { fill: '塗りつぶしの変更', bg: '塗りつぶしの変更', stroke: '枠線の変更', strokeWidth: '線の太さの変更', dash: '線の種類の変更', color: '文字色の変更', size: 'フォント サイズの変更', font: 'フォントの変更', weight: '太字の変更', italic: '斜体の変更', underline: '下線の変更', strike: '取り消し線の変更', align: '配置の変更', valign: '配置の変更', letterSpacing: '文字の間隔の変更', lineHeight: '行間の変更', vertical: '文字列の方向の変更', text: '文字の編集', opacity: '透明度の変更', radius: '角の丸みの変更', name: '名前の変更', locked: 'ロックの変更', hidden: '表示の変更', padding: '余白の変更', fit: '自動調整の変更', src: '画像の変更' };
-function cleanGroups() {
-  var n = {}; elems().forEach(function (e) { if (e.groupId) n[e.groupId] = (n[e.groupId] || 0) + 1; });
-  elems().forEach(function (e) { if (e.groupId && n[e.groupId] < 2) delete e.groupId; });
-}
-function mut(fn, o) {
-  o = o || {}; if (o.label) lbl(o.label); fn(); cleanGroups(); H.changed(!o.live);
-  if (o.live) { drawPage(); drawOv(); } else redraw();
-}
-function setSel(ids) { S.sel = ids.filter(function (id, i) { return ids.indexOf(id) === i && find(id); }); if (S.rowSel && S.sel.indexOf(S.rowSel.eid) < 0) S.rowSel = null; }
-function groupOf(e) { return e && e.groupId ? elems().filter(function (m) { return m.groupId === e.groupId; }) : []; }
-function expandGroups(ids) {
-  var out = ids.slice(); ids.forEach(function (id) { var e = find(id); if (e && e.groupId) groupOf(e).forEach(function (m) { if (out.indexOf(m.id) < 0) out.push(m.id); }); });
-  return out;
-}
-function selChanged() { drawFrame(); if (rawKey() !== S.rawKey) drawPage(); drawOv(); drawTabs(); drawRibbon(); drawPane(); }
-function restyleEdit(e) {
-  var n = S.editing && S.editing.node; if (!n || !e) return; var s = n.style;
-  s.fontFamily = JF.fcss(e.font); s.fontSize = e.size + 'pt'; s.fontWeight = e.weight; s.fontStyle = e.italic ? 'italic' : 'normal';
-  s.textDecoration = [e.underline ? 'underline' : '', e.strike ? 'line-through' : ''].join(' ').trim() || 'none';
-  s.color = resolveColor(e.color); s.textAlign = e.align; s.lineHeight = e.lineHeight; s.letterSpacing = e.letterSpacing ? e.letterSpacing + 'em' : '';
-}
-function editingOnly(es) { var ed = S.editing; return ed && !ed.commit && ed.id && es.length === 1 && es[0].id === ed.id; }
-function setProp(k, v, live) {
-  var es = selEls(); if (!es.length) return;
-  if (editingOnly(es)) { lbl(PROP_LBL[k] || '書式の変更'); if (k in es[0]) es[0][k] = v; H.changed(!live); restyleEdit(es[0]); drawOv(); if (!live) { drawRibbon(); drawPane(); } return; }
-  mut(function () { es.forEach(function (e) { if (k in e) e[k] = v; }); }, { live: !!live, label: PROP_LBL[k] || '書式の変更' });
-}
-function eachProp(label, fn) {
-  var es = selEls(); if (!es.length) return;
-  if (editingOnly(es)) { lbl(label); fn(es[0]); H.changed(true); restyleEdit(es[0]); drawOv(); drawRibbon(); drawPane(); return; }
-  mut(function () { es.forEach(fn); }, { label: label });
-}
+
+
+/* ---------- 操作の共通入口 ---------- */
+
+var PROP_LBL = { fill: '塗りつぶしの変更', bg: '塗りつぶしの変更', stroke: '枠線の変更', strokeWidth: '線の太さの変更', dash: '線の種類の変更', color: '文字色の変更', size: 'フォント サイズの変更', font: 'フォントの変更', weight: '太字の変更', italic: '斜体の変更', underline: '下線の変更', strike: '取り消し線の変更', align: '配置の変更', valign: '配置の変更', letterSpacing: '文字の間隔の変更', lineHeight: '行間の変更', vertical: '文字列の方向の変更', text: '文字の編集', opacity: '透明度の変更', radius: '角の丸みの変更', name: '名前の変更', locked: 'ロックの変更', hidden: '表示の変更', padding: '余白の変更', fit: '自動調整の変更', src: '画像の変更' };
+
+function cleanGroups() {
+
+  var n = {}; elems().forEach(function (e) { if (e.groupId) n[e.groupId] = (n[e.groupId] || 0) + 1; });
+
+  elems().forEach(function (e) { if (e.groupId && n[e.groupId] < 2) delete e.groupId; });
+
+}
+
+function mut(fn, o) {
+
+  o = o || {}; if (o.label) lbl(o.label); fn(); cleanGroups(); H.changed(!o.live);
+
+  if (o.live) { drawPage(); drawOv(); } else redraw();
+
+}
+
+function setSel(ids) { S.sel = ids.filter(function (id, i) { return ids.indexOf(id) === i && find(id); }); if (S.rowSel && S.sel.indexOf(S.rowSel.eid) < 0) S.rowSel = null; }
+
+function groupOf(e) { return e && e.groupId ? elems().filter(function (m) { return m.groupId === e.groupId; }) : []; }
+
+function expandGroups(ids) {
+
+  var out = ids.slice(); ids.forEach(function (id) { var e = find(id); if (e && e.groupId) groupOf(e).forEach(function (m) { if (out.indexOf(m.id) < 0) out.push(m.id); }); });
+
+  return out;
+
+}
+
+function selChanged() { drawFrame(); if (rawKey() !== S.rawKey) drawPage(); drawOv(); drawTabs(); drawRibbon(); drawPane(); }
+
+function restyleEdit(e) {
+
+  var n = S.editing && S.editing.node; if (!n || !e) return; var s = n.style;
+
+  s.fontFamily = JF.fcss(e.font); s.fontSize = e.size + 'pt'; s.fontWeight = e.weight; s.fontStyle = e.italic ? 'italic' : 'normal';
+
+  s.textDecoration = [e.underline ? 'underline' : '', e.strike ? 'line-through' : ''].join(' ').trim() || 'none';
+
+  s.color = resolveColor(e.color); s.textAlign = e.align; s.lineHeight = e.lineHeight; s.letterSpacing = e.letterSpacing ? e.letterSpacing + 'em' : '';
+
+}
+
+function editingOnly(es) { var ed = S.editing; return ed && !ed.commit && ed.id && es.length === 1 && es[0].id === ed.id; }
+
+function setProp(k, v, live) {
+
+  var es = selEls(); if (!es.length) return;
+
+  if (editingOnly(es)) { lbl(PROP_LBL[k] || '書式の変更'); if (k in es[0]) es[0][k] = v; H.changed(!live); restyleEdit(es[0]); drawOv(); if (!live) { drawRibbon(); drawPane(); } return; }
+
+  mut(function () { es.forEach(function (e) { if (k in e) e[k] = v; }); }, { live: !!live, label: PROP_LBL[k] || '書式の変更' });
+
+}
+
+function eachProp(label, fn) {
+
+  var es = selEls(); if (!es.length) return;
+
+  if (editingOnly(es)) { lbl(label); fn(es[0]); H.changed(true); restyleEdit(es[0]); drawOv(); drawRibbon(); drawPane(); return; }
+
+  mut(function () { es.forEach(fn); }, { label: label });
+
+}
+
 /* 太字：フォントにある太さのうち近いものを使う（太い太さが無い書体は 700 を指定してブラウザの擬似太字） */
 function setBold(on) { eachProp('太字の変更', function (e) { if ('weight' in e) e.weight = JFN.snap(e.font, on ? 700 : 400); }); }
 function setFont(v) { JFN.use(v); eachProp('フォントの変更', function (e) { if ('font' in e) { e.font = v; if ('weight' in e) e.weight = JFN.snap(v, e.weight); } }); }
-function forGeom(fn, label) { var es = selEls().filter(function (e) { return !e.locked; }); if (!es.length) return; mut(function () { es.forEach(fn); }, { label: label || '位置とサイズの変更' }); }
-function addEl(type, props) {
-  var e = JF.newElement(type, props); if (!e) return null;
-  var off = (S.addN++ % 6) * 4;
-  if (!props || props.x == null) e.x = r2(clamp((PW - e.w) / 2 + off, 0, PW - Math.min(e.w, PW)));
-  if (!props || props.y == null) e.y = r2(clamp((PH - e.h) / 2 + off, 0, PH));
-  mut(function () { elems().push(e); setSel([e.id]); }, { label: '挿入' });
-  S.draw = null; drawFrame();
-  return e;
-}
-function removeSel() {
-  var ids = S.sel.slice(); if (!ids.length) return;
-  mut(function () { F().elements = elems().filter(function (e) { return ids.indexOf(e.id) < 0; }); S.sel = []; }, { label: '削除' });
-}
-function cloneEls(es, dx, dy) {
-  var gm = {};
-  return es.map(function (e) { var c = JSON.parse(JSON.stringify(e)); c.id = JF.newId(); c.x = r2(c.x + dx); c.y = r2(c.y + dy); if (c.groupId) { gm[c.groupId] = gm[c.groupId] || JF.newId(); c.groupId = gm[c.groupId]; } return c; });
-}
-function dupSel() {
-  var es = selEls(); if (!es.length) return; var cs = cloneEls(es, 5, 5);
-  mut(function () { cs.forEach(function (c) { elems().push(c); }); setSel(cs.map(function (c) { return c.id; })); }, { label: '複製' });
-}
-function copySel(quiet) { var es = selEls(); if (!es.length) return; S.clip = JSON.parse(JSON.stringify(es)); S.pasteN = 0; if (!quiet) H.toast(es.length + '個の要素をコピーしました'); }
-function cutSel() { if (!S.sel.length) return; copySel(true); var ids = S.sel.slice(); mut(function () { F().elements = elems().filter(function (e) { return ids.indexOf(e.id) < 0; }); S.sel = []; }, { label: '切り取り' }); }
-function pasteSel() {
-  if (!S.clip || !S.clip.length) return; S.pasteN++; var d = 5 * S.pasteN, cs = cloneEls(S.clip, d, d);
-  mut(function () { cs.forEach(function (c) { elems().push(c); }); setSel(cs.map(function (c) { return c.id; })); }, { label: '貼り付け' });
-}
-/* kind: up=ひとつ前面へ / down=ひとつ背面へ / front=最前面へ / back=最背面へ */
-function arrange(kind) {
-  var ids = S.sel.slice(); if (!ids.length) return;
-  mut(function () {
-    var a = elems(), on = function (e) { return ids.indexOf(e.id) >= 0; };
-    if (kind === 'front' || kind === 'back') { var sel = a.filter(on), rest = a.filter(function (e) { return !on(e); }); F().elements = kind === 'front' ? rest.concat(sel) : sel.concat(rest); }
-    else if (kind === 'up') { for (var i = a.length - 2; i >= 0; i--) if (on(a[i]) && !on(a[i + 1])) { var t = a[i]; a[i] = a[i + 1]; a[i + 1] = t; } }
-    else { for (var j = 1; j < a.length; j++) if (on(a[j]) && !on(a[j - 1])) { var u = a[j]; a[j] = a[j - 1]; a[j - 1] = u; } }
-  }, { label: { front: '最前面へ移動', back: '最背面へ移動', up: '前面へ移動', down: '背面へ移動' }[kind] });
-}
-function reorder(fromId, toId, afterDisplay) {
-  if (fromId === toId) return;
-  mut(function () {
-    var a = elems(), f = find(fromId); if (!f) return; a.splice(a.indexOf(f), 1);
-    var ti = a.indexOf(find(toId)); a.splice(afterDisplay ? ti : ti + 1, 0, f);
-  }, { label: '重なり順の変更' });
-}
-function alignSel(kind) {
-  var es = selEls().filter(function (e) { return !e.locked && !e.hidden; }); if (!es.length) return;
-  var bb = es.length === 1 ? { x: 0, y: 0, r: PW, b: PH, cx: PW / 2, cy: PH / 2 } : unionBox(es);
-  mut(function () {
-    es.forEach(function (e) {
-      var a = JF.aabb(e), dx = 0, dy = 0;
-      if (kind === 'l') dx = bb.x - a.x; else if (kind === 'c') dx = bb.cx - a.cx; else if (kind === 'r') dx = bb.r - a.r;
-      else if (kind === 't') dy = bb.y - a.y; else if (kind === 'm') dy = bb.cy - a.cy; else if (kind === 'b') dy = bb.b - a.b;
-      e.x = r2(e.x + dx); e.y = r2(e.y + dy);
-    });
-  }, { label: '配置の変更' });
-}
-function centerPage(axis) {
-  var es = selEls().filter(function (e) { return !e.locked && !e.hidden; }); if (!es.length) return; var bb = unionBox(es);
-  mut(function () { es.forEach(function (e) { if (axis === 'h') e.x = r2(e.x + PW / 2 - bb.cx); else e.y = r2(e.y + PH / 2 - bb.cy); }); }, { label: '配置の変更' });
-}
-function distribute(axis) {
-  var es = selEls().filter(function (e) { return !e.locked && !e.hidden; }); if (es.length < 3) return;
-  var k = axis === 'h' ? 'x' : 'y', wk = axis === 'h' ? 'w' : 'h';
-  var arr = es.map(function (e) { return { e: e, a: JF.aabb(e) }; }).sort(function (p, q) { return p.a[k] - q.a[k]; });
-  var first = arr[0].a[k], last = arr[arr.length - 1].a[k] + arr[arr.length - 1].a[wk], sum = 0; arr.forEach(function (p) { sum += p.a[wk]; });
-  var gap = (last - first - sum) / (arr.length - 1);
-  mut(function () { var pos = first; arr.forEach(function (p) { var d = pos - p.a[k]; p.e[k] = r2(p.e[k] + d); pos += p.a[wk] + gap; }); }, { label: '等間隔に配置' });
-}
-/* 回転・グループ化 */
-function isLn(e) { return e.type === 'line' || e.type === 'fold'; }
-function ctrOf(e) { return { x: e.x + e.w / 2, y: isLn(e) ? e.y : e.y + e.h / 2 }; }
-function setCtr(e, cx, cy) { e.x = r2(cx - e.w / 2); e.y = r2(isLn(e) ? cy : cy - e.h / 2); }
-function normRot(d) { d = ((d + 180) % 360 + 360) % 360 - 180; return r2(d === -180 ? 180 : d); }
-function rotateEls(es, deg) {
-  var u = es.length > 1 ? unionBox(es) : null;
-  es.forEach(function (e) {
-    if (u) { var c = ctrOf(e), r = deg * Math.PI / 180, co = Math.cos(r), si = Math.sin(r), dx = c.x - u.cx, dy = c.y - u.cy; setCtr(e, u.cx + dx * co - dy * si, u.cy + dx * si + dy * co); }
-    e.rot = normRot((e.rot || 0) + deg);
-  });
-}
-function rotateSel(deg) { var es = selEls().filter(function (e) { return !e.locked; }); if (!es.length) return; mut(function () { rotateEls(es, deg); }, { label: '回転' }); }
-function groupSel() {
-  var es = selEls(); if (es.length < 2) { H.toast('グループ化するには、2つ以上の要素を選んでください'); return; }
-  var gid = JF.newId();
-  mut(function () {
-    var a = elems(), mem = a.filter(function (e) { return S.sel.indexOf(e.id) >= 0; }), top = 0;
-    a.forEach(function (e, i) { if (mem.indexOf(e) >= 0) top = i; });
-    mem.forEach(function (e) { e.groupId = gid; });
-    var out = []; a.forEach(function (e, i) { if (mem.indexOf(e) >= 0) { if (i === top) mem.forEach(function (m) { out.push(m); }); } else out.push(e); });
-    F().elements = out;
-  }, { label: 'グループ化' });
-}
-function ungroupSel() {
-  var es = selEls().filter(function (e) { return e.groupId; }); if (!es.length) return;
-  var gs = {}; es.forEach(function (e) { gs[e.groupId] = 1; });
-  mut(function () { elems().forEach(function (e) { if (e.groupId && gs[e.groupId]) delete e.groupId; }); }, { label: 'グループ解除' });
-}
-/* 文字の大きさ（PowerPoint と同じ段階で増減） */
-function nextSize(cur, dir) {
-  var a = SIZES, i;
-  if (dir > 0) { for (i = 0; i < a.length; i++) if (a[i] > cur + 0.01) return a[i]; return Math.min(500, Math.round(cur + 8)); }
-  for (i = a.length - 1; i >= 0; i--) if (a[i] < cur - 0.01) return a[i]; return Math.max(1, Math.round((cur - 1) * 2) / 2);
-}
-function stepSize(dir) { eachProp('フォント サイズの変更', function (e) { if ('size' in e) e.size = nextSize(e.size, dir); }); }
-/* 書式のコピー／貼り付け */
-var FP_KEYS = ['font', 'size', 'weight', 'italic', 'underline', 'strike', 'color', 'align', 'valign', 'lineHeight', 'letterSpacing', 'bg', 'padding', 'fill', 'stroke', 'strokeWidth', 'dash', 'radius', 'opacity', 'borderColor', 'labelBg', 'labelColor', 'accentColor', 'bullet'];
-function fpTake() {
-  var e = selEls()[0]; if (!e) { H.toast('書式をコピーする要素を、先に選んでください'); return null; }
-  var st = {}; FP_KEYS.forEach(function (k) { if (k in e) st[k] = e[k]; }); S.fpStore = st; return st;
-}
-function fpApply(ids, st) {
-  var es = ids.map(find).filter(Boolean); if (!es.length || !st) return;
-  mut(function () { es.forEach(function (e) { Object.keys(st).forEach(function (k) { if (k in e) e[k] = st[k]; }); }); }, { label: '書式のコピー/貼り付け' });
-}
-function fpToggle(sticky) {
-  if (S.fp) { S.fp = null; S.fpSticky = false; drawFrame(); drawRibbon(); return; }
-  var st = fpTake(); if (!st) return; S.fp = st; S.fpSticky = !!sticky; drawFrame(); drawRibbon();
-}
-function applyStyle(st, label) { var es = selEls().filter(function (e) { return !e.locked; }); if (!es.length) return; mut(function () { es.forEach(function (e) { Object.keys(st).forEach(function (k) { if (k in e) e[k] = st[k]; }); }); }, { label: label || '図形のスタイルの変更' }); }
-
-/* ---------- リボン ---------- */
-function X() {
-  var es = selEls(), n = es.length, o = { es: es, n: n, e0: es[0] || null, one: n === 1 };
-  o.has = function (k) { return n > 0 && es.every(function (e) { return k in e; }); };
-  o.val = function (k) { if (!n) return undefined; var v = es[0][k]; return es.every(function (e) { return e[k] === v; }) ? v : undefined; };
-  o.fillKey = o.has('fill') ? 'fill' : o.has('bg') ? 'bg' : null;
-  o.lineOk = o.has('stroke') && o.has('strokeWidth');
-  return o;
-}
-function rb(o) {
-  var big = !!o.big, b = h('button', (big ? 'fe-rbL' : 'fe-rbS') + (o.cls ? ' ' + o.cls : '') + (o.on ? ' on' : '') + (!o.l && !big ? ' ic' : '')), dd = o.drop ? '<i class="fe-dd"></i>' : '', lab = '';
-  b.type = 'button';
-  if (o.l) {
-    if (big) { var ls = String(o.l).split('\n'); lab = '<em>' + ls.map(function (x, i) { return '<span>' + esc(x) + (i === ls.length - 1 ? dd : '') + '</span>'; }).join('') + '</em>'; }
-    else lab = '<em>' + esc(o.l) + '</em>' + dd;
-  } else lab = dd;
-  b.innerHTML = (o.i ? ic(o.i) : '') + lab;
-  b.setAttribute('data-tip', tipOf(o.t || String(o.l || '').replace('\n', ''), o.d, o.k));
-  if (!o.l) b.setAttribute('aria-label', String(o.t || '').split('\n')[0]);
-  b.disabled = !!o.dis; if (o.fn) b.onclick = function (e) { o.fn(e, b); }; if (o.dbl) b.ondblclick = o.dbl;
-  return b;
-}
-function grp(name, kids, launch) {
-  var g1 = h('div', 'fe-rg'), b = h('div', 'fe-rgb'), l = h('div', 'fe-rgl');
-  kids.forEach(function (k) { if (k) b.appendChild(k); }); l.appendChild(tx('span', null, name));
-  if (launch) { var lb = ibtn('launch', tipOf(launch.t, launch.d || ''), launch.fn); l.appendChild(lb); }
-  g1.appendChild(b); g1.appendChild(l); g1.setAttribute('data-g', name); return g1;
-}
-function col() { var c = h('div', 'fe-rc'); Array.prototype.forEach.call(arguments, function (k) { if (k) c.appendChild(k); }); return c; }
-function rrow() { var c = h('div', 'fe-rr'); Array.prototype.forEach.call(arguments, function (k) { if (k) c.appendChild(k); }); return c; }
-function splitBtn(o) {
-  var w = h('span', 'fe-spl'), m = rb({ i: o.i, t: o.t, d: o.d, k: o.k, fn: function () { o.apply(); }, dis: o.dis, cls: 'fcol' }), bar = h('i', 'fe-cbar');
-  var c = o.color && o.color !== 'transparent' ? resolveColor(o.color) : '#e5e7eb'; bar.style.setProperty('--cb', c); m.appendChild(bar);
-  var a = h('button', 'fe-sla', '<i class="fe-dd"></i>'); a.type = 'button'; a.setAttribute('data-tip', tipOf(o.t + 'の色', '色の一覧を開きます。')); a.disabled = !!o.dis; a.onclick = function () { o.pick(w); };
-  w.appendChild(m); w.appendChild(a); return w;
-}
-function vchk(label, on, fn, tip, dis) {
-  var l = h('label', 'fe-chk'), c = h('input'); c.type = 'checkbox'; c.checked = !!on; c.disabled = !!dis; c.onchange = function () { fn(c.checked); };
-  l.appendChild(c); l.appendChild(document.createTextNode(label)); if (tip) l.setAttribute('data-tip', tip); l.style.margin = '0 4px'; return l;
-}
-function lnum(label, v, on, dis, min, max) {
-  var w = h('span', 'fe-rr'), i = numInput({ v: v == null ? 0 : v, min: min != null ? min : 0, max: max != null ? max : 2000, step: 0.1, label: label, on: on });
-  w.appendChild(tx('span', 'fe-rbs-lab', label)); i.style.width = '58px'; i.style.height = '22px'; i.style.marginLeft = '4px'; if (v == null) i.value = ''; i.disabled = !!dis; w.appendChild(i); return w;
-}
-function openPane(kind, sec, tab) {
-  S.pane = kind; if (tab) S.ptab = tab; if (sec) { S.secs[sec] = true; S.scrollTo = sec; } saveUI(); drawFrame(); drawPane(); relayout();
-}
-function closePane() { S.pane = ''; saveUI(); drawFrame(); relayout(); drawRibbon(); }
-function startDraw(type, props) { S.draw = { type: type, props: props || {} }; closePop(); drawFrame(); drawStat(); }
-var SHAPES = [['rect', '四角形', 'rect', { fill: 'secondary', w: 60, h: 36 }], ['round', '角丸四角形', 'rect', { fill: 'secondary', radius: 6, w: 60, h: 36 }], ['circle', '楕円', 'ellipse', { fill: 'secondary', w: 40, h: 40 }], ['line', '直線', 'line', { w: 80, strokeWidth: 1, stroke: '#1f2937' }], ['dashed', '点線', 'line', { w: 80, strokeWidth: 1, stroke: '#1f2937', dash: 'dashed' }]];
-function shapeBtns() {
-  var g1 = h('div', 'fe-shg');
-  SHAPES.forEach(function (s) { g1.appendChild(rb({ i: s[0], t: s[1], d: 'ページ上をドラッグして描きます。クリックだけでも挿入できます。', fn: function () { startDraw(s[2], s[3]); } })); });
-  g1.appendChild(rb({ i: 'chevD', t: 'その他の図形', d: '図形の一覧を開きます。', fn: function (e, b) { openMenu(0, 0, SHAPES.map(function (s) { return { l: s[1], ic: s[0], fn: function () { startDraw(s[2], s[3]); } }; }).concat(['-', { l: 'テキスト ボックス', ic: 'textbox', fn: function () { startDraw('text', TB_DEF); } }]), b); } }));
-  return g1;
-}
-var TB_DEF = { text: 'テキストを入力', size: 14, w: 60, h: 12 };
-var QSTYLES = [
-  ['濃い塗りつぶし', { fill: 'accent', stroke: 'accent', strokeWidth: 0 }], ['薄い塗りつぶし', { fill: 'secondary', stroke: 'accent', strokeWidth: 0 }], ['白＋アクセントの枠', { fill: '#ffffff', stroke: 'accent', strokeWidth: 1.5 }],
-  ['枠線のみ', { fill: 'transparent', stroke: 'accent', strokeWidth: 1.5 }], ['アクセント＋黒の枠', { fill: 'accent', stroke: '#111827', strokeWidth: 1 }], ['黒の塗りつぶし', { fill: '#111827', stroke: '#111827', strokeWidth: 0 }],
-  ['サブカラー', { fill: 'secondary', stroke: 'transparent', strokeWidth: 0 }], ['白＋灰色の枠', { fill: '#ffffff', stroke: '#9ca3af', strokeWidth: 1 }], ['黒の破線', { fill: 'transparent', stroke: '#111827', strokeWidth: 1, dash: 'dashed' }]
-];
-function qsPrev(st) {
-  var d = h('span', 'qp'), sw = st[1].strokeWidth || 0; d.style.background = resolveColor(st[1].fill); d.style.border = (sw ? Math.max(1, Math.min(3, sw * 1.3)) : 0) + 'px ' + (st[1].dash || 'solid') + ' ' + resolveColor(st[1].stroke || 'transparent'); return d;
-}
-function qsCell(st, dis) { var b = h('button', 'fe-gc', ''); b.type = 'button'; b.style.cssText = 'height:auto;justify-content:center'; b.appendChild(qsPrev(st)); b.setAttribute('data-tip', tipOf(st[0], '図形の塗りつぶしと枠線をまとめて変えます。')); b.disabled = !!dis; b.onclick = function () { closePop(); applyStyle(st[1], '図形のスタイルの変更'); }; return b; }
-function openQuick(anchor) {
-  var p = h('div', 'fe-qs'); QSTYLES.forEach(function (st) { var b = h('button', '', ''); b.type = 'button'; b.appendChild(qsPrev(st)); b.appendChild(tx('small', null, st[0])); b.onclick = function () { closePop(); applyStyle(st[1], '図形のスタイルの変更'); }; p.appendChild(b); });
-  openPop(anchor, p); p.style.width = 'auto';
-}
-function gallery(descs, mk, vis, cls) {
-  var g1 = h('div', 'fe-gal ' + (cls || '')), v = h('div', 'gv'), a = h('div', 'ga'), cw = cls === 'th' ? 47 : 43;
-  v.style.width = (vis * cw) + 'px'; descs.forEach(function (d) { v.appendChild(mk(d)); });
-  a.appendChild(ibtn('chevL', '前へ', function () { v.scrollLeft -= vis * cw; })); a.appendChild(ibtn('chevR', '次へ', function () { v.scrollLeft += vis * cw; }));
-  a.appendChild(ibtn('chevD', 'すべて表示', function (e) { var p = h('div', 'fe-pophost'); p.style.cssText = 'display:grid;grid-template-columns:repeat(' + Math.min(6, descs.length) + ',auto);gap:4px;width:auto;padding:8px'; descs.forEach(function (d) { var c = mk(d); c.classList.add('x'); c.onclickBak = c.onclick; var o = c.onclick; c.onclick = function (ev) { closePop(); o.call(c, ev); }; p.appendChild(c); }); tipify(p); openPop(e.currentTarget || a, p); }));
-  g1.appendChild(v); g1.appendChild(a); return g1;
-}
-/* デザイン（テーマ）・レイアウトのサムネイル */
-function thumbOf(pageFn) { var box = h('div', 'fe-thumb'), pg; try { pg = pageFn(); } catch (e) { return box; } pg.style.transform = 'scale(' + (36 / (210 * PXMM)) + ')'; box.style.width = '36px'; box.style.height = '51px'; box.appendChild(pg); return box; }
-function themeDescs() {
-  if (!S.themeC) {
-    var Vv = V(); S.themeC = { th: [], lay: [] };
-    JT.list().filter(function (t) { return t.id !== 'free'; }).forEach(function (t) {
-      var th = thumbOf(function () { return JT.render(t.id, H.students()[0] || H.sample(), JT.switchVals(t.id, Vv)); }); S.themeC.th.push({ n: t.name, sub: 'このデザインを元に自由編集に変換します。今の配置は置き換わります（元に戻すで戻せます）。', th: th, fn: function () { convertFrom(t.id); } });
-    });
-    JF.LAYOUTS.forEach(function (L) { S.themeC.lay.push({ n: L.name, sub: L.desc, th: thumbOf(function () { return pageFor(L.build(Vv)); }), fn: function () { applyLayout(L.build(V())); } }); });
-    S.themeC.lay.push({ n: '初期レイアウト', sub: 'タイトル・番号・表・折り線・注意事項', th: thumbOf(function () { return pageFor(JF.starter(Vv)); }), fn: function () { applyLayout(JF.starter(V())); } });
-    S.themeC.lay.push({ n: '白紙', sub: '何もない状態から', th: thumbOf(function () { return pageFor([]); }), fn: function () { applyLayout([]); } });
-    S.themeC.th.forEach(function (d) { H.fitAll(d.th.firstChild); });
-  }
-  return S.themeC;
-}
-function thCell(d) {
-  var b = h('button', 'fe-gc'); b.type = 'button'; var t = d.th.cloneNode(true); b.appendChild(t); b.setAttribute('data-tip', tipOf(d.n, d.sub || '', '')); b.onclick = d.fn; return b;
-}
-var PALS = [['藍', '#1e40af', '#e8edf3'], ['墨', '#111827', '#e5e7eb'], ['臙脂', '#9b1c31', '#f5e6e8'], ['若草', '#166534', '#e6f2ea'], ['橙', '#c2410c', '#fdeee3'], ['紫', '#6d28d9', '#eee9fb'], ['青緑', '#0f766e', '#e0f2f1'], ['桃', '#be185d', '#fce7f1']];
-function palCell(p) {
-  var cur = V().accent === p[1] && V().secondary === p[2], b = h('button', 'fe-gc' + (cur ? ' cur' : '')), s = h('span', 'qp'); b.type = 'button'; b.style.cssText = 'height:auto;justify-content:center;flex-direction:column;gap:2px';
-  s.style.cssText = 'width:34px;height:34px;border-radius:2px;border:1px solid rgba(0,0,0,.2);background:linear-gradient(90deg,' + p[1] + ' 50%,' + p[2] + ' 50%)'; b.appendChild(s); b.appendChild(tx('small', null, p[0])); b.lastChild.style.cssText = 'font-size:10px;color:var(--mut)';
-  b.setAttribute('data-tip', tipOf('配色：' + p[0], 'アクセント色とサブカラーを変えます。「アクセント」「サブ」を使っている所が一緒に変わります。'));
-  b.onclick = function () { mut(function () { var v = V(); v.accent = p[1]; v.secondary = p[2]; }, { label: '配色の変更' }); }; return b;
-}
-function toggleFold() {
-  var fs = elems().filter(function (e) { return e.type === 'fold'; });
-  if (!fs.length) { addEl('fold', { y: 148.5, x: 0, w: 210 }); return; }
-  var hid = fs.every(function (e) { return e.hidden; }); mut(function () { fs.forEach(function (e) { e.hidden = !hid; }); }, { label: '折り線の表示切り替え' });
-}
-function pageInfoPop(anchor) {
-  var p = h('div', 'fe-pophost fe-wide'), fs = elems().filter(function (e) { return e.type === 'fold'; });
-  p.appendChild(tx('h5', null, 'ページ設定')); p.appendChild(tx('p', null, '用紙：A4 縦（210 × 297 mm）。受験票は印刷とPDFで同じ大きさになるため、用紙の大きさは変えられません。'));
-  p.appendChild(chkInput('折り線を表示', fs.length && !fs.every(function (e) { return e.hidden; }), function () { closePop(); toggleFold(); }));
-  p.appendChild(chkInput('グリッドを表示（5mm）', S.grid, function (v) { S.grid = v; saveUI(); drawOv(); drawRibbon(); }));
-  p.appendChild(chkInput('ガイド・他の要素・余白にスナップ', S.snap, function (v) { S.snap = v; saveUI(); }));
-  openPop(anchor, p);
-}
-function fieldPop(anchor) {
-  var p = h('div', 'fe-pophost'); p.style.width = '270px'; p.style.maxHeight = '70vh'; p.style.overflowY = 'auto';
-  p.appendChild(tx('h5', null, '項目の値を要素として挿入'));
-  var sp = ['ヘッダー', 'バッジ', 'マーク']; sp.forEach(function (k) { p.appendChild(itemRow(k, null)); });
-  V().items.forEach(function (it) { p.appendChild(itemRow(it.label || '（無題）', it)); });
-  p.appendChild(tx('p', null, '左の名前＝その項目の値を表示する要素を追加。右の「{}」＝{{項目名}} を文字として挿入（文字の中に混ぜて使えます）。')).style.marginTop = '8px';
-  tipify(p); openPop(anchor, p);
-}
-function wmPop(anchor) { var p = h('div', 'fe-pophost fe-wide'); p.appendChild(tx('h5', null, '透かし文字')); p.appendChild(tx('p', null, 'ページ全体に重ねる大きな文字です。ほかの要素の上に薄く表示されます。')); wmForm(p); tipify(p); openPop(anchor, p); }
-function imgMenu(anchor, replace) {
-  var put = function (u) { if (replace) { var e = selEls()[0]; mut(function () { e.src = u; }, { label: '画像の変更' }); } else addEl('image', { src: u, w: 60, h: 60 }); };
-  var Vv = V(), m = C.imageSrc(Vv.map, 'map'), l = C.imageSrc(Vv.logo, 'logo');
-  openMenu(0, 0, [
-    { l: 'このデバイス…', ic: 'upload', fn: function () { pickUpload(put); } }, { l: '素材から…', ic: 'folder', fn: function () { H.pickImage(put); } }, '-',
-    { l: '地図' + (m ? '' : '（非表示中）'), ic: 'map', fn: function () { if (replace) put('map'); else addEl('image', { src: 'map', w: 62, h: 62, name: '地図' }); } },
-    { l: 'ロゴ' + (l ? '' : '（非表示中）'), ic: 'pin', fn: function () { if (replace) put('logo'); else addEl('image', { src: 'logo', w: 50, h: 30, name: 'ロゴ' }); } }
-  ], anchor);
-}
-function insertTable() { var ids = V().items.filter(function (i) { return !i.hidden; }).map(function (i) { return i.id; }); addEl('table', { itemIds: ids, w: 180, h: Math.max(20, Math.min(80, ids.length * 10)), x: 15, y: 60 }); }
-function colorMenu(anchor, key, label, none, X1, kind) {
-  openColor(anchor, X1.val(key), function (v, live) { if (!live && kind) S.lastCol[kind] = v; setProp(key, v, live); }, none ? { none: none } : {});
-}
-function lineMenu(anchor, X1) {
-  var sw = X1.val('strokeWidth'), ds = X1.val('dash');
-  openMenu(0, 0, [
-    { l: '線の色…', ic: 'pen', fn: function () { setTimeout(function () { colorMenu(anchor, 'stroke', '枠線', '枠線なし', X1, 'line'); }, 0); } },
-    { l: '枠線なし', ic: 'close', fn: function () { setProp('strokeWidth', 0); } }, '-',
-    { l: '太さ', sub: [0.25, 0.5, 0.75, 1, 1.5, 2.25, 3, 4.5, 6].map(function (n) { return { l: n + ' pt', ck: sw === n, fn: function () { eachProp('線の太さの変更', function (e) { if ('strokeWidth' in e) { e.strokeWidth = n; if (e.stroke === 'transparent' || !e.stroke) e.stroke = S.lastCol.line === 'transparent' ? 'accent' : S.lastCol.line; } }); } }; }) },
-    { l: '実線/点線', sub: DASH_OPTS.map(function (d) { return { l: d[1], ck: ds === d[0], fn: function () { setProp('dash', d[0]); } }; }) }
-  ], anchor);
-}
-function arrangeMenu(anchor, X1) {
-  var n = X1.n, multi = n > 1, a3 = n > 2;
-  openMenu(0, 0, [
-    { l: '最前面へ移動', ic: 'front', dis: !n, fn: function () { arrange('front'); } }, { l: '前面へ移動', ic: 'front', k: 'Ctrl+]', dis: !n, fn: function () { arrange('up'); } },
-    { l: '背面へ移動', ic: 'back', k: 'Ctrl+[', dis: !n, fn: function () { arrange('down'); } }, { l: '最背面へ移動', ic: 'back', dis: !n, fn: function () { arrange('back'); } }, '-',
-    { l: 'グループ化', ic: 'group', k: 'Ctrl+G', dis: !multi, fn: groupSel }, { l: 'グループ解除', ic: 'ungroup', k: 'Ctrl+Shift+G', dis: !selEls().some(function (e) { return e.groupId; }), fn: ungroupSel }, '-',
-    { l: '配置', ic: 'al', sub: [
-      { l: '左揃え', ic: 'al', dis: !n, fn: function () { alignSel('l'); } }, { l: '左右中央揃え', ic: 'ac', dis: !n, fn: function () { alignSel('c'); } }, { l: '右揃え', ic: 'ar', dis: !n, fn: function () { alignSel('r'); } },
-      { l: '上揃え', ic: 'at', dis: !n, fn: function () { alignSel('t'); } }, { l: '上下中央揃え', ic: 'am', dis: !n, fn: function () { alignSel('m'); } }, { l: '下揃え', ic: 'ab', dis: !n, fn: function () { alignSel('b'); } }, '-',
-      { l: '左右に整列（等間隔）', ic: 'dh', dis: !a3, fn: function () { distribute('h'); } }, { l: '上下に整列（等間隔）', ic: 'dv', dis: !a3, fn: function () { distribute('v'); } }, '-',
-      { l: 'ページの左右中央に配置', dis: !n, fn: function () { centerPage('h'); } }, { l: 'ページの上下中央に配置', dis: !n, fn: function () { centerPage('v'); } }] },
-    { l: '回転', ic: 'rotate', sub: [{ l: '右へ90°回転', dis: !n, fn: function () { rotateSel(90); } }, { l: '左へ90°回転', dis: !n, fn: function () { rotateSel(-90); } }, '-', { l: 'その他の回転オプション…', fn: function () { openPane('fmt', 'size', 'shape'); } }] }, '-',
-    { l: 'オブジェクトの選択と表示', ic: 'layers', fn: function () { S.pane === 'sel' ? closePane() : openPane('sel'); } }
-  ], anchor);
-}
-/* 配置・サイズのグループ（図形の書式／図の形式／テーブル デザインで共通） */
-function geomGroups(X1) {
-  var e0 = X1.e0, one = X1.one, ln = one && isLn(e0), go = function (k) { return function (v) { if (e0.locked) { H.toast('ロック中の要素は動かせません'); return; } resizeKey(e0, k, v); }; };
-  return [
-    grp('配置', [
-      col(rb({ i: 'front', l: '前面へ移動', drop: 1, t: '前面へ移動', d: '選んだ要素を手前に移動します。', dis: !X1.n, fn: function (e, b) { openMenu(0, 0, [{ l: '最前面へ移動', fn: function () { arrange('front'); } }, { l: '前面へ移動', k: 'Ctrl+]', fn: function () { arrange('up'); } }], b); } }),
-        rb({ i: 'back', l: '背面へ移動', drop: 1, t: '背面へ移動', d: '選んだ要素を奥に移動します。', dis: !X1.n, fn: function (e, b) { openMenu(0, 0, [{ l: '最背面へ移動', fn: function () { arrange('back'); } }, { l: '背面へ移動', k: 'Ctrl+[', fn: function () { arrange('down'); } }], b); } }),
-        rb({ i: 'layers', l: '選択ウィンドウ', t: 'オブジェクトの選択と表示', d: '要素の一覧を開き、名前の変更・表示/非表示・順序の変更ができます。', on: S.pane === 'sel', fn: function () { S.pane === 'sel' ? closePane() : openPane('sel'); } })),
-      col(rb({ i: 'al', l: '配置', drop: 1, t: '配置', d: '選んだ要素をそろえたり、等間隔に並べたりします。', dis: !X1.n, fn: function (e, b) { arrangeMenu(b, X1); } }),
-        rb({ i: 'group', l: 'グループ化', drop: 1, t: 'グループ化', d: '複数の要素を1つにまとめます。まとめて動かし、大きさや回転も一緒に変えられます。', k: 'Ctrl+G', dis: !X1.n, fn: function (e, b) { openMenu(0, 0, [{ l: 'グループ化', ic: 'group', k: 'Ctrl+G', dis: X1.n < 2, fn: groupSel }, { l: 'グループ解除', ic: 'ungroup', k: 'Ctrl+Shift+G', dis: !X1.es.some(function (x) { return x.groupId; }), fn: ungroupSel }], b); } }),
-        rb({ i: 'rotate', l: '回転', drop: 1, t: '回転', d: '選んだ要素を回転します。', dis: !X1.n, fn: function (e, b) { openMenu(0, 0, [{ l: '右へ90°回転', fn: function () { rotateSel(90); } }, { l: '左へ90°回転', fn: function () { rotateSel(-90); } }, '-', { l: 'その他の回転オプション…', fn: function () { openPane('fmt', 'size', 'shape'); } }], b); } }))
-    ]),
-    grp('サイズ', [col(ln ? lnum('長さ', e0.w, go('w'), false, 0.5, 2000) : lnum('高さ', one ? e0.h : null, go('h'), !one, 0.5, 2000), ln ? null : lnum('幅', one ? e0.w : null, go('w'), !one, 0.5, 2000))], { t: '図形のサイズと位置', d: '右の書式設定を開きます。', fn: function () { openPane('fmt', 'size', 'shape'); } })
-  ];
-}
-function resizeKey(e, k, v) {
-  var o = e[k]; mut(function () { e[k] = r2(v); if (S.lockAR && o > 0 && !isLn(e)) { var q = v / o; if (k === 'w') e.h = r2(e.h * q); else e.w = r2(e.w * q); } }, { label: 'サイズ変更' });
-}
-
-var RT = {};
-RT.home = function (X1) {
-  var n = X1.n, txt = X1.has('size'), fnt = X1.has('font'), has = X1.has;
-  function tog(k, i, t, k2, on) { return rb({ i: i, t: t, d: '', k: k2, on: on, dis: !has(k), fn: function () { if (k === 'weight') setBold(!on); else setProp(k, !on); } }); }
-  var bold = X1.val('weight') >= 600, it = X1.val('italic') === true, ul = X1.val('underline') === true, st = X1.val('strike') === true;
-  var al = X1.val('align'), lh = X1.val('lineHeight'), ls = X1.val('letterSpacing');
-  var fillOn = !!X1.fillKey;
-  function alb(v, i, t, k2) { return rb({ i: i, t: t, d: '段落の配置を変えます。', k: k2, on: al === v, dis: !has('align'), fn: function () { setProp('align', v); } }); }
-  return [
-    grp('クリップボード', [
-      rb({ big: 1, i: 'paste', l: '貼り付け', t: '貼り付け', d: 'コピーまたは切り取った要素を貼り付けます。', k: 'Ctrl+V', dis: !(S.clip && S.clip.length), fn: pasteSel }),
-      col(rb({ i: 'cut', l: '切り取り', t: '切り取り', d: '選んだ要素を切り取ります。', k: 'Ctrl+X', dis: !n, fn: cutSel }), rb({ i: 'copy', l: 'コピー', t: 'コピー', d: '選んだ要素をコピーします。', k: 'Ctrl+C', dis: !n, fn: function () { copySel(); } }),
-        rb({ i: 'fpaint', l: '書式のコピー/貼り付け', t: '書式のコピー/貼り付け', d: '選んだ要素の書式をコピーして、ほかの要素にクリックで貼り付けます。ダブルクリックで続けて貼り付けられます。', k: 'Ctrl+Shift+C / V', on: !!S.fp, dis: !n && !S.fp, fn: function () { fpToggle(false); }, dbl: function () { if (S.fp) { S.fpSticky = true; } else { fpToggle(true); } } }))
-    ]),
-    grp('フォント', [col(
-      rrow(fontCombo(fnt ? X1.val('font') : '', setFont, !fnt), sizeCombo(txt ? X1.val('size') : null, function (v) { setProp('size', v); }, !txt),
-        rb({ i: 'fontup', t: 'フォント サイズの拡大', d: '文字を大きくします。', k: 'Ctrl+Shift+>', dis: !txt, fn: function () { stepSize(1); } }), rb({ i: 'fontdown', t: 'フォント サイズの縮小', d: '文字を小さくします。', k: 'Ctrl+Shift+<', dis: !txt, fn: function () { stepSize(-1); } })),
-      rrow(tog('weight', 'bold', '太字', 'Ctrl+B', bold), tog('italic', 'italic', '斜体', 'Ctrl+I', it), tog('underline', 'underline', '下線', 'Ctrl+U', ul), tog('strike', 'strike', '取り消し線', '', st),
-        rb({ i: 'spacing', drop: 1, t: '文字の間隔', d: '文字と文字の間隔を変えます。', dis: !has('letterSpacing'), fn: function (e, b) {
-          openMenu(0, 0, [['極狭', -0.1], ['狭く', -0.05], ['標準', 0], ['広く', 0.1], ['極広', 0.25]].map(function (x) { return { l: x[0], ck: ls === x[1], fn: function () { setProp('letterSpacing', x[1]); } }; }).concat(['-', { l: 'その他の間隔…', fn: function () { openPane('fmt', 'para', 'text'); } }]), b); } }),
-        splitBtn({ i: 'fcolor', t: '文字の色', d: '文字の色を変えます。', dis: !has('color'), color: has('color') ? X1.val('color') || S.lastCol.font : S.lastCol.font, apply: function () { setProp('color', S.lastCol.font); }, pick: function (a) { openColor(a, X1.val('color'), function (v, live) { S.lastCol.font = v; setProp('color', v, live); }, {}); } }),
-        splitBtn({ i: 'hilite', t: '蛍光ペンの色（背景色）', d: '文字ボックスの背景に色を付けます。', dis: !has('bg'), color: has('bg') && X1.val('bg') ? X1.val('bg') : S.lastCol.hl, apply: function () { setProp('bg', S.lastCol.hl); }, pick: function (a) { openColor(a, X1.val('bg'), function (v, live) { if (v !== 'transparent') S.lastCol.hl = v; setProp('bg', v, live); }, { none: '色なし' }); } }))
-    )], { t: 'フォント', d: '右の書式設定（文字のオプション）を開きます。', fn: function () { openPane('fmt', 'font', 'text'); } }),
-    grp('段落', [col(
-      rrow(alb('left', 'tl', '左揃え', 'Ctrl+L'), alb('center', 'tc', '中央揃え', 'Ctrl+E'), alb('right', 'tr', '右揃え', 'Ctrl+R'), alb('justify', 'tj', '両端揃え', 'Ctrl+J')),
-      rrow(rb({ i: 'lh', drop: 1, t: '行間', d: '行と行の間隔を変えます。', dis: !has('lineHeight'), fn: function (e, b) { openMenu(0, 0, [1.0, 1.15, 1.5, 2.0, 2.5, 3.0].map(function (v) { return { l: v.toFixed(v === 1.15 ? 2 : 1), ck: lh != null && Math.abs(lh - v) < 0.01, fn: function () { setProp('lineHeight', v); } }; }).concat(['-', { l: '行間のオプション…', fn: function () { openPane('fmt', 'para', 'text'); } }]), b); } }),
-        rb({ i: X1.val('vertical') ? 'vt' : 'tl', drop: 1, t: '文字列の方向', d: '文字を横書きにするか縦書きにするかを選びます。', dis: !has('vertical'), fn: function (e, b) { openMenu(0, 0, [{ l: '横書き', ck: X1.val('vertical') === false, fn: function () { setProp('vertical', false); } }, { l: '縦書き', ck: X1.val('vertical') === true, fn: function () { setProp('vertical', true); } }], b); } }),
-        rb({ i: { top: 'vtop', middle: 'vmid', bottom: 'vbot' }[X1.val('valign')] || 'vmid', drop: 1, t: '文字の配置（上下）', d: '枠の中で、文字を上・上下中央・下のどこに置くかを選びます。', dis: !has('valign'), fn: function (e, b) { openMenu(0, 0, [['top', '上揃え', 'vtop'], ['middle', '上下中央揃え', 'vmid'], ['bottom', '下揃え', 'vbot']].map(function (x) { return { l: x[1], ic: x[2], ck: X1.val('valign') === x[0], fn: function () { setProp('valign', x[0]); } }; }), b); } }))
-    )], { t: '段落', d: '右の書式設定（文字のオプション）を開きます。', fn: function () { openPane('fmt', 'para', 'text'); } }),
-    grp('図形描画', [
-      shapeBtns(),
-      rb({ big: 1, i: 'quick', l: 'クイック\nスタイル', drop: 1, t: 'クイック スタイル', d: '図形の塗りつぶしと枠線の組み合わせを選びます。', dis: !(X1.has('fill') || X1.has('stroke')), fn: function (e, b) { openQuick(b); } }),
-      col(rb({ i: 'bucket', l: '図形の塗りつぶし', drop: 1, t: '図形の塗りつぶし', d: '図形や文字ボックスの塗りつぶしの色を選びます。', dis: !fillOn, fn: function (e, b) { colorMenu(b, X1.fillKey, '塗りつぶし', '塗りつぶしなし', X1, 'fill'); } }),
-        rb({ i: 'pen', l: '図形の枠線', drop: 1, t: '図形の枠線', d: '枠線の色・太さ・種類を選びます。', dis: !X1.lineOk, fn: function (e, b) { lineMenu(b, X1); } }),
-        rb({ i: 'al', l: '配置', drop: 1, t: '配置', d: '要素の重なり順・グループ化・位置合わせ・回転を行います。', dis: !n, fn: function (e, b) { arrangeMenu(b, X1); } }))
-    ], { t: '図形の書式設定', d: '右の書式設定（図形のオプション）を開きます。', fn: function () { openPane('fmt', 'fill', 'shape'); } }),
-    grp('編集', [rb({ big: 1, i: 'select', l: '選択', drop: 1, t: '選択', d: '要素をまとめて選んだり、一覧から選んだりします。', fn: function (e, b) { openMenu(0, 0, [{ l: 'すべて選択', ic: 'selall', k: 'Ctrl+A', fn: selectAll }, { l: 'オブジェクトの選択と表示', ic: 'layers', fn: function () { S.pane === 'sel' ? closePane() : openPane('sel'); } }], b); } })])
-  ];
-};
-RT.insert = function (X1) {
-  return [
-    grp('テキスト', [rb({ big: 1, i: 'textbox', l: 'テキスト\nボックス', t: 'テキスト ボックス', d: 'ページ上をドラッグして、文字を入れる枠を描きます。', fn: function () { startDraw('text', TB_DEF); } })]),
-    grp('図', [
-      rb({ big: 1, i: 'shape', l: '図形', drop: 1, t: '図形', d: '四角形・角丸四角形・楕円・線を描きます。', fn: function (e, b) { openMenu(0, 0, SHAPES.map(function (s) { return { l: s[1], ic: s[0], fn: function () { startDraw(s[2], s[3]); } }; }), b); } }),
-      rb({ big: 1, i: 'image', l: '画像', drop: 1, t: '画像', d: 'このデバイス・素材・地図・ロゴから画像を挿入します。', fn: function (e, b) { imgMenu(b, false); } })
-    ]),
-    grp('差し込み', [rb({ big: 1, i: 'ph', l: '差し込み\nフィールド', drop: 1, t: '差し込みフィールド', d: '名簿などの項目（受験番号・氏名など）を、生徒ごとに入れ替わる要素として挿入します。', fn: function (e, b) { fieldPop(b); } })]),
-    grp('表', [rb({ big: 1, i: 'table', l: '表', t: '表（情報テーブル）', d: '項目を表にまとめた「情報テーブル」を挿入します。セルはダブルクリックで編集できます。', fn: insertTable })]),
-    grp('ブロック', [
-      rb({ big: 1, i: 'note', l: '注意事項', t: '注意事項', d: '注意事項の本文を表示するブロックを挿入します。', fn: function () { addEl('notes', { x: 15, y: 156, w: 112, h: 110, title: V().noteTitle || '' }); } }),
-      rb({ big: 1, i: 'fold', l: '折り線', t: '折り線', d: '山折り・谷折りの目印（破線と文字）を挿入します。', fn: function () { addEl('fold', { y: 148.5, x: 0, w: 210 }); } })
-    ]),
-    grp('透かし', [rb({ big: 1, i: 'wm', l: '透かし', drop: 1, t: '透かし', d: 'ページ全体に重ねる大きな薄い文字を設定します。', fn: function (e, b) { wmPop(b); } })])
-  ];
-};
-RT.design = function (X1) {
-  var D = themeDescs();
-  return [
-    grp('テーマ', [gallery(D.th, thCell, 6, 'th')]),
-    grp('レイアウト', [gallery(D.lay, thCell, 4, 'th')]),
-    grp('バリエーション', [gallery(PALS, palCell, 4, '')]),
-    grp('ユーザー設定', [
-      rb({ big: 1, i: 'drop', l: '背景の\n書式設定', t: '背景の書式設定', d: 'ページの背景色を変えます。', fn: function () { setSel([]); selChanged(); openPane('fmt', 'bg', 'shape'); } }),
-      rb({ big: 1, i: 'page', l: 'ページ設定', t: 'ページ設定', d: '用紙（A4）の情報と、折り線・グリッドの設定です。', fn: function (e, b) { pageInfoPop(b); } })
-    ])
-  ];
-};
-RT.merge = function (X1) {
-  var ls = H.students(), real = ls.length > 0 && !ls[0].sample, nn = ls.length;
-  return [
-    grp('フィールドの挿入', [rb({ big: 1, i: 'ph', l: '差し込み\nフィールド', drop: 1, t: '差し込みフィールドの挿入', d: '項目の値を、生徒ごとに入れ替わる要素として挿入します。', fn: function (e, b) { fieldPop(b); } })]),
-    grp('結果のプレビュー', [
-      rb({ big: 1, i: 'eye', l: '結果の\nプレビュー', on: !S.raw, t: '結果のプレビュー', d: 'オン：生徒の実際の値で表示します（印刷と同じ見た目）。オフ：値の代わりに {{項目名}} を表示します。', fn: function () { S.raw = !S.raw; if (S.editing) finishEdit(true); redraw(); } }),
-      col(rrow(rb({ i: 'chevL', t: '前のレコード', d: '前の生徒を表示します。', dis: !real || S.pidx <= 0, fn: function () { S.pidx = Math.max(0, S.pidx - 1); redraw(); } }),
-        tx('span', 'fe-rbs-lab', real ? 'レコード ' + (S.pidx + 1) + ' / ' + nn : 'サンプル'),
-        rb({ i: 'chevR', t: '次のレコード', d: '次の生徒を表示します。', dis: !real || S.pidx >= nn - 1, fn: function () { S.pidx = Math.min(nn - 1, S.pidx + 1); redraw(); } })),
-        tx('span', 'fe-rbs-lab', real ? (H.label(ls[clamp(S.pidx, 0, nn - 1)]) || '') : '名簿を読み込むと生徒を切り替えられます')) 
-    ]),
-    grp('名簿', [rb({ big: 1, i: 'people', l: '名簿の確認', t: '名簿の確認', d: '名簿を読み込み、印刷する生徒を選ぶ画面に移ります。', fn: function () { H.act('roster'); } })]),
-    grp('完了', [rb({ big: 1, i: 'print', l: '完了と印刷', drop: 1, t: '完了と印刷', d: '選択中の生徒の受験票を印刷、またはPDFにします。', fn: function (e, b) { openMenu(0, 0, [{ l: '印刷', ic: 'print', fn: function () { H.act('print'); } }, { l: 'PDFとして保存', ic: 'pdf', fn: function () { H.act('pdf'); } }], b); } })])
-  ];
-};
-RT.view = function (X1) {
-  return [
-    grp('表示', [col(
-      vchk('ルーラー', S.rulers, function (v) { S.rulers = v; saveUI(); drawFrame(); relayout(); }, 'ルーラー\nページの上と左に目盛りを表示します。ルーラーからドラッグするとガイドを作れます。'),
-      vchk('グリッド線', S.grid, function (v) { S.grid = v; saveUI(); drawOv(); }, 'グリッド線\n5mm間隔の格子を表示します。要素がグリッドに吸着します。'),
-      vchk('ガイド', S.guides, function (v) { S.guides = v; saveUI(); drawFrame(); drawOv(); }, 'ガイド\nルーラーからドラッグして作った補助線を表示します。'))]),
-    grp('ズーム', [
-      rb({ big: 1, i: 'zoom', l: 'ズーム', drop: 1, t: 'ズーム', d: '表示の倍率を選びます。', fn: function (e, b) { openMenu(0, 0, [400, 300, 200, 150, 100, 75, 50, 25, 10].map(function (p) { return { l: p + '%', ck: Math.round(S.zoom * 100) === p, fn: function () { setZoom(p / 100); } }; }), b); } }),
-      rb({ big: 1, i: 'fit', l: 'ページに\n合わせる', t: 'ページに合わせる', d: '1ページ全体が入る大きさにします。', fn: function () { S.fit = 'p'; setZoom(fitZoom(), null, null, true); R.scroll.scrollTop = 0; } }),
-      rb({ big: 1, i: 'page', l: '100%', t: '100%', d: '実寸（100%）で表示します。', fn: function () { setZoom(1); } })
-    ]),
-    grp('ウィンドウ', [
-      rb({ big: 1, i: 'layers', l: '選択\nウィンドウ', on: S.pane === 'sel', t: '選択ウィンドウ', d: '要素の一覧を開き、名前の変更・表示/非表示・順序の変更ができます。', fn: function () { S.pane === 'sel' ? closePane() : openPane('sel'); } }),
-      rb({ big: 1, i: 'panelR', l: '書式設定\nウィンドウ', on: S.pane === 'fmt', t: '書式設定ウィンドウ', d: '選んだ要素の塗りつぶし・線・サイズ・文字の設定を細かく調べます。', fn: function () { S.pane === 'fmt' ? closePane() : openPane('fmt'); } }),
-      rb({ big: 1, i: 'thumbs', l: 'サムネイル', on: S.thumbs, t: 'サムネイル', d: '左のページ一覧（生徒ごとの小さな見本）を表示/非表示にします。', fn: function () { S.thumbs = !S.thumbs; saveUI(); drawFrame(); drawThumbs(true); relayout(); drawRibbon(); } })
-    ])
-  ];
-};
-function selectAll() { setSel(elems().filter(function (e) { return !e.hidden; }).map(function (e) { return e.id; })); selChanged(); }
-function shapeStyleGallery(X1) {
-  var dis = !(X1.has('fill') || X1.has('stroke'));
-  return gallery(QSTYLES, function (st) { return qsCell(st, dis); }, 5, '');
-}
-RT.shape = function (X1) {
-  var G = geomGroups(X1), fillOn = !!X1.fillKey;
-  return [
-    grp('図形の挿入', [shapeBtns(), rb({ big: 1, i: 'textbox', l: 'テキスト\nボックス', t: 'テキスト ボックス', d: 'ページ上をドラッグして、文字を入れる枠を描きます。', fn: function () { startDraw('text', TB_DEF); } })]),
-    grp('図形のスタイル', [shapeStyleGallery(X1),
-      col(rb({ i: 'bucket', l: '図形の塗りつぶし', drop: 1, t: '図形の塗りつぶし', d: '塗りつぶしの色を選びます。', dis: !fillOn, fn: function (e, b) { colorMenu(b, X1.fillKey, '塗りつぶし', '塗りつぶしなし', X1, 'fill'); } }),
-        rb({ i: 'pen', l: '図形の枠線', drop: 1, t: '図形の枠線', d: '枠線の色・太さ・種類を選びます。', dis: !X1.lineOk, fn: function (e, b) { lineMenu(b, X1); } }),
-        rb({ i: 'drop', l: '透明度', drop: 1, t: '透明度', d: '要素全体の透明度を選びます。', dis: !X1.n, fn: function (e, b) { var v = X1.val('opacity'); openMenu(0, 0, [0, 25, 50, 75].map(function (p) { return { l: p + '%', ck: v != null && Math.round((1 - v) * 100) === p, fn: function () { setProp('opacity', 1 - p / 100); } }; }), b); } }))
-    ], { t: '図形の書式設定', d: '右の書式設定を開きます。', fn: function () { openPane('fmt', 'fill', 'shape'); } }),
-    grp('文字', [col(
-      splitBtn({ i: 'fcolor', t: '文字の色', d: '文字の色を変えます。', dis: !X1.has('color'), color: X1.has('color') ? X1.val('color') || S.lastCol.font : S.lastCol.font, apply: function () { setProp('color', S.lastCol.font); }, pick: function (a) { openColor(a, X1.val('color'), function (v, live) { S.lastCol.font = v; setProp('color', v, live); }, {}); } }),
-      rb({ i: X1.val('vertical') ? 'vt' : 'tl', l: '文字列の方向', drop: 1, t: '文字列の方向', d: '横書き・縦書きを選びます。', dis: !X1.has('vertical'), fn: function (e, b) { openMenu(0, 0, [{ l: '横書き', ck: X1.val('vertical') === false, fn: function () { setProp('vertical', false); } }, { l: '縦書き', ck: X1.val('vertical') === true, fn: function () { setProp('vertical', true); } }], b); } }),
-      rb({ i: 'vmid', l: '文字の配置', drop: 1, t: '文字の配置（上下）', d: '枠の中での上下の位置を選びます。', dis: !X1.has('valign'), fn: function (e, b) { openMenu(0, 0, [['top', '上揃え', 'vtop'], ['middle', '上下中央揃え', 'vmid'], ['bottom', '下揃え', 'vbot']].map(function (x) { return { l: x[1], ic: x[2], ck: X1.val('valign') === x[0], fn: function () { setProp('valign', x[0]); } }; }), b); } })
-    )], { t: '文字のオプション', d: '右の書式設定（文字のオプション）を開きます。', fn: function () { openPane('fmt', 'font', 'text'); } })
-  ].concat(G);
-};
-RT.pic = function (X1) {
-  var G = geomGroups(X1), e0 = X1.e0;
-  return [
-    grp('調整', [rb({ big: 1, i: 'imgchg', l: '図の変更', drop: 1, t: '図の変更', d: '別の画像（このデバイス・素材・地図・ロゴ）に差し替えます。サイズと位置は保たれます。', dis: !X1.one, fn: function (e, b) { imgMenu(b, true); } })]),
-    grp('図のスタイル', [col(
-      rb({ i: 'image', l: '全体を表示', t: '表示方法：全体を表示', d: '画像全体が枠に収まるように表示します。', on: X1.val('fit') === 'contain', fn: function () { setProp('fit', 'contain'); } }),
-      rb({ i: 'fit', l: '枠いっぱいに（切り抜き）', t: '表示方法：枠いっぱいに', d: '枠をすき間なく埋めます（はみ出す部分は切り取られます）。', on: X1.val('fit') === 'cover', fn: function () { setProp('fit', 'cover'); } }),
-      lnum('角の丸み', X1.val('radius'), function (v) { setProp('radius', v); }, false, 0, 200)
-    )], { t: '図の書式設定', d: '右の書式設定を開きます。', fn: function () { openPane('fmt', 'size', 'shape'); } })
-  ].concat(G);
-};
-RT.tbl = function (X1) {
-  var G = geomGroups(X1), e0 = X1.e0;
-  function cbtn(key, i, label, d, none) { return rb({ i: i, l: label, drop: 1, t: label, d: d, fn: function (ev, b) { colorMenu(b, key, label, none, X1, null); } }); }
-  return [
-    grp('表の項目', [rb({ big: 1, i: 'table', l: '項目の選択', drop: 1, t: '表に出す項目', d: '情報テーブルに表示する項目を選びます。', fn: function (ev, b) {
-      var p = h('div', 'fe-pophost'); p.style.width = '240px'; p.appendChild(tx('h5', null, '表に出す項目')); var box = h('div', 'fe-its'), items = V().items;
-      items.forEach(function (it) { var l = h('label', 'fe-chk'), c = h('input'); c.type = 'checkbox'; c.checked = e0.itemIds.indexOf(it.id) >= 0; c.onchange = function () { var on = {}; box.querySelectorAll('input').forEach(function (x, ix) { on[items[ix].id] = x.checked; }); setProp('itemIds', items.filter(function (x) { return on[x.id]; }).map(function (x) { return x.id; })); }; l.appendChild(c); l.appendChild(document.createTextNode(it.label || '（無題）')); box.appendChild(l); });
-      p.appendChild(box); openPop(b, p); } })]),
-    grp('罫線と色', [col(cbtn('borderColor', 'pen', '罫線の色', '表の罫線の色を選びます。'), cbtn('labelBg', 'bucket', '項目名の背景', '項目名セルの背景色を選びます。', '背景なし'), cbtn('labelColor', 'fcolor', '項目名の文字色', '項目名の文字の色を選びます。')), col(cbtn('color', 'fcolor', '値の文字色', '値の文字の色を選びます。'))]),
-    grp('文字', [col(rrow(sizeCombo(X1.val('size'), function (v) { setProp('size', v); }), rb({ i: 'fontup', t: 'フォント サイズの拡大', fn: function () { stepSize(1); } }), rb({ i: 'fontdown', t: 'フォント サイズの縮小', fn: function () { stepSize(-1); } })),
-      lnum('セルの余白', X1.val('rowGap'), function (v) { setProp('rowGap', v); }, false, 0, 30),
-      vchk('項目ごとの大きさ', e0.itemSize, function (v) { setProp('itemSize', v); }, '項目ごとの文字サイズを反映\n項目の「小・大・特大」の設定を表に反映します。'))])
-  ].concat(G);
-};
-var lastTabKey = '';
-function drawRibbon() {
-  var rbn = R.ribbon; if (!rbn) return; var sl = rbn.scrollLeft; rbn.textContent = '';
-  if (!S.open || S.ro) return;
-  var fn = RT[S.rtab] || RT.home; fn(X()).forEach(function (g1) { rbn.appendChild(g1); });
-  tipify(rbn); if (mini) refreshMini(); var key = S.rtab; rbn.scrollLeft = key === lastTabKey ? sl : 0; lastTabKey = key;
-}
+function forGeom(fn, label) { var es = selEls().filter(function (e) { return !e.locked; }); if (!es.length) return; mut(function () { es.forEach(fn); }, { label: label || '位置とサイズの変更' }); }
+
+function addEl(type, props) {
+
+  var e = JF.newElement(type, props); if (!e) return null;
+
+  var off = (S.addN++ % 6) * 4;
+
+  if (!props || props.x == null) e.x = r2(clamp((PW - e.w) / 2 + off, 0, PW - Math.min(e.w, PW)));
+
+  if (!props || props.y == null) e.y = r2(clamp((PH - e.h) / 2 + off, 0, PH));
+
+  mut(function () { elems().push(e); setSel([e.id]); }, { label: '挿入' });
+
+  S.draw = null; drawFrame();
+
+  return e;
+
+}
+
+function removeSel() {
+
+  var ids = S.sel.slice(); if (!ids.length) return;
+
+  mut(function () { F().elements = elems().filter(function (e) { return ids.indexOf(e.id) < 0; }); S.sel = []; }, { label: '削除' });
+
+}
+
+function cloneEls(es, dx, dy) {
+
+  var gm = {};
+
+  return es.map(function (e) { var c = JSON.parse(JSON.stringify(e)); c.id = JF.newId(); c.x = r2(c.x + dx); c.y = r2(c.y + dy); if (c.groupId) { gm[c.groupId] = gm[c.groupId] || JF.newId(); c.groupId = gm[c.groupId]; } return c; });
+
+}
+
+function dupSel() {
+
+  var es = selEls(); if (!es.length) return; var cs = cloneEls(es, 5, 5);
+
+  mut(function () { cs.forEach(function (c) { elems().push(c); }); setSel(cs.map(function (c) { return c.id; })); }, { label: '複製' });
+
+}
+
+function copySel(quiet) { var es = selEls(); if (!es.length) return; S.clip = JSON.parse(JSON.stringify(es)); S.pasteN = 0; if (!quiet) H.toast(es.length + '個の要素をコピーしました'); }
+
+function cutSel() { if (!S.sel.length) return; copySel(true); var ids = S.sel.slice(); mut(function () { F().elements = elems().filter(function (e) { return ids.indexOf(e.id) < 0; }); S.sel = []; }, { label: '切り取り' }); }
+
+function pasteSel() {
+
+  if (!S.clip || !S.clip.length) return; S.pasteN++; var d = 5 * S.pasteN, cs = cloneEls(S.clip, d, d);
+
+  mut(function () { cs.forEach(function (c) { elems().push(c); }); setSel(cs.map(function (c) { return c.id; })); }, { label: '貼り付け' });
+
+}
+
+/* kind: up=ひとつ前面へ / down=ひとつ背面へ / front=最前面へ / back=最背面へ */
+
+function arrange(kind) {
+
+  var ids = S.sel.slice(); if (!ids.length) return;
+
+  mut(function () {
+
+    var a = elems(), on = function (e) { return ids.indexOf(e.id) >= 0; };
+
+    if (kind === 'front' || kind === 'back') { var sel = a.filter(on), rest = a.filter(function (e) { return !on(e); }); F().elements = kind === 'front' ? rest.concat(sel) : sel.concat(rest); }
+
+    else if (kind === 'up') { for (var i = a.length - 2; i >= 0; i--) if (on(a[i]) && !on(a[i + 1])) { var t = a[i]; a[i] = a[i + 1]; a[i + 1] = t; } }
+
+    else { for (var j = 1; j < a.length; j++) if (on(a[j]) && !on(a[j - 1])) { var u = a[j]; a[j] = a[j - 1]; a[j - 1] = u; } }
+
+  }, { label: { front: '最前面へ移動', back: '最背面へ移動', up: '前面へ移動', down: '背面へ移動' }[kind] });
+
+}
+
+function reorder(fromId, toId, afterDisplay) {
+
+  if (fromId === toId) return;
+
+  mut(function () {
+
+    var a = elems(), f = find(fromId); if (!f) return; a.splice(a.indexOf(f), 1);
+
+    var ti = a.indexOf(find(toId)); a.splice(afterDisplay ? ti : ti + 1, 0, f);
+
+  }, { label: '重なり順の変更' });
+
+}
+
+function alignSel(kind) {
+
+  var es = selEls().filter(function (e) { return !e.locked && !e.hidden; }); if (!es.length) return;
+
+  var bb = es.length === 1 ? { x: 0, y: 0, r: PW, b: PH, cx: PW / 2, cy: PH / 2 } : unionBox(es);
+
+  mut(function () {
+
+    es.forEach(function (e) {
+
+      var a = JF.aabb(e), dx = 0, dy = 0;
+
+      if (kind === 'l') dx = bb.x - a.x; else if (kind === 'c') dx = bb.cx - a.cx; else if (kind === 'r') dx = bb.r - a.r;
+
+      else if (kind === 't') dy = bb.y - a.y; else if (kind === 'm') dy = bb.cy - a.cy; else if (kind === 'b') dy = bb.b - a.b;
+
+      e.x = r2(e.x + dx); e.y = r2(e.y + dy);
+
+    });
+
+  }, { label: '配置の変更' });
+
+}
+
+function centerPage(axis) {
+
+  var es = selEls().filter(function (e) { return !e.locked && !e.hidden; }); if (!es.length) return; var bb = unionBox(es);
+
+  mut(function () { es.forEach(function (e) { if (axis === 'h') e.x = r2(e.x + PW / 2 - bb.cx); else e.y = r2(e.y + PH / 2 - bb.cy); }); }, { label: '配置の変更' });
+
+}
+
+function distribute(axis) {
+
+  var es = selEls().filter(function (e) { return !e.locked && !e.hidden; }); if (es.length < 3) return;
+
+  var k = axis === 'h' ? 'x' : 'y', wk = axis === 'h' ? 'w' : 'h';
+
+  var arr = es.map(function (e) { return { e: e, a: JF.aabb(e) }; }).sort(function (p, q) { return p.a[k] - q.a[k]; });
+
+  var first = arr[0].a[k], last = arr[arr.length - 1].a[k] + arr[arr.length - 1].a[wk], sum = 0; arr.forEach(function (p) { sum += p.a[wk]; });
+
+  var gap = (last - first - sum) / (arr.length - 1);
+
+  mut(function () { var pos = first; arr.forEach(function (p) { var d = pos - p.a[k]; p.e[k] = r2(p.e[k] + d); pos += p.a[wk] + gap; }); }, { label: '等間隔に配置' });
+
+}
+
+/* 回転・グループ化 */
+
+function isLn(e) { return e.type === 'line' || e.type === 'fold'; }
+
+function ctrOf(e) { return { x: e.x + e.w / 2, y: isLn(e) ? e.y : e.y + e.h / 2 }; }
+
+function setCtr(e, cx, cy) { e.x = r2(cx - e.w / 2); e.y = r2(isLn(e) ? cy : cy - e.h / 2); }
+
+function normRot(d) { d = ((d + 180) % 360 + 360) % 360 - 180; return r2(d === -180 ? 180 : d); }
+
+function rotateEls(es, deg) {
+
+  var u = es.length > 1 ? unionBox(es) : null;
+
+  es.forEach(function (e) {
+
+    if (u) { var c = ctrOf(e), r = deg * Math.PI / 180, co = Math.cos(r), si = Math.sin(r), dx = c.x - u.cx, dy = c.y - u.cy; setCtr(e, u.cx + dx * co - dy * si, u.cy + dx * si + dy * co); }
+
+    e.rot = normRot((e.rot || 0) + deg);
+
+  });
+
+}
+
+function rotateSel(deg) { var es = selEls().filter(function (e) { return !e.locked; }); if (!es.length) return; mut(function () { rotateEls(es, deg); }, { label: '回転' }); }
+
+function groupSel() {
+
+  var es = selEls(); if (es.length < 2) { H.toast('グループ化するには、2つ以上の要素を選んでください'); return; }
+
+  var gid = JF.newId();
+
+  mut(function () {
+
+    var a = elems(), mem = a.filter(function (e) { return S.sel.indexOf(e.id) >= 0; }), top = 0;
+
+    a.forEach(function (e, i) { if (mem.indexOf(e) >= 0) top = i; });
+
+    mem.forEach(function (e) { e.groupId = gid; });
+
+    var out = []; a.forEach(function (e, i) { if (mem.indexOf(e) >= 0) { if (i === top) mem.forEach(function (m) { out.push(m); }); } else out.push(e); });
+
+    F().elements = out;
+
+  }, { label: 'グループ化' });
+
+}
+
+function ungroupSel() {
+
+  var es = selEls().filter(function (e) { return e.groupId; }); if (!es.length) return;
+
+  var gs = {}; es.forEach(function (e) { gs[e.groupId] = 1; });
+
+  mut(function () { elems().forEach(function (e) { if (e.groupId && gs[e.groupId]) delete e.groupId; }); }, { label: 'グループ解除' });
+
+}
+
+/* 文字の大きさ（PowerPoint と同じ段階で増減） */
+
+function nextSize(cur, dir) {
+
+  var a = SIZES, i;
+
+  if (dir > 0) { for (i = 0; i < a.length; i++) if (a[i] > cur + 0.01) return a[i]; return Math.min(500, Math.round(cur + 8)); }
+
+  for (i = a.length - 1; i >= 0; i--) if (a[i] < cur - 0.01) return a[i]; return Math.max(1, Math.round((cur - 1) * 2) / 2);
+
+}
+
+function stepSize(dir) { eachProp('フォント サイズの変更', function (e) { if ('size' in e) e.size = nextSize(e.size, dir); }); }
+
+/* 書式のコピー／貼り付け */
+
+var FP_KEYS = ['font', 'size', 'weight', 'italic', 'underline', 'strike', 'color', 'align', 'valign', 'lineHeight', 'letterSpacing', 'bg', 'padding', 'fill', 'stroke', 'strokeWidth', 'dash', 'radius', 'opacity', 'borderColor', 'labelBg', 'labelColor', 'accentColor', 'bullet'];
+
+function fpTake() {
+
+  var e = selEls()[0]; if (!e) { H.toast('書式をコピーする要素を、先に選んでください'); return null; }
+
+  var st = {}; FP_KEYS.forEach(function (k) { if (k in e) st[k] = e[k]; }); S.fpStore = st; return st;
+
+}
+
+function fpApply(ids, st) {
+
+  var es = ids.map(find).filter(Boolean); if (!es.length || !st) return;
+
+  mut(function () { es.forEach(function (e) { Object.keys(st).forEach(function (k) { if (k in e) e[k] = st[k]; }); }); }, { label: '書式のコピー/貼り付け' });
+
+}
+
+function fpToggle(sticky) {
+
+  if (S.fp) { S.fp = null; S.fpSticky = false; drawFrame(); drawRibbon(); return; }
+
+  var st = fpTake(); if (!st) return; S.fp = st; S.fpSticky = !!sticky; drawFrame(); drawRibbon();
+
+}
+
+function applyStyle(st, label) { var es = selEls().filter(function (e) { return !e.locked; }); if (!es.length) return; mut(function () { es.forEach(function (e) { Object.keys(st).forEach(function (k) { if (k in e) e[k] = st[k]; }); }); }, { label: label || '図形のスタイルの変更' }); }
+
+
+
+/* ---------- リボン ---------- */
+
+function X() {
+
+  var es = selEls(), n = es.length, o = { es: es, n: n, e0: es[0] || null, one: n === 1 };
+
+  o.has = function (k) { return n > 0 && es.every(function (e) { return k in e; }); };
+
+  o.val = function (k) { if (!n) return undefined; var v = es[0][k]; return es.every(function (e) { return e[k] === v; }) ? v : undefined; };
+
+  o.fillKey = o.has('fill') ? 'fill' : o.has('bg') ? 'bg' : null;
+
+  o.lineOk = o.has('stroke') && o.has('strokeWidth');
+
+  return o;
+
+}
+
+function rb(o) {
+
+  var big = !!o.big, b = h('button', (big ? 'fe-rbL' : 'fe-rbS') + (o.cls ? ' ' + o.cls : '') + (o.on ? ' on' : '') + (!o.l && !big ? ' ic' : '')), dd = o.drop ? '<i class="fe-dd"></i>' : '', lab = '';
+
+  b.type = 'button';
+
+  if (o.l) {
+
+    if (big) { var ls = String(o.l).split('\n'); lab = '<em>' + ls.map(function (x, i) { return '<span>' + esc(x) + (i === ls.length - 1 ? dd : '') + '</span>'; }).join('') + '</em>'; }
+
+    else lab = '<em>' + esc(o.l) + '</em>' + dd;
+
+  } else lab = dd;
+
+  b.innerHTML = (o.i ? ic(o.i) : '') + lab;
+
+  b.setAttribute('data-tip', tipOf(o.t || String(o.l || '').replace('\n', ''), o.d, o.k));
+
+  if (!o.l) b.setAttribute('aria-label', String(o.t || '').split('\n')[0]);
+
+  b.disabled = !!o.dis; if (o.fn) b.onclick = function (e) { o.fn(e, b); }; if (o.dbl) b.ondblclick = o.dbl;
+
+  return b;
+
+}
+
+function grp(name, kids, launch) {
+
+  var g1 = h('div', 'fe-rg'), b = h('div', 'fe-rgb'), l = h('div', 'fe-rgl');
+
+  kids.forEach(function (k) { if (k) b.appendChild(k); }); l.appendChild(tx('span', null, name));
+
+  if (launch) { var lb = ibtn('launch', tipOf(launch.t, launch.d || ''), launch.fn); l.appendChild(lb); }
+
+  g1.appendChild(b); g1.appendChild(l); g1.setAttribute('data-g', name); return g1;
+
+}
+
+function col() { var c = h('div', 'fe-rc'); Array.prototype.forEach.call(arguments, function (k) { if (k) c.appendChild(k); }); return c; }
+
+function rrow() { var c = h('div', 'fe-rr'); Array.prototype.forEach.call(arguments, function (k) { if (k) c.appendChild(k); }); return c; }
+
+function splitBtn(o) {
+
+  var w = h('span', 'fe-spl'), m = rb({ i: o.i, t: o.t, d: o.d, k: o.k, fn: function () { o.apply(); }, dis: o.dis, cls: 'fcol' }), bar = h('i', 'fe-cbar');
+
+  var c = o.color && o.color !== 'transparent' ? resolveColor(o.color) : '#e5e7eb'; bar.style.setProperty('--cb', c); m.appendChild(bar);
+
+  var a = h('button', 'fe-sla', '<i class="fe-dd"></i>'); a.type = 'button'; a.setAttribute('data-tip', tipOf(o.t + 'の色', '色の一覧を開きます。')); a.disabled = !!o.dis; a.onclick = function () { o.pick(w); };
+
+  w.appendChild(m); w.appendChild(a); return w;
+
+}
+
+function vchk(label, on, fn, tip, dis) {
+
+  var l = h('label', 'fe-chk'), c = h('input'); c.type = 'checkbox'; c.checked = !!on; c.disabled = !!dis; c.onchange = function () { fn(c.checked); };
+
+  l.appendChild(c); l.appendChild(document.createTextNode(label)); if (tip) l.setAttribute('data-tip', tip); l.style.margin = '0 4px'; return l;
+
+}
+
+function lnum(label, v, on, dis, min, max) {
+
+  var w = h('span', 'fe-rr'), i = numInput({ v: v == null ? 0 : v, min: min != null ? min : 0, max: max != null ? max : 2000, step: 0.1, label: label, on: on });
+
+  w.appendChild(tx('span', 'fe-rbs-lab', label)); i.style.width = '58px'; i.style.height = '22px'; i.style.marginLeft = '4px'; if (v == null) i.value = ''; i.disabled = !!dis; w.appendChild(i); return w;
+
+}
+
+function openPane(kind, sec, tab) {
+
+  S.pane = kind; if (tab) S.ptab = tab; if (sec) { S.secs[sec] = true; S.scrollTo = sec; } saveUI(); drawFrame(); drawPane(); relayout();
+
+}
+
+function closePane() { S.pane = ''; saveUI(); drawFrame(); relayout(); drawRibbon(); }
+
+function startDraw(type, props) { S.draw = { type: type, props: props || {} }; closePop(); drawFrame(); drawStat(); }
+
+var SHAPES = [['rect', '四角形', 'rect', { fill: 'secondary', w: 60, h: 36 }], ['round', '角丸四角形', 'rect', { fill: 'secondary', radius: 6, w: 60, h: 36 }], ['circle', '楕円', 'ellipse', { fill: 'secondary', w: 40, h: 40 }], ['line', '直線', 'line', { w: 80, strokeWidth: 1, stroke: '#1f2937' }], ['dashed', '点線', 'line', { w: 80, strokeWidth: 1, stroke: '#1f2937', dash: 'dashed' }]];
+
+function shapeBtns() {
+
+  var g1 = h('div', 'fe-shg');
+
+  SHAPES.forEach(function (s) { g1.appendChild(rb({ i: s[0], t: s[1], d: 'ページ上をドラッグして描きます。クリックだけでも挿入できます。', fn: function () { startDraw(s[2], s[3]); } })); });
+
+  g1.appendChild(rb({ i: 'chevD', t: 'その他の図形', d: '図形の一覧を開きます。', fn: function (e, b) { openMenu(0, 0, SHAPES.map(function (s) { return { l: s[1], ic: s[0], fn: function () { startDraw(s[2], s[3]); } }; }).concat(['-', { l: 'テキスト ボックス', ic: 'textbox', fn: function () { startDraw('text', TB_DEF); } }]), b); } }));
+
+  return g1;
+
+}
+
+var TB_DEF = { text: 'テキストを入力', size: 14, w: 60, h: 12 };
+
+var QSTYLES = [
+
+  ['濃い塗りつぶし', { fill: 'accent', stroke: 'accent', strokeWidth: 0 }], ['薄い塗りつぶし', { fill: 'secondary', stroke: 'accent', strokeWidth: 0 }], ['白＋アクセントの枠', { fill: '#ffffff', stroke: 'accent', strokeWidth: 1.5 }],
+
+  ['枠線のみ', { fill: 'transparent', stroke: 'accent', strokeWidth: 1.5 }], ['アクセント＋黒の枠', { fill: 'accent', stroke: '#111827', strokeWidth: 1 }], ['黒の塗りつぶし', { fill: '#111827', stroke: '#111827', strokeWidth: 0 }],
+
+  ['サブカラー', { fill: 'secondary', stroke: 'transparent', strokeWidth: 0 }], ['白＋灰色の枠', { fill: '#ffffff', stroke: '#9ca3af', strokeWidth: 1 }], ['黒の破線', { fill: 'transparent', stroke: '#111827', strokeWidth: 1, dash: 'dashed' }]
+
+];
+
+function qsPrev(st) {
+
+  var d = h('span', 'qp'), sw = st[1].strokeWidth || 0; d.style.background = resolveColor(st[1].fill); d.style.border = (sw ? Math.max(1, Math.min(3, sw * 1.3)) : 0) + 'px ' + (st[1].dash || 'solid') + ' ' + resolveColor(st[1].stroke || 'transparent'); return d;
+
+}
+
+function qsCell(st, dis) { var b = h('button', 'fe-gc', ''); b.type = 'button'; b.style.cssText = 'height:auto;justify-content:center'; b.appendChild(qsPrev(st)); b.setAttribute('data-tip', tipOf(st[0], '図形の塗りつぶしと枠線をまとめて変えます。')); b.disabled = !!dis; b.onclick = function () { closePop(); applyStyle(st[1], '図形のスタイルの変更'); }; return b; }
+
+function openQuick(anchor) {
+
+  var p = h('div', 'fe-qs'); QSTYLES.forEach(function (st) { var b = h('button', '', ''); b.type = 'button'; b.appendChild(qsPrev(st)); b.appendChild(tx('small', null, st[0])); b.onclick = function () { closePop(); applyStyle(st[1], '図形のスタイルの変更'); }; p.appendChild(b); });
+
+  openPop(anchor, p); p.style.width = 'auto';
+
+}
+
+function gallery(descs, mk, vis, cls) {
+
+  var g1 = h('div', 'fe-gal ' + (cls || '')), v = h('div', 'gv'), a = h('div', 'ga'), cw = cls === 'th' ? 47 : 43;
+
+  v.style.width = (vis * cw) + 'px'; descs.forEach(function (d) { v.appendChild(mk(d)); });
+
+  a.appendChild(ibtn('chevL', '前へ', function () { v.scrollLeft -= vis * cw; })); a.appendChild(ibtn('chevR', '次へ', function () { v.scrollLeft += vis * cw; }));
+
+  a.appendChild(ibtn('chevD', 'すべて表示', function (e) { var p = h('div', 'fe-pophost'); p.style.cssText = 'display:grid;grid-template-columns:repeat(' + Math.min(6, descs.length) + ',auto);gap:4px;width:auto;padding:8px'; descs.forEach(function (d) { var c = mk(d); c.classList.add('x'); c.onclickBak = c.onclick; var o = c.onclick; c.onclick = function (ev) { closePop(); o.call(c, ev); }; p.appendChild(c); }); tipify(p); openPop(e.currentTarget || a, p); }));
+
+  g1.appendChild(v); g1.appendChild(a); return g1;
+
+}
+
+/* デザイン（テーマ）・レイアウトのサムネイル */
+
+function thumbOf(pageFn) { var box = h('div', 'fe-thumb'), pg; try { pg = pageFn(); } catch (e) { return box; } pg.style.transform = 'scale(' + (36 / (210 * PXMM)) + ')'; box.style.width = '36px'; box.style.height = '51px'; box.appendChild(pg); return box; }
+
+function themeDescs() {
+
+  if (!S.themeC) {
+
+    var Vv = V(); S.themeC = { th: [], lay: [] };
+
+    JT.list().filter(function (t) { return t.id !== 'free'; }).forEach(function (t) {
+
+      var th = thumbOf(function () { return JT.render(t.id, H.students()[0] || H.sample(), JT.switchVals(t.id, Vv)); }); S.themeC.th.push({ n: t.name, sub: 'このデザインを元に自由編集に変換します。今の配置は置き換わります（元に戻すで戻せます）。', th: th, fn: function () { convertFrom(t.id); } });
+
+    });
+
+    JF.LAYOUTS.forEach(function (L) { S.themeC.lay.push({ n: L.name, sub: L.desc, th: thumbOf(function () { return pageFor(L.build(Vv)); }), fn: function () { applyLayout(L.build(V())); } }); });
+
+    S.themeC.lay.push({ n: '初期レイアウト', sub: 'タイトル・番号・表・折り線・注意事項', th: thumbOf(function () { return pageFor(JF.starter(Vv)); }), fn: function () { applyLayout(JF.starter(V())); } });
+
+    S.themeC.lay.push({ n: '白紙', sub: '何もない状態から', th: thumbOf(function () { return pageFor([]); }), fn: function () { applyLayout([]); } });
+
+    S.themeC.th.forEach(function (d) { H.fitAll(d.th.firstChild); });
+
+  }
+
+  return S.themeC;
+
+}
+
+function thCell(d) {
+
+  var b = h('button', 'fe-gc'); b.type = 'button'; var t = d.th.cloneNode(true); b.appendChild(t); b.setAttribute('data-tip', tipOf(d.n, d.sub || '', '')); b.onclick = d.fn; return b;
+
+}
+
+var PALS = [['藍', '#1e40af', '#e8edf3'], ['墨', '#111827', '#e5e7eb'], ['臙脂', '#9b1c31', '#f5e6e8'], ['若草', '#166534', '#e6f2ea'], ['橙', '#c2410c', '#fdeee3'], ['紫', '#6d28d9', '#eee9fb'], ['青緑', '#0f766e', '#e0f2f1'], ['桃', '#be185d', '#fce7f1']];
+
+function palCell(p) {
+
+  var cur = V().accent === p[1] && V().secondary === p[2], b = h('button', 'fe-gc' + (cur ? ' cur' : '')), s = h('span', 'qp'); b.type = 'button'; b.style.cssText = 'height:auto;justify-content:center;flex-direction:column;gap:2px';
+
+  s.style.cssText = 'width:34px;height:34px;border-radius:2px;border:1px solid rgba(0,0,0,.2);background:linear-gradient(90deg,' + p[1] + ' 50%,' + p[2] + ' 50%)'; b.appendChild(s); b.appendChild(tx('small', null, p[0])); b.lastChild.style.cssText = 'font-size:10px;color:var(--mut)';
+
+  b.setAttribute('data-tip', tipOf('配色：' + p[0], 'アクセント色とサブカラーを変えます。「アクセント」「サブ」を使っている所が一緒に変わります。'));
+
+  b.onclick = function () { mut(function () { var v = V(); v.accent = p[1]; v.secondary = p[2]; }, { label: '配色の変更' }); }; return b;
+
+}
+
+function toggleFold() {
+
+  var fs = elems().filter(function (e) { return e.type === 'fold'; });
+
+  if (!fs.length) { addEl('fold', { y: 148.5, x: 0, w: 210 }); return; }
+
+  var hid = fs.every(function (e) { return e.hidden; }); mut(function () { fs.forEach(function (e) { e.hidden = !hid; }); }, { label: '折り線の表示切り替え' });
+
+}
+
+function pageInfoPop(anchor) {
+
+  var p = h('div', 'fe-pophost fe-wide'), fs = elems().filter(function (e) { return e.type === 'fold'; });
+
+  p.appendChild(tx('h5', null, 'ページ設定')); p.appendChild(tx('p', null, '用紙：A4 縦（210 × 297 mm）。受験票は印刷とPDFで同じ大きさになるため、用紙の大きさは変えられません。'));
+
+  p.appendChild(chkInput('折り線を表示', fs.length && !fs.every(function (e) { return e.hidden; }), function () { closePop(); toggleFold(); }));
+
+  p.appendChild(chkInput('グリッドを表示（5mm）', S.grid, function (v) { S.grid = v; saveUI(); drawOv(); drawRibbon(); }));
+
+  p.appendChild(chkInput('ガイド・他の要素・余白にスナップ', S.snap, function (v) { S.snap = v; saveUI(); }));
+
+  openPop(anchor, p);
+
+}
+
+function fieldPop(anchor) {
+
+  var p = h('div', 'fe-pophost'); p.style.width = '270px'; p.style.maxHeight = '70vh'; p.style.overflowY = 'auto';
+
+  p.appendChild(tx('h5', null, '項目の値を要素として挿入'));
+
+  var sp = ['ヘッダー', 'バッジ', 'マーク']; sp.forEach(function (k) { p.appendChild(itemRow(k, null)); });
+
+  V().items.forEach(function (it) { p.appendChild(itemRow(it.label || '（無題）', it)); });
+
+  p.appendChild(tx('p', null, '左の名前＝その項目の値を表示する要素を追加。右の「{}」＝{{項目名}} を文字として挿入（文字の中に混ぜて使えます）。')).style.marginTop = '8px';
+
+  tipify(p); openPop(anchor, p);
+
+}
+
+function wmPop(anchor) { var p = h('div', 'fe-pophost fe-wide'); p.appendChild(tx('h5', null, '透かし文字')); p.appendChild(tx('p', null, 'ページ全体に重ねる大きな文字です。ほかの要素の上に薄く表示されます。')); wmForm(p); tipify(p); openPop(anchor, p); }
+
+function imgMenu(anchor, replace) {
+
+  var put = function (u) { if (replace) { var e = selEls()[0]; mut(function () { e.src = u; }, { label: '画像の変更' }); } else addEl('image', { src: u, w: 60, h: 60 }); };
+
+  var Vv = V(), m = C.imageSrc(Vv.map, 'map'), l = C.imageSrc(Vv.logo, 'logo');
+
+  openMenu(0, 0, [
+
+    { l: 'このデバイス…', ic: 'upload', fn: function () { pickUpload(put); } }, { l: '素材から…', ic: 'folder', fn: function () { H.pickImage(put); } }, '-',
+
+    { l: '地図' + (m ? '' : '（非表示中）'), ic: 'map', fn: function () { if (replace) put('map'); else addEl('image', { src: 'map', w: 62, h: 62, name: '地図' }); } },
+
+    { l: 'ロゴ' + (l ? '' : '（非表示中）'), ic: 'pin', fn: function () { if (replace) put('logo'); else addEl('image', { src: 'logo', w: 50, h: 30, name: 'ロゴ' }); } }
+
+  ], anchor);
+
+}
+
+function insertTable() { var ids = V().items.filter(function (i) { return !i.hidden; }).map(function (i) { return i.id; }); addEl('table', { itemIds: ids, w: 180, h: Math.max(20, Math.min(80, ids.length * 10)), x: 15, y: 60 }); }
+
+function colorMenu(anchor, key, label, none, X1, kind) {
+
+  openColor(anchor, X1.val(key), function (v, live) { if (!live && kind) S.lastCol[kind] = v; setProp(key, v, live); }, none ? { none: none } : {});
+
+}
+
+function lineMenu(anchor, X1) {
+
+  var sw = X1.val('strokeWidth'), ds = X1.val('dash');
+
+  openMenu(0, 0, [
+
+    { l: '線の色…', ic: 'pen', fn: function () { setTimeout(function () { colorMenu(anchor, 'stroke', '枠線', '枠線なし', X1, 'line'); }, 0); } },
+
+    { l: '枠線なし', ic: 'close', fn: function () { setProp('strokeWidth', 0); } }, '-',
+
+    { l: '太さ', sub: [0.25, 0.5, 0.75, 1, 1.5, 2.25, 3, 4.5, 6].map(function (n) { return { l: n + ' pt', ck: sw === n, fn: function () { eachProp('線の太さの変更', function (e) { if ('strokeWidth' in e) { e.strokeWidth = n; if (e.stroke === 'transparent' || !e.stroke) e.stroke = S.lastCol.line === 'transparent' ? 'accent' : S.lastCol.line; } }); } }; }) },
+
+    { l: '実線/点線', sub: DASH_OPTS.map(function (d) { return { l: d[1], ck: ds === d[0], fn: function () { setProp('dash', d[0]); } }; }) }
+
+  ], anchor);
+
+}
+
+function arrangeMenu(anchor, X1) {
+
+  var n = X1.n, multi = n > 1, a3 = n > 2;
+
+  openMenu(0, 0, [
+
+    { l: '最前面へ移動', ic: 'front', dis: !n, fn: function () { arrange('front'); } }, { l: '前面へ移動', ic: 'front', k: 'Ctrl+]', dis: !n, fn: function () { arrange('up'); } },
+
+    { l: '背面へ移動', ic: 'back', k: 'Ctrl+[', dis: !n, fn: function () { arrange('down'); } }, { l: '最背面へ移動', ic: 'back', dis: !n, fn: function () { arrange('back'); } }, '-',
+
+    { l: 'グループ化', ic: 'group', k: 'Ctrl+G', dis: !multi, fn: groupSel }, { l: 'グループ解除', ic: 'ungroup', k: 'Ctrl+Shift+G', dis: !selEls().some(function (e) { return e.groupId; }), fn: ungroupSel }, '-',
+
+    { l: '配置', ic: 'al', sub: [
+
+      { l: '左揃え', ic: 'al', dis: !n, fn: function () { alignSel('l'); } }, { l: '左右中央揃え', ic: 'ac', dis: !n, fn: function () { alignSel('c'); } }, { l: '右揃え', ic: 'ar', dis: !n, fn: function () { alignSel('r'); } },
+
+      { l: '上揃え', ic: 'at', dis: !n, fn: function () { alignSel('t'); } }, { l: '上下中央揃え', ic: 'am', dis: !n, fn: function () { alignSel('m'); } }, { l: '下揃え', ic: 'ab', dis: !n, fn: function () { alignSel('b'); } }, '-',
+
+      { l: '左右に整列（等間隔）', ic: 'dh', dis: !a3, fn: function () { distribute('h'); } }, { l: '上下に整列（等間隔）', ic: 'dv', dis: !a3, fn: function () { distribute('v'); } }, '-',
+
+      { l: 'ページの左右中央に配置', dis: !n, fn: function () { centerPage('h'); } }, { l: 'ページの上下中央に配置', dis: !n, fn: function () { centerPage('v'); } }] },
+
+    { l: '回転', ic: 'rotate', sub: [{ l: '右へ90°回転', dis: !n, fn: function () { rotateSel(90); } }, { l: '左へ90°回転', dis: !n, fn: function () { rotateSel(-90); } }, '-', { l: 'その他の回転オプション…', fn: function () { openPane('fmt', 'size', 'shape'); } }] }, '-',
+
+    { l: 'オブジェクトの選択と表示', ic: 'layers', fn: function () { S.pane === 'sel' ? closePane() : openPane('sel'); } }
+
+  ], anchor);
+
+}
+
+/* 配置・サイズのグループ（図形の書式／図の形式／テーブル デザインで共通） */
+
+function geomGroups(X1) {
+
+  var e0 = X1.e0, one = X1.one, ln = one && isLn(e0), go = function (k) { return function (v) { if (e0.locked) { H.toast('ロック中の要素は動かせません'); return; } resizeKey(e0, k, v); }; };
+
+  return [
+
+    grp('配置', [
+
+      col(rb({ i: 'front', l: '前面へ移動', drop: 1, t: '前面へ移動', d: '選んだ要素を手前に移動します。', dis: !X1.n, fn: function (e, b) { openMenu(0, 0, [{ l: '最前面へ移動', fn: function () { arrange('front'); } }, { l: '前面へ移動', k: 'Ctrl+]', fn: function () { arrange('up'); } }], b); } }),
+
+        rb({ i: 'back', l: '背面へ移動', drop: 1, t: '背面へ移動', d: '選んだ要素を奥に移動します。', dis: !X1.n, fn: function (e, b) { openMenu(0, 0, [{ l: '最背面へ移動', fn: function () { arrange('back'); } }, { l: '背面へ移動', k: 'Ctrl+[', fn: function () { arrange('down'); } }], b); } }),
+
+        rb({ i: 'layers', l: '選択ウィンドウ', t: 'オブジェクトの選択と表示', d: '要素の一覧を開き、名前の変更・表示/非表示・順序の変更ができます。', on: S.pane === 'sel', fn: function () { S.pane === 'sel' ? closePane() : openPane('sel'); } })),
+
+      col(rb({ i: 'al', l: '配置', drop: 1, t: '配置', d: '選んだ要素をそろえたり、等間隔に並べたりします。', dis: !X1.n, fn: function (e, b) { arrangeMenu(b, X1); } }),
+
+        rb({ i: 'group', l: 'グループ化', drop: 1, t: 'グループ化', d: '複数の要素を1つにまとめます。まとめて動かし、大きさや回転も一緒に変えられます。', k: 'Ctrl+G', dis: !X1.n, fn: function (e, b) { openMenu(0, 0, [{ l: 'グループ化', ic: 'group', k: 'Ctrl+G', dis: X1.n < 2, fn: groupSel }, { l: 'グループ解除', ic: 'ungroup', k: 'Ctrl+Shift+G', dis: !X1.es.some(function (x) { return x.groupId; }), fn: ungroupSel }], b); } }),
+
+        rb({ i: 'rotate', l: '回転', drop: 1, t: '回転', d: '選んだ要素を回転します。', dis: !X1.n, fn: function (e, b) { openMenu(0, 0, [{ l: '右へ90°回転', fn: function () { rotateSel(90); } }, { l: '左へ90°回転', fn: function () { rotateSel(-90); } }, '-', { l: 'その他の回転オプション…', fn: function () { openPane('fmt', 'size', 'shape'); } }], b); } }))
+
+    ]),
+
+    grp('サイズ', [col(ln ? lnum('長さ', e0.w, go('w'), false, 0.5, 2000) : lnum('高さ', one ? e0.h : null, go('h'), !one, 0.5, 2000), ln ? null : lnum('幅', one ? e0.w : null, go('w'), !one, 0.5, 2000))], { t: '図形のサイズと位置', d: '右の書式設定を開きます。', fn: function () { openPane('fmt', 'size', 'shape'); } })
+
+  ];
+
+}
+
+function resizeKey(e, k, v) {
+
+  var o = e[k]; mut(function () { e[k] = r2(v); if (S.lockAR && o > 0 && !isLn(e)) { var q = v / o; if (k === 'w') e.h = r2(e.h * q); else e.w = r2(e.w * q); } }, { label: 'サイズ変更' });
+
+}
+
+
+
+var RT = {};
+
+RT.home = function (X1) {
+
+  var n = X1.n, txt = X1.has('size'), fnt = X1.has('font'), has = X1.has;
+
+  function tog(k, i, t, k2, on) { return rb({ i: i, t: t, d: '', k: k2, on: on, dis: !has(k), fn: function () { if (k === 'weight') setBold(!on); else setProp(k, !on); } }); }
+
+  var bold = X1.val('weight') >= 600, it = X1.val('italic') === true, ul = X1.val('underline') === true, st = X1.val('strike') === true;
+
+  var al = X1.val('align'), lh = X1.val('lineHeight'), ls = X1.val('letterSpacing');
+
+  var fillOn = !!X1.fillKey;
+
+  function alb(v, i, t, k2) { return rb({ i: i, t: t, d: '段落の配置を変えます。', k: k2, on: al === v, dis: !has('align'), fn: function () { setProp('align', v); } }); }
+
+  return [
+
+    grp('クリップボード', [
+
+      rb({ big: 1, i: 'paste', l: '貼り付け', t: '貼り付け', d: 'コピーまたは切り取った要素を貼り付けます。', k: 'Ctrl+V', dis: !(S.clip && S.clip.length), fn: pasteSel }),
+
+      col(rb({ i: 'cut', l: '切り取り', t: '切り取り', d: '選んだ要素を切り取ります。', k: 'Ctrl+X', dis: !n, fn: cutSel }), rb({ i: 'copy', l: 'コピー', t: 'コピー', d: '選んだ要素をコピーします。', k: 'Ctrl+C', dis: !n, fn: function () { copySel(); } }),
+
+        rb({ i: 'fpaint', l: '書式のコピー/貼り付け', t: '書式のコピー/貼り付け', d: '選んだ要素の書式をコピーして、ほかの要素にクリックで貼り付けます。ダブルクリックで続けて貼り付けられます。', k: 'Ctrl+Shift+C / V', on: !!S.fp, dis: !n && !S.fp, fn: function () { fpToggle(false); }, dbl: function () { if (S.fp) { S.fpSticky = true; } else { fpToggle(true); } } }))
+
+    ]),
+
+    grp('フォント', [col(
+
+      rrow(fontCombo(fnt ? X1.val('font') : '', setFont, !fnt), sizeCombo(txt ? X1.val('size') : null, function (v) { setProp('size', v); }, !txt),
+
+        rb({ i: 'fontup', t: 'フォント サイズの拡大', d: '文字を大きくします。', k: 'Ctrl+Shift+>', dis: !txt, fn: function () { stepSize(1); } }), rb({ i: 'fontdown', t: 'フォント サイズの縮小', d: '文字を小さくします。', k: 'Ctrl+Shift+<', dis: !txt, fn: function () { stepSize(-1); } })),
+
+      rrow(tog('weight', 'bold', '太字', 'Ctrl+B', bold), tog('italic', 'italic', '斜体', 'Ctrl+I', it), tog('underline', 'underline', '下線', 'Ctrl+U', ul), tog('strike', 'strike', '取り消し線', '', st),
+
+        rb({ i: 'spacing', drop: 1, t: '文字の間隔', d: '文字と文字の間隔を変えます。', dis: !has('letterSpacing'), fn: function (e, b) {
+
+          openMenu(0, 0, [['極狭', -0.1], ['狭く', -0.05], ['標準', 0], ['広く', 0.1], ['極広', 0.25]].map(function (x) { return { l: x[0], ck: ls === x[1], fn: function () { setProp('letterSpacing', x[1]); } }; }).concat(['-', { l: 'その他の間隔…', fn: function () { openPane('fmt', 'para', 'text'); } }]), b); } }),
+
+        splitBtn({ i: 'fcolor', t: '文字の色', d: '文字の色を変えます。', dis: !has('color'), color: has('color') ? X1.val('color') || S.lastCol.font : S.lastCol.font, apply: function () { setProp('color', S.lastCol.font); }, pick: function (a) { openColor(a, X1.val('color'), function (v, live) { S.lastCol.font = v; setProp('color', v, live); }, {}); } }),
+
+        splitBtn({ i: 'hilite', t: '蛍光ペンの色（背景色）', d: '文字ボックスの背景に色を付けます。', dis: !has('bg'), color: has('bg') && X1.val('bg') ? X1.val('bg') : S.lastCol.hl, apply: function () { setProp('bg', S.lastCol.hl); }, pick: function (a) { openColor(a, X1.val('bg'), function (v, live) { if (v !== 'transparent') S.lastCol.hl = v; setProp('bg', v, live); }, { none: '色なし' }); } }))
+
+    )], { t: 'フォント', d: '右の書式設定（文字のオプション）を開きます。', fn: function () { openPane('fmt', 'font', 'text'); } }),
+
+    grp('段落', [col(
+
+      rrow(alb('left', 'tl', '左揃え', 'Ctrl+L'), alb('center', 'tc', '中央揃え', 'Ctrl+E'), alb('right', 'tr', '右揃え', 'Ctrl+R'), alb('justify', 'tj', '両端揃え', 'Ctrl+J')),
+
+      rrow(rb({ i: 'lh', drop: 1, t: '行間', d: '行と行の間隔を変えます。', dis: !has('lineHeight'), fn: function (e, b) { openMenu(0, 0, [1.0, 1.15, 1.5, 2.0, 2.5, 3.0].map(function (v) { return { l: v.toFixed(v === 1.15 ? 2 : 1), ck: lh != null && Math.abs(lh - v) < 0.01, fn: function () { setProp('lineHeight', v); } }; }).concat(['-', { l: '行間のオプション…', fn: function () { openPane('fmt', 'para', 'text'); } }]), b); } }),
+
+        rb({ i: X1.val('vertical') ? 'vt' : 'tl', drop: 1, t: '文字列の方向', d: '文字を横書きにするか縦書きにするかを選びます。', dis: !has('vertical'), fn: function (e, b) { openMenu(0, 0, [{ l: '横書き', ck: X1.val('vertical') === false, fn: function () { setProp('vertical', false); } }, { l: '縦書き', ck: X1.val('vertical') === true, fn: function () { setProp('vertical', true); } }], b); } }),
+
+        rb({ i: { top: 'vtop', middle: 'vmid', bottom: 'vbot' }[X1.val('valign')] || 'vmid', drop: 1, t: '文字の配置（上下）', d: '枠の中で、文字を上・上下中央・下のどこに置くかを選びます。', dis: !has('valign'), fn: function (e, b) { openMenu(0, 0, [['top', '上揃え', 'vtop'], ['middle', '上下中央揃え', 'vmid'], ['bottom', '下揃え', 'vbot']].map(function (x) { return { l: x[1], ic: x[2], ck: X1.val('valign') === x[0], fn: function () { setProp('valign', x[0]); } }; }), b); } }))
+
+    )], { t: '段落', d: '右の書式設定（文字のオプション）を開きます。', fn: function () { openPane('fmt', 'para', 'text'); } }),
+
+    grp('図形描画', [
+
+      shapeBtns(),
+
+      rb({ big: 1, i: 'quick', l: 'クイック\nスタイル', drop: 1, t: 'クイック スタイル', d: '図形の塗りつぶしと枠線の組み合わせを選びます。', dis: !(X1.has('fill') || X1.has('stroke')), fn: function (e, b) { openQuick(b); } }),
+
+      col(rb({ i: 'bucket', l: '図形の塗りつぶし', drop: 1, t: '図形の塗りつぶし', d: '図形や文字ボックスの塗りつぶしの色を選びます。', dis: !fillOn, fn: function (e, b) { colorMenu(b, X1.fillKey, '塗りつぶし', '塗りつぶしなし', X1, 'fill'); } }),
+
+        rb({ i: 'pen', l: '図形の枠線', drop: 1, t: '図形の枠線', d: '枠線の色・太さ・種類を選びます。', dis: !X1.lineOk, fn: function (e, b) { lineMenu(b, X1); } }),
+
+        rb({ i: 'al', l: '配置', drop: 1, t: '配置', d: '要素の重なり順・グループ化・位置合わせ・回転を行います。', dis: !n, fn: function (e, b) { arrangeMenu(b, X1); } }))
+
+    ], { t: '図形の書式設定', d: '右の書式設定（図形のオプション）を開きます。', fn: function () { openPane('fmt', 'fill', 'shape'); } }),
+
+    grp('編集', [rb({ big: 1, i: 'select', l: '選択', drop: 1, t: '選択', d: '要素をまとめて選んだり、一覧から選んだりします。', fn: function (e, b) { openMenu(0, 0, [{ l: 'すべて選択', ic: 'selall', k: 'Ctrl+A', fn: selectAll }, { l: 'オブジェクトの選択と表示', ic: 'layers', fn: function () { S.pane === 'sel' ? closePane() : openPane('sel'); } }], b); } })])
+
+  ];
+
+};
+
+RT.insert = function (X1) {
+
+  return [
+
+    grp('テキスト', [rb({ big: 1, i: 'textbox', l: 'テキスト\nボックス', t: 'テキスト ボックス', d: 'ページ上をドラッグして、文字を入れる枠を描きます。', fn: function () { startDraw('text', TB_DEF); } })]),
+
+    grp('図', [
+
+      rb({ big: 1, i: 'shape', l: '図形', drop: 1, t: '図形', d: '四角形・角丸四角形・楕円・線を描きます。', fn: function (e, b) { openMenu(0, 0, SHAPES.map(function (s) { return { l: s[1], ic: s[0], fn: function () { startDraw(s[2], s[3]); } }; }), b); } }),
+
+      rb({ big: 1, i: 'image', l: '画像', drop: 1, t: '画像', d: 'このデバイス・素材・地図・ロゴから画像を挿入します。', fn: function (e, b) { imgMenu(b, false); } })
+
+    ]),
+
+    grp('差し込み', [rb({ big: 1, i: 'ph', l: '差し込み\nフィールド', drop: 1, t: '差し込みフィールド', d: '名簿などの項目（受験番号・氏名など）を、生徒ごとに入れ替わる要素として挿入します。', fn: function (e, b) { fieldPop(b); } })]),
+
+    grp('表', [rb({ big: 1, i: 'table', l: '表', t: '表（情報テーブル）', d: '項目を表にまとめた「情報テーブル」を挿入します。セルはダブルクリックで編集できます。', fn: insertTable })]),
+
+    grp('ブロック', [
+
+      rb({ big: 1, i: 'note', l: '注意事項', t: '注意事項', d: '注意事項の本文を表示するブロックを挿入します。', fn: function () { addEl('notes', { x: 15, y: 156, w: 112, h: 110, title: V().noteTitle || '' }); } }),
+
+      rb({ big: 1, i: 'fold', l: '折り線', t: '折り線', d: '山折り・谷折りの目印（破線と文字）を挿入します。', fn: function () { addEl('fold', { y: 148.5, x: 0, w: 210 }); } })
+
+    ]),
+
+    grp('透かし', [rb({ big: 1, i: 'wm', l: '透かし', drop: 1, t: '透かし', d: 'ページ全体に重ねる大きな薄い文字を設定します。', fn: function (e, b) { wmPop(b); } })])
+
+  ];
+
+};
+
+RT.design = function (X1) {
+
+  var D = themeDescs();
+
+  return [
+
+    grp('テーマ', [gallery(D.th, thCell, 6, 'th')]),
+
+    grp('レイアウト', [gallery(D.lay, thCell, 4, 'th')]),
+
+    grp('バリエーション', [gallery(PALS, palCell, 4, '')]),
+
+    grp('ユーザー設定', [
+
+      rb({ big: 1, i: 'drop', l: '背景の\n書式設定', t: '背景の書式設定', d: 'ページの背景色を変えます。', fn: function () { setSel([]); selChanged(); openPane('fmt', 'bg', 'shape'); } }),
+
+      rb({ big: 1, i: 'page', l: 'ページ設定', t: 'ページ設定', d: '用紙（A4）の情報と、折り線・グリッドの設定です。', fn: function (e, b) { pageInfoPop(b); } })
+
+    ])
+
+  ];
+
+};
+
+RT.merge = function (X1) {
+
+  var ls = H.students(), real = ls.length > 0 && !ls[0].sample, nn = ls.length;
+
+  return [
+
+    grp('フィールドの挿入', [rb({ big: 1, i: 'ph', l: '差し込み\nフィールド', drop: 1, t: '差し込みフィールドの挿入', d: '項目の値を、生徒ごとに入れ替わる要素として挿入します。', fn: function (e, b) { fieldPop(b); } })]),
+
+    grp('結果のプレビュー', [
+
+      rb({ big: 1, i: 'eye', l: '結果の\nプレビュー', on: !S.raw, t: '結果のプレビュー', d: 'オン：生徒の実際の値で表示します（印刷と同じ見た目）。オフ：値の代わりに {{項目名}} を表示します。', fn: function () { S.raw = !S.raw; if (S.editing) finishEdit(true); redraw(); } }),
+
+      col(rrow(rb({ i: 'chevL', t: '前のレコード', d: '前の生徒を表示します。', dis: !real || S.pidx <= 0, fn: function () { S.pidx = Math.max(0, S.pidx - 1); redraw(); } }),
+
+        tx('span', 'fe-rbs-lab', real ? 'レコード ' + (S.pidx + 1) + ' / ' + nn : 'サンプル'),
+
+        rb({ i: 'chevR', t: '次のレコード', d: '次の生徒を表示します。', dis: !real || S.pidx >= nn - 1, fn: function () { S.pidx = Math.min(nn - 1, S.pidx + 1); redraw(); } })),
+
+        tx('span', 'fe-rbs-lab', real ? (H.label(ls[clamp(S.pidx, 0, nn - 1)]) || '') : '名簿を読み込むと生徒を切り替えられます')) 
+
+    ]),
+
+    grp('名簿', [rb({ big: 1, i: 'people', l: '名簿の確認', t: '名簿の確認', d: '名簿を読み込み、印刷する生徒を選ぶ画面に移ります。', fn: function () { H.act('roster'); } })]),
+
+    grp('完了', [rb({ big: 1, i: 'print', l: '完了と印刷', drop: 1, t: '完了と印刷', d: '選択中の生徒の受験票を印刷、またはPDFにします。', fn: function (e, b) { openMenu(0, 0, [{ l: '印刷', ic: 'print', fn: function () { H.act('print'); } }, { l: 'PDFとして保存', ic: 'pdf', fn: function () { H.act('pdf'); } }], b); } })])
+
+  ];
+
+};
+
+RT.view = function (X1) {
+
+  return [
+
+    grp('表示', [col(
+
+      vchk('ルーラー', S.rulers, function (v) { S.rulers = v; saveUI(); drawFrame(); relayout(); }, 'ルーラー\nページの上と左に目盛りを表示します。ルーラーからドラッグするとガイドを作れます。'),
+
+      vchk('グリッド線', S.grid, function (v) { S.grid = v; saveUI(); drawOv(); }, 'グリッド線\n5mm間隔の格子を表示します。要素がグリッドに吸着します。'),
+
+      vchk('ガイド', S.guides, function (v) { S.guides = v; saveUI(); drawFrame(); drawOv(); }, 'ガイド\nルーラーからドラッグして作った補助線を表示します。'))]),
+
+    grp('ズーム', [
+
+      rb({ big: 1, i: 'zoom', l: 'ズーム', drop: 1, t: 'ズーム', d: '表示の倍率を選びます。', fn: function (e, b) { openMenu(0, 0, [400, 300, 200, 150, 100, 75, 50, 25, 10].map(function (p) { return { l: p + '%', ck: Math.round(S.zoom * 100) === p, fn: function () { setZoom(p / 100); } }; }), b); } }),
+
+      rb({ big: 1, i: 'fit', l: 'ページに\n合わせる', t: 'ページに合わせる', d: '1ページ全体が入る大きさにします。', fn: function () { S.fit = 'p'; setZoom(fitZoom(), null, null, true); R.scroll.scrollTop = 0; } }),
+
+      rb({ big: 1, i: 'page', l: '100%', t: '100%', d: '実寸（100%）で表示します。', fn: function () { setZoom(1); } })
+
+    ]),
+
+    grp('ウィンドウ', [
+
+      rb({ big: 1, i: 'layers', l: '選択\nウィンドウ', on: S.pane === 'sel', t: '選択ウィンドウ', d: '要素の一覧を開き、名前の変更・表示/非表示・順序の変更ができます。', fn: function () { S.pane === 'sel' ? closePane() : openPane('sel'); } }),
+
+      rb({ big: 1, i: 'panelR', l: '書式設定\nウィンドウ', on: S.pane === 'fmt', t: '書式設定ウィンドウ', d: '選んだ要素の塗りつぶし・線・サイズ・文字の設定を細かく調べます。', fn: function () { S.pane === 'fmt' ? closePane() : openPane('fmt'); } }),
+
+      rb({ big: 1, i: 'thumbs', l: 'サムネイル', on: S.thumbs, t: 'サムネイル', d: '左のページ一覧（生徒ごとの小さな見本）を表示/非表示にします。', fn: function () { S.thumbs = !S.thumbs; saveUI(); drawFrame(); drawThumbs(true); relayout(); drawRibbon(); } })
+
+    ])
+
+  ];
+
+};
+
+function selectAll() { setSel(elems().filter(function (e) { return !e.hidden; }).map(function (e) { return e.id; })); selChanged(); }
+
+function shapeStyleGallery(X1) {
+
+  var dis = !(X1.has('fill') || X1.has('stroke'));
+
+  return gallery(QSTYLES, function (st) { return qsCell(st, dis); }, 5, '');
+
+}
+
+RT.shape = function (X1) {
+
+  var G = geomGroups(X1), fillOn = !!X1.fillKey;
+
+  return [
+
+    grp('図形の挿入', [shapeBtns(), rb({ big: 1, i: 'textbox', l: 'テキスト\nボックス', t: 'テキスト ボックス', d: 'ページ上をドラッグして、文字を入れる枠を描きます。', fn: function () { startDraw('text', TB_DEF); } })]),
+
+    grp('図形のスタイル', [shapeStyleGallery(X1),
+
+      col(rb({ i: 'bucket', l: '図形の塗りつぶし', drop: 1, t: '図形の塗りつぶし', d: '塗りつぶしの色を選びます。', dis: !fillOn, fn: function (e, b) { colorMenu(b, X1.fillKey, '塗りつぶし', '塗りつぶしなし', X1, 'fill'); } }),
+
+        rb({ i: 'pen', l: '図形の枠線', drop: 1, t: '図形の枠線', d: '枠線の色・太さ・種類を選びます。', dis: !X1.lineOk, fn: function (e, b) { lineMenu(b, X1); } }),
+
+        rb({ i: 'drop', l: '透明度', drop: 1, t: '透明度', d: '要素全体の透明度を選びます。', dis: !X1.n, fn: function (e, b) { var v = X1.val('opacity'); openMenu(0, 0, [0, 25, 50, 75].map(function (p) { return { l: p + '%', ck: v != null && Math.round((1 - v) * 100) === p, fn: function () { setProp('opacity', 1 - p / 100); } }; }), b); } }))
+
+    ], { t: '図形の書式設定', d: '右の書式設定を開きます。', fn: function () { openPane('fmt', 'fill', 'shape'); } }),
+
+    grp('文字', [col(
+
+      splitBtn({ i: 'fcolor', t: '文字の色', d: '文字の色を変えます。', dis: !X1.has('color'), color: X1.has('color') ? X1.val('color') || S.lastCol.font : S.lastCol.font, apply: function () { setProp('color', S.lastCol.font); }, pick: function (a) { openColor(a, X1.val('color'), function (v, live) { S.lastCol.font = v; setProp('color', v, live); }, {}); } }),
+
+      rb({ i: X1.val('vertical') ? 'vt' : 'tl', l: '文字列の方向', drop: 1, t: '文字列の方向', d: '横書き・縦書きを選びます。', dis: !X1.has('vertical'), fn: function (e, b) { openMenu(0, 0, [{ l: '横書き', ck: X1.val('vertical') === false, fn: function () { setProp('vertical', false); } }, { l: '縦書き', ck: X1.val('vertical') === true, fn: function () { setProp('vertical', true); } }], b); } }),
+
+      rb({ i: 'vmid', l: '文字の配置', drop: 1, t: '文字の配置（上下）', d: '枠の中での上下の位置を選びます。', dis: !X1.has('valign'), fn: function (e, b) { openMenu(0, 0, [['top', '上揃え', 'vtop'], ['middle', '上下中央揃え', 'vmid'], ['bottom', '下揃え', 'vbot']].map(function (x) { return { l: x[1], ic: x[2], ck: X1.val('valign') === x[0], fn: function () { setProp('valign', x[0]); } }; }), b); } })
+
+    )], { t: '文字のオプション', d: '右の書式設定（文字のオプション）を開きます。', fn: function () { openPane('fmt', 'font', 'text'); } })
+
+  ].concat(G);
+
+};
+
+RT.pic = function (X1) {
+
+  var G = geomGroups(X1), e0 = X1.e0;
+
+  return [
+
+    grp('調整', [rb({ big: 1, i: 'imgchg', l: '図の変更', drop: 1, t: '図の変更', d: '別の画像（このデバイス・素材・地図・ロゴ）に差し替えます。サイズと位置は保たれます。', dis: !X1.one, fn: function (e, b) { imgMenu(b, true); } })]),
+
+    grp('図のスタイル', [col(
+
+      rb({ i: 'image', l: '全体を表示', t: '表示方法：全体を表示', d: '画像全体が枠に収まるように表示します。', on: X1.val('fit') === 'contain', fn: function () { setProp('fit', 'contain'); } }),
+
+      rb({ i: 'fit', l: '枠いっぱいに（切り抜き）', t: '表示方法：枠いっぱいに', d: '枠をすき間なく埋めます（はみ出す部分は切り取られます）。', on: X1.val('fit') === 'cover', fn: function () { setProp('fit', 'cover'); } }),
+
+      lnum('角の丸み', X1.val('radius'), function (v) { setProp('radius', v); }, false, 0, 200)
+
+    )], { t: '図の書式設定', d: '右の書式設定を開きます。', fn: function () { openPane('fmt', 'size', 'shape'); } })
+
+  ].concat(G);
+
+};
+
+RT.tbl = function (X1) {
+
+  var G = geomGroups(X1), e0 = X1.e0;
+
+  function cbtn(key, i, label, d, none) { return rb({ i: i, l: label, drop: 1, t: label, d: d, fn: function (ev, b) { colorMenu(b, key, label, none, X1, null); } }); }
+
+  return [
+
+    grp('表の項目', [rb({ big: 1, i: 'table', l: '項目の選択', drop: 1, t: '表に出す項目', d: '情報テーブルに表示する項目を選びます。', fn: function (ev, b) {
+
+      var p = h('div', 'fe-pophost'); p.style.width = '240px'; p.appendChild(tx('h5', null, '表に出す項目')); var box = h('div', 'fe-its'), items = V().items;
+
+      items.forEach(function (it) { var l = h('label', 'fe-chk'), c = h('input'); c.type = 'checkbox'; c.checked = e0.itemIds.indexOf(it.id) >= 0; c.onchange = function () { var on = {}; box.querySelectorAll('input').forEach(function (x, ix) { on[items[ix].id] = x.checked; }); setProp('itemIds', items.filter(function (x) { return on[x.id]; }).map(function (x) { return x.id; })); }; l.appendChild(c); l.appendChild(document.createTextNode(it.label || '（無題）')); box.appendChild(l); });
+
+      p.appendChild(box); openPop(b, p); } })]),
+
+    grp('罫線と色', [col(cbtn('borderColor', 'pen', '罫線の色', '表の罫線の色を選びます。'), cbtn('labelBg', 'bucket', '項目名の背景', '項目名セルの背景色を選びます。', '背景なし'), cbtn('labelColor', 'fcolor', '項目名の文字色', '項目名の文字の色を選びます。')), col(cbtn('color', 'fcolor', '値の文字色', '値の文字の色を選びます。'))]),
+
+    grp('文字', [col(rrow(sizeCombo(X1.val('size'), function (v) { setProp('size', v); }), rb({ i: 'fontup', t: 'フォント サイズの拡大', fn: function () { stepSize(1); } }), rb({ i: 'fontdown', t: 'フォント サイズの縮小', fn: function () { stepSize(-1); } })),
+
+      lnum('セルの余白', X1.val('rowGap'), function (v) { setProp('rowGap', v); }, false, 0, 30),
+
+      vchk('項目ごとの大きさ', e0.itemSize, function (v) { setProp('itemSize', v); }, '項目ごとの文字サイズを反映\n項目の「小・大・特大」の設定を表に反映します。'))])
+
+  ].concat(G);
+
+};
+
+var lastTabKey = '';
+
+function drawRibbon() {
+
+  var rbn = R.ribbon; if (!rbn) return; var sl = rbn.scrollLeft; rbn.textContent = '';
+
+  if (!S.open || S.ro) return;
+
+  var fn = RT[S.rtab] || RT.home; fn(X()).forEach(function (g1) { rbn.appendChild(g1); });
+
+  tipify(rbn); if (mini) refreshMini(); var key = S.rtab; rbn.scrollLeft = key === lastTabKey ? sl : 0; lastTabKey = key;
+
+}
+
 
 /* ---------- 項目の内容・プロパティ部品 ---------- */
 function prow(label, ctl, wide) { var d = h('div', 'fe-pr'); if (label) d.appendChild(tx('label', null, label)); if (wide || !label) { ctl.classList.add('fe-wide'); } d.appendChild(ctl); return d; }
@@ -1677,173 +2224,338 @@ function autoName(e) {
   return JF.TYPE_NAMES[e.type] || e.type;
 }
 function layerName(e) { return e.name && e.name !== JF.TYPE_NAMES[e.type] ? e.name : autoName(e); }
-
-/* ---------- 右の作業ウィンドウ（書式設定・選択） ---------- */
-function ctl(es, k) { var p = schemaFor(es).filter(function (x) { return x.k === k; })[0]; return p ? propControl(p, es) : null; }
-function addCtl(b, es, k) { var c = ctl(es, k); if (c) b.appendChild(c); return c; }
-function psec(P, key, title, fill) {
-  var s = h('div', 'fe-ps' + (S.secs[key] === false ? ' cl' : '')), hd = h('button', 'fe-psh', '<i class="ar"></i><span>' + esc(title) + '</span>'), b = h('div', 'fe-psb');
-  s.setAttribute('data-sec', key); hd.type = 'button'; hd.onclick = function () { S.secs[key] = s.classList.contains('cl'); s.classList.toggle('cl'); saveUI(); };
-  s.appendChild(hd); s.appendChild(b); P.appendChild(s); fill(b); return s;
-}
-function schemaFor(es) { var t0 = es[0].type; return (SCHEMA[t0] || []).filter(function (p) { return es.every(function (e) { return p.k in e; }); }); }
-function radios(items, cur, on) {
-  var d = h('div', 'fe-rad'), nm = 'fer' + Math.random().toString(36).slice(2, 6);
-  items.forEach(function (it) { var l = h('label'), r = h('input'); r.type = 'radio'; r.name = nm; r.checked = it[0] === cur; r.onchange = function () { if (r.checked) on(it[0]); }; l.appendChild(r); l.appendChild(document.createTextNode(it[1])); d.appendChild(l); });
-  return d;
-}
-function colLabel(c) { return c === 'accent' ? 'アクセント色' : c === 'secondary' ? 'サブカラー' : (!c || c === 'transparent') ? 'なし' : c; }
-function fillSec(b, es, key) {
-  var cur = es[0][key], none = !cur || cur === 'transparent';
-  b.appendChild(radios([['none', key === 'bg' ? '塗りつぶしなし（透明）' : '塗りつぶしなし'], ['solid', '塗りつぶし（単色）']], none ? 'none' : 'solid', function (v) { setProp(key, v === 'none' ? 'transparent' : (S.lastCol.fill && S.lastCol.fill !== 'transparent' ? S.lastCol.fill : 'secondary')); }));
-  if (!none) b.appendChild(prow('色', swatch(cur, false, function (v, lv) { S.lastCol.fill = v; setProp(key, v, lv); }, colLabel(cur))));
-  b.appendChild(prow('透明度', rangeNum({ v: Math.round((1 - es[0].opacity) * 100), min: 0, max: 100, step: 1, label: '透明度', on: function (v, live) { setProp('opacity', 1 - v / 100, live); } }), true));
-  b.appendChild(tx('p', null, '透明度は要素全体（枠線・文字を含む）にかかります。')).style.cssText = 'margin:2px 0 0;font-size:11px;color:var(--mut)';
-}
-function lineSec(b, es) {
-  var e0 = es[0], ln = e0.type === 'line', none = !ln && (!(e0.strokeWidth > 0) || !e0.stroke || e0.stroke === 'transparent');
-  if (!ln) b.appendChild(radios([['none', '線なし'], ['solid', '線（単色）']], none ? 'none' : 'solid', function (v) {
-    if (v === 'none') setProp('strokeWidth', 0);
-    else mut(function () { es.forEach(function (e) { if ('strokeWidth' in e) { if (!(e.strokeWidth > 0)) e.strokeWidth = 1; if (!e.stroke || e.stroke === 'transparent') e.stroke = 'accent'; } }); }, { label: '枠線の変更' });
-  }));
-  if (!none) {
-    b.appendChild(prow('色', swatch(e0.stroke, false, function (v, lv) { S.lastCol.line = v; setProp('stroke', v, lv); }, colLabel(e0.stroke))));
-    addCtl(b, es, 'strokeWidth'); addCtl(b, es, 'dash');
-  }
-}
-function sizeSec(b, es) {
-  var one = es.length === 1, e0 = es[0], ln = isLn(e0);
-  if (one) {
-    var gi = function (label, k, min, max, unit) { return labeledNum(label, { v: e0[k], min: min, max: max, step: 0.1, label: label, on: function (v) { if (e0.locked) { H.toast('ロック中の要素は動かせません'); return; } if (k === 'w' || k === 'h') resizeKey(e0, k, v); else mut(function () { e0[k] = r2(v); }, { label: k === 'rot' ? '回転' : '移動' }); } }, unit); };
-    var g1 = h('div', 'fe-g4'); g1.appendChild(gi(ln ? '長さ' : '高さ', ln ? 'w' : 'h', 0.5, 2000, 'mm')); if (!ln) g1.appendChild(gi('幅', 'w', 0.5, 2000, 'mm')); else g1.appendChild(gi('回転', 'rot', -360, 360, '°')); b.appendChild(g1);
-    if (!ln) { var g2 = h('div', 'fe-g4'); g2.appendChild(gi('回転', 'rot', -360, 360, '°')); b.appendChild(g2); b.appendChild(chkInput('縦横比を固定する', S.lockAR, function (v) { S.lockAR = v; saveUI(); })); }
-    var g3 = h('div', 'fe-g4'); g3.appendChild(gi('位置 X', 'x', -2000, 2000, 'mm')); g3.appendChild(gi('Y', 'y', -2000, 2000, 'mm')); b.appendChild(g3);
-  } else { var u = unionBox(es); b.appendChild(tx('p', null, es.length + '個を選択中。範囲：X ' + fmt(u.x) + ' / Y ' + fmt(u.y) + ' / 幅 ' + fmt(u.w) + ' / 高さ ' + fmt(u.h) + '（mm）')).style.margin = '0 0 6px'; }
-  var lk = es.every(function (e) { return e.locked; }), hid = es.every(function (e) { return e.hidden; });
-  b.appendChild(chkInput('動かせないようにする（ロック）', lk, function (v) { setProp('locked', v); }));
-  b.appendChild(chkInput('非表示にする', hid, function (v) { setProp('hidden', v); }));
-  if (one) { var nm = h('input'); nm.type = 'text'; nm.value = layerName(e0); nm.setAttribute('aria-label', '要素の名前'); nm.onchange = function () { var v = nm.value.trim(); setProp('name', !v || v === autoName(e0) ? JF.TYPE_NAMES[e0.type] : v); }; b.appendChild(prow('名前', nm)); }
-  var bt = h('div', 'fe-two'); bt.style.marginTop = '4px'; bt.appendChild(tbtn('copy', '複製', dupSel)); bt.appendChild(tbtn('trash', '削除', removeSel)); b.appendChild(bt);
-}
-function drawFmtPane(P) {
-  var es = selEls(), e0 = es[0], ty = es.length ? (es.every(function (e) { return e.type === 'image'; }) ? '図の書式設定' : es.every(function (e) { return e.type === 'table'; }) ? 'テーブルの書式設定' : '図形の書式設定') : '背景の書式設定';
-  var hd = h('div', 'fe-ph'); hd.appendChild(tx('b', null, ty)); hd.firstChild.style.fontWeight = '600'; hd.appendChild(ibtn('close', tipOf('閉じる', '書式設定ウィンドウを閉じます。'), closePane)); P.appendChild(hd);
-  var textTab = es.length && es.every(function (e) { return e.type === 'text' || e.type === 'field'; });
-  if (es.length && (textTab || true)) {
-    var tb = h('div', 'fe-pt'), mk = function (id, l, icn) { var bt = h('button', S.ptab === id ? 'on' : '', ic(icn) + '<span>' + l + '</span>'); bt.type = 'button'; bt.onclick = function () { S.ptab = id; drawPane(); }; return bt; };
-    if (!textTab && S.ptab === 'text') S.ptab = 'shape';
-    tb.appendChild(mk('shape', '図形のオプション', 'shape')); if (textTab) tb.appendChild(mk('text', '文字のオプション', 'text')); P.appendChild(tb);
-  }
-  var pb = h('div', 'fe-pb'); P.appendChild(pb);
-  if (!es.length) {
-    psec(pb, 'bg', '背景', function (b) {
-      b.appendChild(prow('背景色', swatch(F().bg, false, function (v, lv) { F().bg = v || '#ffffff'; H.changed(!lv); lbl('背景の変更'); if (lv) { drawPage(); } else redraw(); }, F().bg)));
-      b.appendChild(tx('p', null, '用紙：A4 縦（210 × 297 mm）。要素を選ぶと、その書式がここに出ます。')).style.cssText = 'margin:0;font-size:11px;color:var(--mut)';
-    });
-    psec(pb, 'pgset', 'ページ設定', function (b) {
-      b.appendChild(chkInput('グリッドを表示（5mm）', S.grid, function (v) { S.grid = v; saveUI(); drawOv(); drawRibbon(); }));
-      b.appendChild(chkInput('ガイド・他の要素・余白にスナップ', S.snap, function (v) { S.snap = v; saveUI(); }));
-      if (F().guides.length) { var gb = tbtn('', 'ガイドをすべて消す', function () { mut(function () { F().guides = []; }, { label: 'ガイドの削除' }); }); gb.style.marginBottom = '6px'; b.appendChild(gb); }
-      b.appendChild(tbtn('help', 'ショートカット一覧', showHelp));
-    });
-    return;
-  }
-  var t = e0.type, one = es.length === 1;
-  if (S.ptab === 'text' && textTab) {
-    if (t === 'text' && one) psec(pb, 'content', 'テキスト', function (b) { addCtl(b, es, 'text'); b.appendChild(tx('p', null, '「{{項目名}}」は印刷のとき生徒ごとの値に置き換わります。')).style.cssText = 'margin:0;font-size:11px;color:var(--mut)'; });
-    if (t === 'field' && one) {
-      psec(pb, 'field', 'フィールド', function (b) { ['itemId', 'showLabel', 'labelText', 'labelPos', 'labelSize', 'labelColor', 'ruby'].concat(e0.ruby ? ['rubyScale'] : []).forEach(function (k) { addCtl(b, es, k); }); var fit = JF.itemById(V(), e0.itemId); if (fit) b.appendChild(itemBox(fit, false)); });
-    }
-    psec(pb, 'font', 'フォント', function (b) {
-      addCtl(b, es, 'font'); addCtl(b, es, 'size');
+
+
+/* ---------- 右の作業ウィンドウ（書式設定・選択） ---------- */
+
+function ctl(es, k) { var p = schemaFor(es).filter(function (x) { return x.k === k; })[0]; return p ? propControl(p, es) : null; }
+
+function addCtl(b, es, k) { var c = ctl(es, k); if (c) b.appendChild(c); return c; }
+
+function psec(P, key, title, fill) {
+
+  var s = h('div', 'fe-ps' + (S.secs[key] === false ? ' cl' : '')), hd = h('button', 'fe-psh', '<i class="ar"></i><span>' + esc(title) + '</span>'), b = h('div', 'fe-psb');
+
+  s.setAttribute('data-sec', key); hd.type = 'button'; hd.onclick = function () { S.secs[key] = s.classList.contains('cl'); s.classList.toggle('cl'); saveUI(); };
+
+  s.appendChild(hd); s.appendChild(b); P.appendChild(s); fill(b); return s;
+
+}
+
+function schemaFor(es) { var t0 = es[0].type; return (SCHEMA[t0] || []).filter(function (p) { return es.every(function (e) { return p.k in e; }); }); }
+
+function radios(items, cur, on) {
+
+  var d = h('div', 'fe-rad'), nm = 'fer' + Math.random().toString(36).slice(2, 6);
+
+  items.forEach(function (it) { var l = h('label'), r = h('input'); r.type = 'radio'; r.name = nm; r.checked = it[0] === cur; r.onchange = function () { if (r.checked) on(it[0]); }; l.appendChild(r); l.appendChild(document.createTextNode(it[1])); d.appendChild(l); });
+
+  return d;
+
+}
+
+function colLabel(c) { return c === 'accent' ? 'アクセント色' : c === 'secondary' ? 'サブカラー' : (!c || c === 'transparent') ? 'なし' : c; }
+
+function fillSec(b, es, key) {
+
+  var cur = es[0][key], none = !cur || cur === 'transparent';
+
+  b.appendChild(radios([['none', key === 'bg' ? '塗りつぶしなし（透明）' : '塗りつぶしなし'], ['solid', '塗りつぶし（単色）']], none ? 'none' : 'solid', function (v) { setProp(key, v === 'none' ? 'transparent' : (S.lastCol.fill && S.lastCol.fill !== 'transparent' ? S.lastCol.fill : 'secondary')); }));
+
+  if (!none) b.appendChild(prow('色', swatch(cur, false, function (v, lv) { S.lastCol.fill = v; setProp(key, v, lv); }, colLabel(cur))));
+
+  b.appendChild(prow('透明度', rangeNum({ v: Math.round((1 - es[0].opacity) * 100), min: 0, max: 100, step: 1, label: '透明度', on: function (v, live) { setProp('opacity', 1 - v / 100, live); } }), true));
+
+  b.appendChild(tx('p', null, '透明度は要素全体（枠線・文字を含む）にかかります。')).style.cssText = 'margin:2px 0 0;font-size:11px;color:var(--mut)';
+
+}
+
+function lineSec(b, es) {
+
+  var e0 = es[0], ln = e0.type === 'line', none = !ln && (!(e0.strokeWidth > 0) || !e0.stroke || e0.stroke === 'transparent');
+
+  if (!ln) b.appendChild(radios([['none', '線なし'], ['solid', '線（単色）']], none ? 'none' : 'solid', function (v) {
+
+    if (v === 'none') setProp('strokeWidth', 0);
+
+    else mut(function () { es.forEach(function (e) { if ('strokeWidth' in e) { if (!(e.strokeWidth > 0)) e.strokeWidth = 1; if (!e.stroke || e.stroke === 'transparent') e.stroke = 'accent'; } }); }, { label: '枠線の変更' });
+
+  }));
+
+  if (!none) {
+
+    b.appendChild(prow('色', swatch(e0.stroke, false, function (v, lv) { S.lastCol.line = v; setProp('stroke', v, lv); }, colLabel(e0.stroke))));
+
+    addCtl(b, es, 'strokeWidth'); addCtl(b, es, 'dash');
+
+  }
+
+}
+
+function sizeSec(b, es) {
+
+  var one = es.length === 1, e0 = es[0], ln = isLn(e0);
+
+  if (one) {
+
+    var gi = function (label, k, min, max, unit) { return labeledNum(label, { v: e0[k], min: min, max: max, step: 0.1, label: label, on: function (v) { if (e0.locked) { H.toast('ロック中の要素は動かせません'); return; } if (k === 'w' || k === 'h') resizeKey(e0, k, v); else mut(function () { e0[k] = r2(v); }, { label: k === 'rot' ? '回転' : '移動' }); } }, unit); };
+
+    var g1 = h('div', 'fe-g4'); g1.appendChild(gi(ln ? '長さ' : '高さ', ln ? 'w' : 'h', 0.5, 2000, 'mm')); if (!ln) g1.appendChild(gi('幅', 'w', 0.5, 2000, 'mm')); else g1.appendChild(gi('回転', 'rot', -360, 360, '°')); b.appendChild(g1);
+
+    if (!ln) { var g2 = h('div', 'fe-g4'); g2.appendChild(gi('回転', 'rot', -360, 360, '°')); b.appendChild(g2); b.appendChild(chkInput('縦横比を固定する', S.lockAR, function (v) { S.lockAR = v; saveUI(); })); }
+
+    var g3 = h('div', 'fe-g4'); g3.appendChild(gi('位置 X', 'x', -2000, 2000, 'mm')); g3.appendChild(gi('Y', 'y', -2000, 2000, 'mm')); b.appendChild(g3);
+
+  } else { var u = unionBox(es); b.appendChild(tx('p', null, es.length + '個を選択中。範囲：X ' + fmt(u.x) + ' / Y ' + fmt(u.y) + ' / 幅 ' + fmt(u.w) + ' / 高さ ' + fmt(u.h) + '（mm）')).style.margin = '0 0 6px'; }
+
+  var lk = es.every(function (e) { return e.locked; }), hid = es.every(function (e) { return e.hidden; });
+
+  b.appendChild(chkInput('動かせないようにする（ロック）', lk, function (v) { setProp('locked', v); }));
+
+  b.appendChild(chkInput('非表示にする', hid, function (v) { setProp('hidden', v); }));
+
+  if (one) { var nm = h('input'); nm.type = 'text'; nm.value = layerName(e0); nm.setAttribute('aria-label', '要素の名前'); nm.onchange = function () { var v = nm.value.trim(); setProp('name', !v || v === autoName(e0) ? JF.TYPE_NAMES[e0.type] : v); }; b.appendChild(prow('名前', nm)); }
+
+  var bt = h('div', 'fe-two'); bt.style.marginTop = '4px'; bt.appendChild(tbtn('copy', '複製', dupSel)); bt.appendChild(tbtn('trash', '削除', removeSel)); b.appendChild(bt);
+
+}
+
+function drawFmtPane(P) {
+
+  var es = selEls(), e0 = es[0], ty = es.length ? (es.every(function (e) { return e.type === 'image'; }) ? '図の書式設定' : es.every(function (e) { return e.type === 'table'; }) ? 'テーブルの書式設定' : '図形の書式設定') : '背景の書式設定';
+
+  var hd = h('div', 'fe-ph'); hd.appendChild(tx('b', null, ty)); hd.firstChild.style.fontWeight = '600'; hd.appendChild(ibtn('close', tipOf('閉じる', '書式設定ウィンドウを閉じます。'), closePane)); P.appendChild(hd);
+
+  var textTab = es.length && es.every(function (e) { return e.type === 'text' || e.type === 'field'; });
+
+  if (es.length && (textTab || true)) {
+
+    var tb = h('div', 'fe-pt'), mk = function (id, l, icn) { var bt = h('button', S.ptab === id ? 'on' : '', ic(icn) + '<span>' + l + '</span>'); bt.type = 'button'; bt.onclick = function () { S.ptab = id; drawPane(); }; return bt; };
+
+    if (!textTab && S.ptab === 'text') S.ptab = 'shape';
+
+    tb.appendChild(mk('shape', '図形のオプション', 'shape')); if (textTab) tb.appendChild(mk('text', '文字のオプション', 'text')); P.appendChild(tb);
+
+  }
+
+  var pb = h('div', 'fe-pb'); P.appendChild(pb);
+
+  if (!es.length) {
+
+    psec(pb, 'bg', '背景', function (b) {
+
+      b.appendChild(prow('背景色', swatch(F().bg, false, function (v, lv) { F().bg = v || '#ffffff'; H.changed(!lv); lbl('背景の変更'); if (lv) { drawPage(); } else redraw(); }, F().bg)));
+
+      b.appendChild(tx('p', null, '用紙：A4 縦（210 × 297 mm）。要素を選ぶと、その書式がここに出ます。')).style.cssText = 'margin:0;font-size:11px;color:var(--mut)';
+
+    });
+
+    psec(pb, 'pgset', 'ページ設定', function (b) {
+
+      b.appendChild(chkInput('グリッドを表示（5mm）', S.grid, function (v) { S.grid = v; saveUI(); drawOv(); drawRibbon(); }));
+
+      b.appendChild(chkInput('ガイド・他の要素・余白にスナップ', S.snap, function (v) { S.snap = v; saveUI(); }));
+
+      if (F().guides.length) { var gb = tbtn('', 'ガイドをすべて消す', function () { mut(function () { F().guides = []; }, { label: 'ガイドの削除' }); }); gb.style.marginBottom = '6px'; b.appendChild(gb); }
+
+      b.appendChild(tbtn('help', 'ショートカット一覧', showHelp));
+
+    });
+
+    return;
+
+  }
+
+  var t = e0.type, one = es.length === 1;
+
+  if (S.ptab === 'text' && textTab) {
+
+    if (t === 'text' && one) psec(pb, 'content', 'テキスト', function (b) { addCtl(b, es, 'text'); b.appendChild(tx('p', null, '「{{項目名}}」は印刷のとき生徒ごとの値に置き換わります。')).style.cssText = 'margin:0;font-size:11px;color:var(--mut)'; });
+
+    if (t === 'field' && one) {
+
+      psec(pb, 'field', 'フィールド', function (b) { ['itemId', 'showLabel', 'labelText', 'labelPos', 'labelSize', 'labelColor', 'ruby'].concat(e0.ruby ? ['rubyScale'] : []).forEach(function (k) { addCtl(b, es, k); }); var fit = JF.itemById(V(), e0.itemId); if (fit) b.appendChild(itemBox(fit, false)); });
+
+    }
+
+    psec(pb, 'font', 'フォント', function (b) {
+
+      addCtl(b, es, 'font'); addCtl(b, es, 'size');
+
       var wsv = JFN.weights(e0.font || 'gothic');
       if (e0.font && 'weight' in e0 && wsv.length > 2) b.appendChild(prow('太さ', selInput(wsv.map(function (x) { return [x, JFN.weightLabel(x)]; }), JFN.nearest(e0.font, e0.weight), function (v) { setProp('weight', +v); })));
-      var d = h('div'); d.style.cssText = 'display:flex;gap:6px;align-items:center;margin-bottom:6px';
-      var bold = es.every(function (e) { return e.weight >= 600; });
-      d.appendChild(seg([['b', 'bold', '太字'], ['i', 'italic', '斜体'], ['u', 'underline', '下線'], ['s', 'strike', '取り消し線']].map(function (x) { return x; }), '', function () { }));
-      var sg = d.firstChild; Array.prototype.forEach.call(sg.children, function (btn, i) { var k = ['weight', 'italic', 'underline', 'strike'][i], on = k === 'weight' ? bold : es.every(function (e) { return e[k]; }); btn.classList.toggle('on', on); btn.onclick = function () { if (k === 'weight') setBold(!on); else setProp(k, !on); }; });
-      b.appendChild(d); addCtl(b, es, 'color');
-    });
-    psec(pb, 'para', '段落', function (b) {
-      b.appendChild(prow('配置', seg([['left', 'tl', '左揃え'], ['center', 'tc', '中央揃え'], ['right', 'tr', '右揃え'], ['justify', 'tj', '両端揃え']], e0.align, function (v) { setProp('align', v); })));
-      addCtl(b, es, 'lineHeight'); addCtl(b, es, 'letterSpacing');
-    });
-    psec(pb, 'tbox', 'テキスト ボックス', function (b) {
-      b.appendChild(prow('上下の配置', seg([['top', 'vtop', '上揃え'], ['middle', 'vmid', '中央揃え'], ['bottom', 'vbot', '下揃え']], e0.valign, function (v) { setProp('valign', v); })));
-      addCtl(b, es, 'padding'); addCtl(b, es, 'vertical'); addCtl(b, es, 'fit');
-    });
-    return;
-  }
-  /* 図形のオプション */
-  if (t === 'table' && one) {
-    psec(pb, 'tbl', 'テーブルの項目', function (b) {
-      var rit = S.rowSel && S.rowSel.eid === e0.id ? JF.itemById(V(), S.rowSel.iid) : null;
-      if (rit) b.appendChild(itemBox(rit, true, e0));
-      else b.appendChild(tx('p', null, '表の行をクリックすると、その項目の設定（項目名・入る値・大きさ・色）がここに出ます。値や項目名はダブルクリックでその場で編集できます。')).style.cssText = 'margin:0 0 8px;font-size:11px;color:var(--mut)';
-      addCtl(b, es, 'itemIds');
-    });
-    psec(pb, 'tblfmt', 'テーブルの書式', function (b) { ['borderColor', 'labelBg', 'labelColor', 'color', 'size', 'rowGap', 'itemSize'].forEach(function (k) { addCtl(b, es, k); }); });
-  }
-  if (es.every(function (e) { return 'fill' in e; })) psec(pb, 'fill', '塗りつぶし', function (b) { fillSec(b, es, 'fill'); });
-  else if (es.every(function (e) { return 'bg' in e; })) psec(pb, 'fill', '塗りつぶし', function (b) { fillSec(b, es, 'bg'); });
-  if (es.every(function (e) { return 'stroke' in e && 'strokeWidth' in e; })) psec(pb, 'line', '線', function (b) { lineSec(b, es); });
-  if (t === 'rect' && es.every(function (e) { return e.type === 'rect'; })) psec(pb, 'shp', '図形', function (b) { addCtl(b, es, 'radius'); });
-  if (t === 'image' && one) psec(pb, 'img', '画像', function (b) { ['src', 'fit', 'radius'].forEach(function (k) { addCtl(b, es, k); }); });
-  if (t === 'notes' && one) {
-    psec(pb, 'notes', '注意事項', function (b) {
-      schemaFor(es).forEach(function (p) { if (p.t !== 'hint') b.appendChild(propControl(p, es)); });
-      var nta = h('textarea'); nta.rows = 7; nta.value = V().notes; nta.onchange = function () { mut(function () { V().notes = nta.value; }, { label: '注意事項の編集' }); }; b.appendChild(tx('label', null, '本文（1行に1項目。行頭の「!」で強調）')); b.lastChild.style.margin = '6px 0 4px'; b.appendChild(nta);
-    });
-  }
-  if (t === 'fold' && one) psec(pb, 'foldp', '折り線', function (b) { schemaFor(es).forEach(function (p) { b.appendChild(propControl(p, es)); }); });
-  if (t === 'field' && one) psec(pb, 'field2', 'フィールド', function (b) { b.appendChild(tx('p', null, '文字の書体・大きさ・色は「文字のオプション」で変更します。')).style.cssText = 'margin:0;font-size:11px;color:var(--mut)'; });
-  psec(pb, 'size', 'サイズとプロパティ', function (b) { sizeSec(b, es); });
-}
-function drawPane() {
-  var P = R.pane; if (!P || !S.open) return;
-  var old = P.querySelector('.fe-pb'), keep = old ? old.scrollTop : 0, pk = S.sel.join(',') + '|' + (S.rowSel ? S.rowSel.iid : '') + '|' + S.pane + S.ptab;
-  if (pk !== S.paneKey) { keep = 0; S.paneKey = pk; }
-  P.textContent = ''; if (!S.pane) return;
-  if (S.pane === 'sel') drawSelPane(P); else drawFmtPane(P);
-  tipify(P);
-  var pb = P.querySelector('.fe-pb'); if (!pb) return;
-  if (S.scrollTo) { var t = pb.querySelector('[data-sec="' + S.scrollTo + '"]'); if (t) pb.scrollTop = Math.max(0, t.offsetTop - 4); S.scrollTo = ''; } else pb.scrollTop = keep;
-}
-/* ---------- 選択ウィンドウ ---------- */
-function drawSelPane(P) {
-  S.hover = '';
-  var hd = h('div', 'fe-ph'); hd.appendChild(tx('b', null, '選択')); hd.firstChild.style.fontWeight = '600'; hd.appendChild(ibtn('close', tipOf('閉じる', '選択ウィンドウを閉じます。'), closePane)); P.appendChild(hd);
-  var a = elems(), sh = h('div', 'fe-sh');
-  sh.appendChild(tbtn('eye', 'すべて表示', function () { mut(function () { a.forEach(function (e) { e.hidden = false; }); }, { label: '表示の変更' }); }));
-  sh.appendChild(tbtn('eyeoff', 'すべて非表示', function () { mut(function () { a.forEach(function (e) { e.hidden = true; }); }, { label: '表示の変更' }); }));
-  sh.appendChild(h('span', 'fe-sp'));
-  var up = ibtn('chevU', tipOf('前面へ移動', '選んだ要素をひとつ前面へ移動します。'), function () { arrange('up'); }), dn = ibtn('chevD', tipOf('背面へ移動', '選んだ要素をひとつ背面へ移動します。'), function () { arrange('down'); });
-  up.disabled = dn.disabled = !S.sel.length; sh.appendChild(up); sh.appendChild(dn); P.appendChild(sh);
-  var pb = h('div', 'fe-pb'); pb.style.paddingTop = '6px'; P.appendChild(pb);
-  if (!a.length) pb.appendChild(tx('p', 'fe-pn', '要素がありません。「挿入」タブから追加してください。'));
-  for (var i = a.length - 1; i >= 0; i--) (function (e) {
-    var r = h('div', 'fe-lay' + (S.sel.indexOf(e.id) >= 0 ? ' on' : '') + (e.hidden ? ' hid' : '') + (e.groupId ? ' ing' : '')); r.setAttribute('data-id', e.id); r.draggable = true;
-    r.appendChild(h('span', 'fe-ty', ic(e.groupId ? 'group' : TYPE_ICON[e.type])));
-    var nm = tx('span', 'fe-ln', layerName(e)); nm.setAttribute('data-tip', layerName(e) + '\nダブルクリックで名前を変更できます。'); r.appendChild(nm);
-    var ey = ibtn(e.hidden ? 'eyeoff' : 'eye', tipOf(e.hidden ? '表示する' : '非表示にする', ''), function (ev) { ev.stopPropagation(); mut(function () { e.hidden = !e.hidden; }, { label: '表示の変更' }); });
-    var lk = ibtn(e.locked ? 'lock' : 'unlock', tipOf(e.locked ? 'ロックを解除' : 'ロック', '動かせないようにします。'), function (ev) { ev.stopPropagation(); mut(function () { e.locked = !e.locked; }, { label: 'ロックの変更' }); }, e.locked ? 'on' : '');
-    r.appendChild(ey); r.appendChild(lk);
-    r.onmouseenter = function () { if (S.hover !== e.id) { S.hover = e.id; drawOv(); } };
-    r.onmouseleave = function () { if (S.hover === e.id) { S.hover = ''; drawOv(); } };
-    r.onclick = function (ev) { if (ev.shiftKey || ev.ctrlKey || ev.metaKey) { var s = S.sel.slice(), k = s.indexOf(e.id); if (k >= 0) s.splice(k, 1); else s.push(e.id); setSel(s); } else { if (S.sel.length === 1 && S.sel[0] === e.id) return; setSel([e.id]); } selChanged(); };
-    nm.ondblclick = function (ev) {
-      ev.stopPropagation(); var inp = h('input'); inp.type = 'text'; inp.value = layerName(e); inp.style.margin = '0 4px'; r.replaceChild(inp, nm); inp.focus(); inp.select(); var done = false;
-      function fin(ok) { if (done) return; done = true; var v = inp.value.trim(); if (ok && v && v !== layerName(e)) mut(function () { e.name = v; }, { label: '名前の変更' }); else drawPane(); }
-      inp.onblur = function () { fin(true); }; inp.onkeydown = function (k) { k.stopPropagation(); if (k.key === 'Enter') { k.preventDefault(); fin(true); } else if (k.key === 'Escape') { k.preventDefault(); fin(false); } }; inp.onclick = function (k) { k.stopPropagation(); };
-    };
-    r.ondragstart = function (ev) { layDrag = e.id; ev.dataTransfer.effectAllowed = 'move'; try { ev.dataTransfer.setData('text/plain', e.id); } catch (x) {} };
-    r.ondragover = function (ev) { if (!layDrag) return; ev.preventDefault(); var b = r.getBoundingClientRect(), after = ev.clientY > b.top + b.height / 2; r.classList.toggle('dt-a', after); r.classList.toggle('dt-b', !after); };
-    r.ondragleave = function () { r.classList.remove('dt-a', 'dt-b'); };
-    r.ondrop = function (ev) { ev.preventDefault(); var b = r.getBoundingClientRect(), after = ev.clientY > b.top + b.height / 2, f = layDrag; layDrag = ''; r.classList.remove('dt-a', 'dt-b'); if (f) reorder(f, e.id, after); };
-    r.ondragend = function () { layDrag = ''; Array.prototype.forEach.call(pb.querySelectorAll('.dt-a,.dt-b'), function (x) { x.classList.remove('dt-a', 'dt-b'); }); };
-    pb.appendChild(r);
-  })(a[i]);
-}
+      var d = h('div'); d.style.cssText = 'display:flex;gap:6px;align-items:center;margin-bottom:6px';
+
+      var bold = es.every(function (e) { return e.weight >= 600; });
+
+      d.appendChild(seg([['b', 'bold', '太字'], ['i', 'italic', '斜体'], ['u', 'underline', '下線'], ['s', 'strike', '取り消し線']].map(function (x) { return x; }), '', function () { }));
+
+      var sg = d.firstChild; Array.prototype.forEach.call(sg.children, function (btn, i) { var k = ['weight', 'italic', 'underline', 'strike'][i], on = k === 'weight' ? bold : es.every(function (e) { return e[k]; }); btn.classList.toggle('on', on); btn.onclick = function () { if (k === 'weight') setBold(!on); else setProp(k, !on); }; });
+
+      b.appendChild(d); addCtl(b, es, 'color');
+
+    });
+
+    psec(pb, 'para', '段落', function (b) {
+
+      b.appendChild(prow('配置', seg([['left', 'tl', '左揃え'], ['center', 'tc', '中央揃え'], ['right', 'tr', '右揃え'], ['justify', 'tj', '両端揃え']], e0.align, function (v) { setProp('align', v); })));
+
+      addCtl(b, es, 'lineHeight'); addCtl(b, es, 'letterSpacing');
+
+    });
+
+    psec(pb, 'tbox', 'テキスト ボックス', function (b) {
+
+      b.appendChild(prow('上下の配置', seg([['top', 'vtop', '上揃え'], ['middle', 'vmid', '中央揃え'], ['bottom', 'vbot', '下揃え']], e0.valign, function (v) { setProp('valign', v); })));
+
+      addCtl(b, es, 'padding'); addCtl(b, es, 'vertical'); addCtl(b, es, 'fit');
+
+    });
+
+    return;
+
+  }
+
+  /* 図形のオプション */
+
+  if (t === 'table' && one) {
+
+    psec(pb, 'tbl', 'テーブルの項目', function (b) {
+
+      var rit = S.rowSel && S.rowSel.eid === e0.id ? JF.itemById(V(), S.rowSel.iid) : null;
+
+      if (rit) b.appendChild(itemBox(rit, true, e0));
+
+      else b.appendChild(tx('p', null, '表の行をクリックすると、その項目の設定（項目名・入る値・大きさ・色）がここに出ます。値や項目名はダブルクリックでその場で編集できます。')).style.cssText = 'margin:0 0 8px;font-size:11px;color:var(--mut)';
+
+      addCtl(b, es, 'itemIds');
+
+    });
+
+    psec(pb, 'tblfmt', 'テーブルの書式', function (b) { ['borderColor', 'labelBg', 'labelColor', 'color', 'size', 'rowGap', 'itemSize'].forEach(function (k) { addCtl(b, es, k); }); });
+
+  }
+
+  if (es.every(function (e) { return 'fill' in e; })) psec(pb, 'fill', '塗りつぶし', function (b) { fillSec(b, es, 'fill'); });
+
+  else if (es.every(function (e) { return 'bg' in e; })) psec(pb, 'fill', '塗りつぶし', function (b) { fillSec(b, es, 'bg'); });
+
+  if (es.every(function (e) { return 'stroke' in e && 'strokeWidth' in e; })) psec(pb, 'line', '線', function (b) { lineSec(b, es); });
+
+  if (t === 'rect' && es.every(function (e) { return e.type === 'rect'; })) psec(pb, 'shp', '図形', function (b) { addCtl(b, es, 'radius'); });
+
+  if (t === 'image' && one) psec(pb, 'img', '画像', function (b) { ['src', 'fit', 'radius'].forEach(function (k) { addCtl(b, es, k); }); });
+
+  if (t === 'notes' && one) {
+
+    psec(pb, 'notes', '注意事項', function (b) {
+
+      schemaFor(es).forEach(function (p) { if (p.t !== 'hint') b.appendChild(propControl(p, es)); });
+
+      var nta = h('textarea'); nta.rows = 7; nta.value = V().notes; nta.onchange = function () { mut(function () { V().notes = nta.value; }, { label: '注意事項の編集' }); }; b.appendChild(tx('label', null, '本文（1行に1項目。行頭の「!」で強調）')); b.lastChild.style.margin = '6px 0 4px'; b.appendChild(nta);
+
+    });
+
+  }
+
+  if (t === 'fold' && one) psec(pb, 'foldp', '折り線', function (b) { schemaFor(es).forEach(function (p) { b.appendChild(propControl(p, es)); }); });
+
+  if (t === 'field' && one) psec(pb, 'field2', 'フィールド', function (b) { b.appendChild(tx('p', null, '文字の書体・大きさ・色は「文字のオプション」で変更します。')).style.cssText = 'margin:0;font-size:11px;color:var(--mut)'; });
+
+  psec(pb, 'size', 'サイズとプロパティ', function (b) { sizeSec(b, es); });
+
+}
+
+function drawPane() {
+
+  var P = R.pane; if (!P || !S.open) return;
+
+  var old = P.querySelector('.fe-pb'), keep = old ? old.scrollTop : 0, pk = S.sel.join(',') + '|' + (S.rowSel ? S.rowSel.iid : '') + '|' + S.pane + S.ptab;
+
+  if (pk !== S.paneKey) { keep = 0; S.paneKey = pk; }
+
+  P.textContent = ''; if (!S.pane) return;
+
+  if (S.pane === 'sel') drawSelPane(P); else drawFmtPane(P);
+
+  tipify(P);
+
+  var pb = P.querySelector('.fe-pb'); if (!pb) return;
+
+  if (S.scrollTo) { var t = pb.querySelector('[data-sec="' + S.scrollTo + '"]'); if (t) pb.scrollTop = Math.max(0, t.offsetTop - 4); S.scrollTo = ''; } else pb.scrollTop = keep;
+
+}
+
+/* ---------- 選択ウィンドウ ---------- */
+
+function drawSelPane(P) {
+
+  S.hover = '';
+
+  var hd = h('div', 'fe-ph'); hd.appendChild(tx('b', null, '選択')); hd.firstChild.style.fontWeight = '600'; hd.appendChild(ibtn('close', tipOf('閉じる', '選択ウィンドウを閉じます。'), closePane)); P.appendChild(hd);
+
+  var a = elems(), sh = h('div', 'fe-sh');
+
+  sh.appendChild(tbtn('eye', 'すべて表示', function () { mut(function () { a.forEach(function (e) { e.hidden = false; }); }, { label: '表示の変更' }); }));
+
+  sh.appendChild(tbtn('eyeoff', 'すべて非表示', function () { mut(function () { a.forEach(function (e) { e.hidden = true; }); }, { label: '表示の変更' }); }));
+
+  sh.appendChild(h('span', 'fe-sp'));
+
+  var up = ibtn('chevU', tipOf('前面へ移動', '選んだ要素をひとつ前面へ移動します。'), function () { arrange('up'); }), dn = ibtn('chevD', tipOf('背面へ移動', '選んだ要素をひとつ背面へ移動します。'), function () { arrange('down'); });
+
+  up.disabled = dn.disabled = !S.sel.length; sh.appendChild(up); sh.appendChild(dn); P.appendChild(sh);
+
+  var pb = h('div', 'fe-pb'); pb.style.paddingTop = '6px'; P.appendChild(pb);
+
+  if (!a.length) pb.appendChild(tx('p', 'fe-pn', '要素がありません。「挿入」タブから追加してください。'));
+
+  for (var i = a.length - 1; i >= 0; i--) (function (e) {
+
+    var r = h('div', 'fe-lay' + (S.sel.indexOf(e.id) >= 0 ? ' on' : '') + (e.hidden ? ' hid' : '') + (e.groupId ? ' ing' : '')); r.setAttribute('data-id', e.id); r.draggable = true;
+
+    r.appendChild(h('span', 'fe-ty', ic(e.groupId ? 'group' : TYPE_ICON[e.type])));
+
+    var nm = tx('span', 'fe-ln', layerName(e)); nm.setAttribute('data-tip', layerName(e) + '\nダブルクリックで名前を変更できます。'); r.appendChild(nm);
+
+    var ey = ibtn(e.hidden ? 'eyeoff' : 'eye', tipOf(e.hidden ? '表示する' : '非表示にする', ''), function (ev) { ev.stopPropagation(); mut(function () { e.hidden = !e.hidden; }, { label: '表示の変更' }); });
+
+    var lk = ibtn(e.locked ? 'lock' : 'unlock', tipOf(e.locked ? 'ロックを解除' : 'ロック', '動かせないようにします。'), function (ev) { ev.stopPropagation(); mut(function () { e.locked = !e.locked; }, { label: 'ロックの変更' }); }, e.locked ? 'on' : '');
+
+    r.appendChild(ey); r.appendChild(lk);
+
+    r.onmouseenter = function () { if (S.hover !== e.id) { S.hover = e.id; drawOv(); } };
+
+    r.onmouseleave = function () { if (S.hover === e.id) { S.hover = ''; drawOv(); } };
+
+    r.onclick = function (ev) { if (ev.shiftKey || ev.ctrlKey || ev.metaKey) { var s = S.sel.slice(), k = s.indexOf(e.id); if (k >= 0) s.splice(k, 1); else s.push(e.id); setSel(s); } else { if (S.sel.length === 1 && S.sel[0] === e.id) return; setSel([e.id]); } selChanged(); };
+
+    nm.ondblclick = function (ev) {
+
+      ev.stopPropagation(); var inp = h('input'); inp.type = 'text'; inp.value = layerName(e); inp.style.margin = '0 4px'; r.replaceChild(inp, nm); inp.focus(); inp.select(); var done = false;
+
+      function fin(ok) { if (done) return; done = true; var v = inp.value.trim(); if (ok && v && v !== layerName(e)) mut(function () { e.name = v; }, { label: '名前の変更' }); else drawPane(); }
+
+      inp.onblur = function () { fin(true); }; inp.onkeydown = function (k) { k.stopPropagation(); if (k.key === 'Enter') { k.preventDefault(); fin(true); } else if (k.key === 'Escape') { k.preventDefault(); fin(false); } }; inp.onclick = function (k) { k.stopPropagation(); };
+
+    };
+
+    r.ondragstart = function (ev) { layDrag = e.id; ev.dataTransfer.effectAllowed = 'move'; try { ev.dataTransfer.setData('text/plain', e.id); } catch (x) {} };
+
+    r.ondragover = function (ev) { if (!layDrag) return; ev.preventDefault(); var b = r.getBoundingClientRect(), after = ev.clientY > b.top + b.height / 2; r.classList.toggle('dt-a', after); r.classList.toggle('dt-b', !after); };
+
+    r.ondragleave = function () { r.classList.remove('dt-a', 'dt-b'); };
+
+    r.ondrop = function (ev) { ev.preventDefault(); var b = r.getBoundingClientRect(), after = ev.clientY > b.top + b.height / 2, f = layDrag; layDrag = ''; r.classList.remove('dt-a', 'dt-b'); if (f) reorder(f, e.id, after); };
+
+    r.ondragend = function () { layDrag = ''; Array.prototype.forEach.call(pb.querySelectorAll('.dt-a,.dt-b'), function (x) { x.classList.remove('dt-a', 'dt-b'); }); };
+
+    pb.appendChild(r);
+
+  })(a[i]);
+
+}
+
 
 /* ---------- ポインタ操作 ---------- */
 function pageXY(ev) { var r = R.box.getBoundingClientRect(), s = sz(); return { x: (ev.clientX - r.left) / s, y: (ev.clientY - r.top) / s }; }

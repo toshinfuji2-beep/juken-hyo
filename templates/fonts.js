@@ -179,7 +179,7 @@ function linkFor(f) {
 /* 描画の前に呼ぶ：そのフォント（と代替のWebフォント）のCSSを読み込む（旧 loadFonts の代わり） */
 function use(id) {
   var f = resolve(id); if (!f) return Promise.resolve();
-  if (f.kind === 'gf') return linkFor(f); if (f.kind === 'up') return ensureUp(f.id); if (f.fb && REG[f.fb]) return linkFor(REG[f.fb]);
+  if (f.kind === 'gf') return linkFor(f); if (f.kind === 'up') return ensureUp(f.id); if (f.kind === 'local' && f.sug && REG[f.sug]) return linkFor(REG[f.sug]); if (f.fb && REG[f.fb]) return linkFor(REG[f.fb]);
   return Promise.resolve();
 }
 /* 読み込み待ちの CSS（link）がすべて取得されるまで */
@@ -298,8 +298,8 @@ function fromCss(famList) {
 function fillSelect(sel, cur) {
   sel.textContent = '';
   CATS.forEach(function (c) {
-    var og = document.createElement('optgroup'); og.label = c;
-    list().filter(function (f) { return f.cat === c; }).forEach(function (f) { var o = document.createElement('option'); o.value = f.id; o.textContent = f.name + (f.kind === 'sys' && !has(f.id) ? '（このPCにない）' : ''); og.appendChild(o); });
+    var og = document.createElement('optgroup'); og.label = c; var fl = list().filter(function (f) { return f.cat === c; }); if (!fl.length) return;
+    fl.forEach(function (f) { var o = document.createElement('option'); o.value = f.id; o.textContent = f.name + (f.kind === 'sys' && !has(f.id) ? '（このPCにない）' : ''); og.appendChild(o); });
     sel.appendChild(og);
   });
   var r = resolve(cur); sel.value = r ? r.id : 'noto-sans-jp';
@@ -428,7 +428,8 @@ function changed() { try { window.dispatchEvent(new Event('juken-fonts')); } cat
 function regLocal(family) {
   var id = 'local:' + family; if (REG[id]) return REG[id];
   var tl = isSerifName(family) ? 'serif' : isRoundName(family) ? 'round' : 'sans';
-  REG[id] = { id: id, name: family, cat: 'このパソコンのフォント', family: family, locals: [family], kind: 'local', w: [400, 700], sample: SAMPLE, tail: tl, css: q(family) + ',' + TAIL[tl] };
+  var sg = REG[fromName(family)];   /* このPCに無いとき表示する、近い Web フォント */
+  REG[id] = { id: id, name: family, cat: 'このパソコンのフォント', family: family, locals: [family], kind: 'local', w: [400, 700], sample: SAMPLE, tail: tl, sug: sg ? sg.id : '', css: q(family) + ',' + (sg ? q(sg.family) + ',' : '') + TAIL[tl] };
   ORDER.push(id); return REG[id];
 }
 function localSupported() { return typeof window !== 'undefined' && typeof window.queryLocalFonts === 'function'; }
@@ -564,9 +565,9 @@ function openCompare(o) {
   function E(t, x, st) { var e = document.createElement(t); if (x != null) e.textContent = x; if (st) e.style.cssText = st; return e; }
   var top = E('div', '', 'flex:none;display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 12px;border-bottom:1px solid var(--bd,#d1d5db)');
   top.appendChild(E('b', '書体を見比べる', 'font-size:15px'));
-  var ti = document.createElement('input'); ti.type = 'text'; ti.value = text; ti.setAttribute('aria-label', '見本の文字'); ti.style.cssText = 'flex:1;min-width:120px;max-width:300px;height:28px;padding:0 8px'; top.appendChild(ti);
-  var wt = document.createElement('select'); wt.setAttribute('aria-label', '太さ'); [[400, '標準'], [700, '太字']].forEach(function (x) { var op = document.createElement('option'); op.value = x[0]; op.textContent = x[1]; wt.appendChild(op); }); wt.value = String(o.w >= 600 ? 700 : 400); top.appendChild(wt);
-  var xb = E('button', '閉じる'); xb.type = 'button'; xb.style.marginLeft = 'auto'; top.appendChild(xb); c.appendChild(top);
+  var ti = document.createElement('input'); ti.type = 'text'; ti.value = text; ti.setAttribute('aria-label', '見本の文字'); ti.style.cssText = 'flex:1;min-width:120px;max-width:300px;width:auto;height:28px;padding:0 8px;margin:0'; top.appendChild(ti);
+  var wt = document.createElement('select'); wt.setAttribute('aria-label', '太さ'); [[400, '標準'], [700, '太字']].forEach(function (x) { var op = document.createElement('option'); op.value = x[0]; op.textContent = x[1]; wt.appendChild(op); }); wt.value = String(o.w >= 600 ? 700 : 400); wt.style.cssText = 'width:auto;flex:none;height:28px;margin:0'; top.appendChild(wt);
+  var xb = E('button', '閉じる'); xb.type = 'button'; xb.style.cssText = 'margin:0 0 0 auto;width:auto;flex:none'; top.appendChild(xb); c.appendChild(top);
   var chips = E('div', '', 'flex:none;display:flex;gap:6px;flex-wrap:wrap;padding:6px 12px;border-bottom:1px solid var(--bd,#d1d5db)'); c.appendChild(chips);
   var grid = E('div', '', 'flex:1;min-height:0;overflow:auto;padding:10px 12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;align-content:start'); c.appendChild(grid);
   var cat = '★・最近', io = null;
@@ -591,14 +592,16 @@ function openCompare(o) {
       var b = E('button', '', 'text-align:left;padding:8px 10px;border:1px solid var(--bd,#d1d5db);border-radius:6px;background:var(--inp,#fff);color:inherit;cursor:pointer;display:flex;flex-direction:column;gap:4px;min-width:0' + (cur && cur.id === f.id ? ';outline:2px solid var(--ac,#1d4ed8)' : '') + (ok ? '' : ';opacity:.5')); b.type = 'button'; b._id = f.id; b.setAttribute('data-id', f.id);
       var s = E('span', t, 'font-size:24px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:' + snap(f.id, wv) + ';font-family:' + css(f.id));
       b.appendChild(s); b.appendChild(E('span', f.name + (ok ? '' : '（このPCにない）'), 'font-size:11px;color:var(--mut,#6b7280);white-space:nowrap;overflow:hidden;text-overflow:ellipsis'));
-      b.onclick = function () { if (!ok) return; w.remove(); pushRecent(f.id); pushLocal(f.id); if (o.onPick) o.onPick(f.id, snap(f.id, +wt.value)); };
+      b.onclick = function () { if (!ok) return; close(); pushRecent(f.id); pushLocal(f.id); if (o.onPick) o.onPick(f.id, snap(f.id, +wt.value)); };
       grid.appendChild(b); if (io) io.observe(b); else use(f.id);
     });
   }
   ti.oninput = draw; wt.onchange = draw; draw();
-  xb.onclick = function () { w.remove(); };
-  w.addEventListener('mousedown', function (e) { if (e.target === w) w.remove(); });
-  w.addEventListener('keydown', function (e) { if (e.key === 'Escape') { e.stopPropagation(); w.remove(); } });
+  function kd(e) { if (e.key === 'Escape') { e.stopPropagation(); close(); } }
+  function close() { document.removeEventListener('keydown', kd, true); w.remove(); }
+  xb.onclick = close;
+  w.addEventListener('mousedown', function (e) { if (e.target === w) close(); });
+  document.addEventListener('keydown', kd, true);
   document.body.appendChild(w); ti.focus();
   return w;
 }
