@@ -144,7 +144,17 @@ summary .rs{font-weight:400;font-size:12px;color:var(--mut);margin-left:6px}
 .sl-n.ng{color:var(--warn);border-color:var(--warn);background:var(--warnbg)}
 .sl-h button{padding:1px 8px;font-size:11px}
 .sl textarea{min-height:82px;max-height:190px;overflow:auto;white-space:pre;font:12px/1.4 ui-monospace,Consolas,"Meiryo",monospace;resize:vertical;padding:4px 6px}
+.bulk{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;margin:6px 0;font-size:12px}
+.bulk input{flex:1 1 7em;min-width:0;padding:4px 6px;font-size:13px}.bulk button,.bulk .bn,.bulk .ba{white-space:nowrap}.bulk .bn{color:var(--mut)}
+.bulkd{margin:0 0 var(--s5)}.bulkd summary{cursor:pointer;font-size:13px;font-weight:700}
+.ftl{display:flex;flex-direction:column;gap:4px}.ftx{display:grid;grid-template-columns:6.5em minmax(0,1fr);gap:6px;align-items:center}
+.ftk{font-size:12px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ftx input,.ftx textarea{padding:5px 8px;font-size:14px;min-width:0;width:100%;box-sizing:border-box}
 .sl-m{grid-column:2;min-width:0}
+.sl-a{grid-column:2;display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;font-size:12px;min-width:0}
+.sl-a .chk{white-space:nowrap;margin:0}
+.sl-ai{display:inline-flex;gap:4px;align-items:center}.sl-ai[hidden]{display:none}
+.sl-ai input{width:4.2em;padding:2px 4px;font-size:12px}.sl-ai input[type=text]{width:5em}
 .sl-m div{font-size:11px;margin:2px 0 0;line-height:1.4;overflow-wrap:anywhere}
 details.sfs{grid-column:1/-1;margin:6px 0 0;border:1px dashed var(--bd);background:transparent}
 details.sfs>summary{padding:3px 8px;font-size:12px;color:var(--mut);cursor:pointer;background:transparent}
@@ -304,7 +314,7 @@ button.dg,.dg{color:var(--err)}
 .brand{font-size:15px;font-weight:700;margin:0;white-space:nowrap}
 .tb-name{display:flex;align-items:center;gap:var(--s2);min-width:0;flex:1 1 120px;font-size:12px}
 .tb-btns{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-left:auto}
-.tb-btns button{padding:4px 10px;font-size:12px}
+.tb-btns button{padding:4px 10px;font-size:12px;white-space:nowrap}
 #undo,#redo{font-size:16px;line-height:1.2;padding:0 8px!important}
 #modebtn{border-color:var(--bd);color:var(--mut)}
 #topbar #uem{flex:none;max-width:180px;text-align:right}
@@ -489,7 +499,7 @@ button.dg,.dg{color:var(--err)}
 <button id="undo" class="adv-only" type="button" title="元に戻す (Ctrl+Z)" aria-label="元に戻す" disabled>↶</button><button id="redo" class="adv-only" type="button" title="やり直し (Ctrl+Shift+Z / Ctrl+Y)" aria-label="やり直し" disabled>↷</button>
 <button id="dopen" type="button" title="保存したデザインを開く・整理する">デザイン</button>
 <button id="fopen" type="button" title="ファイル保管（受験票PDF・画像素材・資料）">ファイル</button>
-<span class="sv adv-only"><button id="save" class="pri" type="button" title="保存 (Ctrl+S)">保存</button><button id="smore" class="pri" type="button" title="その他の保存方法" aria-label="その他の保存方法" aria-haspopup="true" aria-expanded="false">▾</button><div id="smenu" hidden><button id="sas" type="button">名前を付けて保存</button><button id="spdf" type="button">PDFを作成して保存</button><button id="sfile" type="button">ファイルに書き出し</button></div></span>
+<span class="sv"><button id="save" class="pri" type="button" title="保存 (Ctrl+S)">保存</button><button id="smore" class="pri" type="button" title="その他の保存方法" aria-label="その他の保存方法" aria-haspopup="true" aria-expanded="false">▾</button><div id="smenu" hidden><button id="sas" type="button">名前を付けて保存</button><button id="spdf" type="button">PDFを作成して保存</button><button id="sfile" type="button">ファイルに書き出し</button><button id="sauto" type="button"></button></div></span>
 <button id="modebtn" type="button" class="ghost">詳細編集</button>
 <span id="uem"></span><button id="lout" type="button" class="ghost">ログアウト</button>
 </div>
@@ -514,7 +524,7 @@ button.dg,.dg{color:var(--err)}
 </section>
 <section id="adv" class="adv-only" aria-label="詳細編集">
 <div id="tabs" role="tablist"><button type="button" data-tab="items">項目</button><button type="button" data-tab="look">見た目</button><button type="button" data-tab="notes">注意事項・画像</button><button type="button" data-tab="wm">透かし</button><button type="button" data-tab="roster">名簿<span id="rsum" class="rs"></span></button><button type="button" data-tab="io">入出力</button></div>
-<div class="tp" id="tp-items"><p class="note" style="margin-top:0">プレビューの項目をクリックして直接編集することもできます。</p><div id="f-hdr"></div><div class="sub">項目</div><div id="items"></div><button id="iadd" type="button">＋項目を追加</button></div>
+<div class="tp" id="tp-items"><p class="note" style="margin-top:0">プレビューの項目をクリックして直接編集することもできます。</p><details class="bulkd" id="bulkadv"><summary>まとめて置き換え</summary></details><div id="f-hdr"></div><div class="sub">項目</div><div id="items"></div><button id="iadd" type="button">＋項目を追加</button></div>
 <div class="tp" id="tp-look" hidden><label for="tpl" style="margin-top:0">デザイン（テンプレート）</label><select id="tpl"></select><div id="f-look"></div></div>
 <div class="tp" id="tp-notes" hidden><div id="f-notes"></div></div>
 <div class="tp" id="tp-wm" hidden><div id="f-wm"></div></div>
@@ -586,9 +596,10 @@ function opt(sel,list,cur){list.forEach(function(o){var op=el('option',null,o[1]
 function fld(label,ctl,cls){var d=el('div',cls||'');d.appendChild(el('label',null,label));d.appendChild(ctl);return d}
 
 /* ---------- UI状態（モード・ズーム等はlocalStorageに記憶） ---------- */
-var UIK='juken-hyo-ui-v1',UI={zoom:'fit',all:false,mode:'easy',tab:'items',view:'grid'};
-try{var u0=JSON.parse(localStorage.getItem(UIK)||'{}');if(u0&&typeof u0==='object'){if(u0.zoom==='100')UI.zoom='100';UI.all=!!u0.all;if(u0.mode==='adv')UI.mode='adv';if(typeof u0.tab==='string')UI.tab=u0.tab;if(u0.view==='list')UI.view='list'}}catch(e){}
+var UIK='juken-hyo-ui-v1',UI={zoom:'fit',all:false,mode:'easy',tab:'items',view:'grid',autosave:true};
+try{var u0=JSON.parse(localStorage.getItem(UIK)||'{}');if(u0&&typeof u0==='object'){if(u0.zoom==='100')UI.zoom='100';UI.all=!!u0.all;if(u0.mode==='adv')UI.mode='adv';if(typeof u0.tab==='string')UI.tab=u0.tab;if(u0.view==='list')UI.view='list';if(u0.autosave===false)UI.autosave=false}}catch(e){}
 function saveUi(){try{localStorage.setItem(UIK,JSON.stringify(UI))}catch(e){}}
+var AS={t:null,key:'',stop:'',fail:0,cur:'',at:'',thumbAt:0,inAt:0,ptr:false,offered:false};
 
 /* ---------- 状態・保存 ---------- */
 var SUPABASE_URL='https://qaovkxpyquedvfhiacek.supabase.co',SUPABASE_ANON_KEY='sb_publishable_xJ-VtOx2-5Z6we-ar1iKYQ_n_J6sNx7',uid=null;
@@ -726,8 +737,8 @@ function drawPreSel(){if(presetsLoaded&&S.cur&&!presets.some(function(p){return 
 $('save').disabled=$('sas').disabled=busy;drawMig();refreshDirty();
 if(UI.mode==='easy'&&step===1)drawGallery();
 if(!$('ex').hidden)exDraw()}
-function clearCur(){S.cur='';S.curAt='';S.curName=''}
-function setCur(id,name,at){S.cur=id;S.curName=name;S.curAt=at||'';importName='';lastFile=''}
+function clearCur(){S.cur='';S.curAt='';S.curName='';AS.stop='';AS.offered=false}
+function setCur(id,name,at){AS.stop='';AS.thumbAt=Date.now();S.cur=id;S.curName=name;S.curAt=at||'';importName='';lastFile=''}
 function byId(id){for(var i=0;i<presets.length;i++)if(presets[i].id===id)return presets[i]}
 function drawMig(){var m=$('mig');m.hidden=!localPresets.length;if(localPresets.length)$('migt').textContent='このブラウザに保存されたデザインが'+localPresets.length+'件あります → 共有にアップロード'}
 
@@ -766,7 +777,7 @@ function fontWarn(){if(!window.JukenFonts)return;var m=JSON.stringify(V).match(/
 m.forEach(function(q){var id=q.slice(1,-1);if(warnedFont[id])return;var f=JukenFonts.resolve(id);if(!f)return;
 if(f.kind==='local'){if(!JukenFonts.has(id)){warnedFont[id]=1;toast('このデザインは「'+f.family+'」を使っていますが、このパソコンにはありません。近い書体の「'+JukenFonts.suggest(f.family)+'」で表示します。',null,null,14000)}}
 else if(f.kind==='up'){JukenFonts.ensureUp(id).then(function(r){if(!r&&!warnedFont[id]){warnedFont[id]=1;toast('このデザインが使う持ち込みフォント「'+f.name+'」が見つかりません。フォント一覧の「フォントを追加」から入れてください。',null,null,14000)}})}})}
-function afterDesignChange(){save();drawTplSel();drawPreSel();drawFields();drawItems();render();if(UI.mode==='easy'&&step===2)drawInfo();fontWarn()}
+function afterDesignChange(){if((typeof bulkAdv!=="undefined"))bulkAdv.refresh();save();drawTplSel();drawPreSel();drawFields();drawItems();render();if(UI.mode==='easy'&&step===2)drawInfo();fontWarn()}
 function openPreset(id){var p=byId(id);if(!p)return false;
 if(dirtyNow()&&!confirm('保存していない変更があります。破棄して「'+p.name+'」を開きますか？'))return false;
 S.tpl=p.tpl;V=JT.mkVals(p.tpl,p.vals);setCur(p.id,p.name,p.at);afterDesignChange();resetBase();hideDraft();return true}
@@ -840,7 +851,7 @@ function setSS(s,m){ss=s;ssMsg=m||'';refreshDirty()}
 function needAuth(){if(!sb||!uid)throw {message:'ログインしていません。ログインし直してください。',local:1};if(typeof navigator!=='undefined'&&navigator.onLine===false)throw {message:'オフラインです。通信状況を確認してください。',local:1}}
 function saveErrMsg(e){return e&&e.local?e.message:pErr(e&&e.message?e:{message:String(e)})}
 function saveFail(e){setSS('error',saveErrMsg(e));pstat(saveErrMsg(e),true);toast('保存に失敗しました。変更は残っています：'+saveErrMsg(e),'再試行',function(){saveMain()},12000)}
-function markSaved(row){S.curAt=row.updated_at||'';S.curName=row.name||S.curName;save();hideDraft()}
+function markSaved(row){AS.stop='';AS.fail=0;AS.thumbAt=Date.now();S.curAt=row.updated_at||'';S.curName=row.name||S.curName;save();hideDraft()}
 function endSave(){saving=false;setBusy(false)}
 async function findActive(name,folder){var q=sb.from(TBL).select('id,name,updated_at').eq('name',name);if(EXP.ok)q=q.eq('folder',folder).is('deleted_at',null);return chk(await q.maybeSingle()).data}
 /* 新規保存（名前とフォルダを聞く）。同名なら上書き／別名を選べる */
@@ -886,8 +897,40 @@ $('sas').onclick=function(){closeSM();saveAs()};$('sfile').onclick=function(){cl
 function closeSM(){$('smenu').hidden=true;$('smore').setAttribute('aria-expanded','false')}
 $('smore').onclick=function(e){e.stopPropagation();var h=!$('smenu').hidden;$('smenu').hidden=h;this.setAttribute('aria-expanded',h?'false':'true')};
 document.addEventListener('click',function(e){if(!$('smenu').hidden&&!$('smenu').contains(e.target))closeSM()});
-$('sst').onclick=function(){if(ss==='error'||dirtyNow())saveMain()};
-window.addEventListener('beforeunload',function(e){if(booted&&(dirtyNow()||saving)){e.preventDefault();e.returnValue='';return ''}});
+$('sst').onclick=function(){if(ss==='error'||AS.stop===S.cur||dirtyNow())saveMain()};
+/* ---------- 自動保存（共有に保存済みのデザインを、操作が約3秒止まったら静かに上書き） ---------- */
+function z2(n){return n<10?'0'+n:''+n}
+function autoLabel(){$('sauto').textContent='自動保存：'+(UI.autosave?'オン':'オフ')}
+autoLabel();
+$('sauto').onclick=function(){UI.autosave=!UI.autosave;saveUi();autoLabel();closeSM();toast('自動保存を'+(UI.autosave?'オン':'オフ')+'にしました');if(!UI.autosave){clearTimeout(AS.t);AS.t=null}AS.key='';refreshDirty()};
+document.addEventListener('input',function(){AS.inAt=Date.now()},true);
+document.addEventListener('pointerdown',function(){AS.ptr=true},true);
+['pointerup','pointercancel','dragend','blur'].forEach(function(n){window.addEventListener(n,function(){AS.ptr=false},true)});
+function autoOk(){return UI.autosave&&booted&&S.cur&&presetsLoaded&&!!byId(S.cur)&&AS.stop!==S.cur}
+function autoSched(d){if(!autoOk()||!d){if(!d)AS.key='';return}
+var k=S.cur+'|'+dsnap().length+'|'+hsh(dsnap());if(k===AS.key)return;AS.key=k;clearTimeout(AS.t);AS.t=setTimeout(function(){autoRun(false)},3000)}
+function autoRetry(ms){clearTimeout(AS.t);AS.t=setTimeout(function(){autoRun(false)},ms||1500)}
+async function autoRun(force){AS.t=null;if(!autoOk())return;if(hT){clearTimeout(hT);histCommit()}if(!dirtyNow())return;
+if(!force&&(saving||modalOpen||busy||AS.ptr||Date.now()-AS.inAt<1500)){autoRetry();return}
+if(saving||modalOpen||busy)return;
+var cp=byId(S.cur);if(!cp)return;
+try{needAuth()}catch(e){return}
+if(!force&&!sizeOkQ(V))return;
+saving=true;setSS('saving');var cid=cp.id;
+try{var vals=clone(V),tp=S.tpl;
+var sv=chk(await sb.from(TBL).select('id,name,updated_at').eq('id',cid).maybeSingle());
+if(!sv.data||(S.curAt&&tsNum(sv.data.updated_at)>tsNum(S.curAt))){saving=false;AS.stop=cid;setSS('');return}
+var up={template:tp,data:vals,updated_at:new Date().toISOString(),updated_by:uid};
+if(EXP.ok&&Date.now()-AS.thumbAt>60000){var th=await thumbFor(tp,vals);if(th){up.thumb=th;AS.thumbAt=Date.now()}}
+var r=chk(await sb.from(TBL).update(up).eq('id',cid).select('id,name,updated_at').single());
+markSaved(r.data);var dn=new Date();AS.cur=r.data.updated_at||'';AS.at=z2(dn.getHours())+':'+z2(dn.getMinutes());
+await loadPresetsQuiet();saving=false;AS.key='';setSS('');drawPreSel()}
+catch(e){saving=false;if(e&&e.local){setSS('')}else{AS.fail++;setSS(AS.fail>=3?'error':'',saveErrMsg(e))}}}
+function sizeOkQ(vals){return JSON.stringify(vals).length<=PMAX}
+function autoFlush(){if(AS.t){clearTimeout(AS.t);AS.t=null;autoRun(true)}}
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')autoFlush()});
+window.addEventListener('pagehide',autoFlush);
+window.addEventListener('beforeunload',function(e){autoFlush();if(booted&&(dirtyNow()||saving)){e.preventDefault();e.returnValue='';return ''}});
 $('migup').onclick=function(){if(!localPresets.length)return;
 pdo(async function(){var ex=chk(await sb.from(TBL).select('name')).data.map(function(x){return x.name}),ok=0,skip=0,big=0,fail=0,fe=null;
 for(var i=0;i<localPresets.length;i++){var p=localPresets[i];if(ex.indexOf(p.name)>=0){skip++;continue}
@@ -1224,6 +1267,14 @@ return det}
 function updQact(){var q=$('qact');if(!q)return;var on=UI.mode==='easy'&&step===3&&S.tpl==='free'&&rows.length>0;q.hidden=!on;if(!on)return;
 var n=current().length;$('qprint').disabled=!n;$('qpdf').disabled=!n;var nb=Object.keys(badRows).length,st=$('qstat');
 st.className=nb?'ng':'';st.textContent=nb?'⚠ 文字化けの疑いが'+nb+'名分あります。上の赤い欄を確認してください。':n+'名分・入力の文字チェック問題なし（印刷・PDFの前に、字形の有無も自動で確認します）'}
+function isNoSlot(sl){return groupOf(sl.label)==='no'||/番号/.test(sl.label)}
+function slotAuto(sl){if(!isNoSlot(sl))return null;var it=V.items.filter(function(x){return x.id===sl.key})[0];if(!it)return null;if(!it.auto)it.auto={prefix:'',start:1,digits:3};
+var w=el('div','sl-a'),lb=el('label','chk'),cx=el('input');cx.type='checkbox';cx.checked=!!it.autoEmpty;lb.appendChild(cx);lb.appendChild(document.createTextNode('自動で振る'));lb.title='貼り付けが空の行に番号を自動で入れます';w.appendChild(lb);
+var sp=el('span','sl-ai');sp.hidden=!it.autoEmpty;
+[['prefix','頭の文字','text'],['start','開始','number'],['digits','桁','number']].forEach(function(k){var i=el('input');i.type=k[2];i.value=it.auto[k[0]];i.setAttribute('aria-label',k[1]);i.title=k[1];i.placeholder=k[1];if(k[2]==='number')i.min=k[0]==='digits'?1:0;
+i.oninput=function(){it.auto[k[0]]=k[2]==='number'?(parseInt(i.value,10)||(k[0]==='digits'?1:0)):i.value;save();rosterInput()};sp.appendChild(i)});
+w.appendChild(sp);
+cx.onchange=function(){it.autoEmpty=cx.checked;sp.hidden=!cx.checked;sl.req=!it.hidden&&!it.fallback&&!it.autoEmpty;save();drawItems();rosterInfo();render()};return w}
 function drawRoster(){var box=$('slots');
 var ns=getSlots(),keys={};ns.forEach(function(s){keys[s.key]=1});
 ns.forEach(function(s){if(texts[s.key]!==undefined)return;for(var i=0;i<lastSlots.length;i++){var o=lastSlots[i];if(o.label===s.label&&!keys[o.key]&&texts[o.key]!==undefined){texts[s.key]=texts[o.key];break}}});
@@ -1236,7 +1287,7 @@ ta.placeholder='ここに'+sl.label+'を1行に1人ずつ貼り付け';
 ta.oninput=function(){texts[sl.key]=ta.value;delete keepHdr[sl.key];growTa(ta);rosterInput()};
 cb.onclick=function(){var prev=texts[sl.key]||'';if(!prev)return;texts[sl.key]='';ta.value='';delete keepHdr[sl.key];growTa(ta);rosterInput();
 toast('「'+sl.label+'」をクリアしました','元に戻す',function(){texts[sl.key]=prev;ta.value=prev;growTa(ta);rosterInput()})};
-d.appendChild(ta);var m=el('div','sl-m');d.appendChild(m);var ss=slotStyle(sl);if(ss)d.appendChild(ss);box.appendChild(d);slotEls[sl.key]={ta:ta,n:n,m:m};growTa(ta)});
+d.appendChild(ta);var ar=slotAuto(sl);if(ar)d.appendChild(ar);var m=el('div','sl-m');d.appendChild(m);var ss=slotStyle(sl);if(ss)d.appendChild(ss);box.appendChild(d);slotEls[sl.key]={ta:ta,n:n,m:m};growTa(ta)});
 rosterInfo()}
 function rosterInfo(){computeRoster();updRosterUI();var has=rows.length>0;$('loaded').hidden=!has;
 $('cnt').textContent=rows.length+'名';$('rsum').textContent=has?rows.length+'名':'';drawList();updQact()}
@@ -1360,11 +1411,12 @@ var d=dirtyNow(),st,tx,tip;
 if(ss==='error'&&!d&&!saving)ss='';
 if(ss==='saving'){st='saving';tx='保存中…';tip=tx}
 else if(ss==='error'){st='error';tx='保存に失敗しました（再試行）';tip=ssMsg||tx}
+else if(S.cur&&AS.stop===S.cur&&d){st='error';tx='他のスタッフが更新しています（クリックで確認）';tip=tx}
 else if(d){st='dirty';tx='未保存の変更あり';tip='未保存の変更あり（クリックまたはCtrl+Sで保存）'}
-else if(S.cur){st='saved';tx='保存済み';tip='保存済み'+((cur&&cur.at)||S.curAt?'（最終保存 '+fmtAt(S.curAt||cur.at)+'）':'')}
+else if(S.cur){st='saved';tx=AS.cur===S.curAt&&AS.at?'自動保存済み '+AS.at:'保存済み';tip=tx+((cur&&cur.at)||S.curAt?'（最終保存 '+fmtAt(S.curAt||cur.at)+'）':'')}
 else{st='new';tx='共有に未保存';tip='まだ共有に保存されていません（「保存」で保存）'}
 var b=$('sst');b.dataset.s=st;b.querySelector('.stx').textContent=tx;b.title=tip;b.setAttribute('aria-label',tx);
-var sv=$('save');sv.title='保存 (Ctrl+S)'+(S.cur&&(S.curAt||(cur&&cur.at))?'　最終保存 '+fmtAt(S.curAt||cur.at):'');sv.disabled=busy||saving;if(window.FreeEditor)FreeEditor.status(st,tx);updFinal()}
+var sv=$('save');sv.title='保存 (Ctrl+S)'+(S.cur&&(S.curAt||(cur&&cur.at))?'　最終保存 '+fmtAt(S.curAt||cur.at):'');sv.disabled=busy||saving;if(window.FreeEditor)FreeEditor.status(st,tx);updFinal();autoSched(d)}
 /* ---------- 前回の未保存の変更（下書き） ---------- */
 var draftChecked=false;
 function hideDraft(){$('draftbar').hidden=true}
@@ -1436,7 +1488,22 @@ var isF=t.id==='free',gv=JT.switchVals(t.id,V);if(isF)freeInit(gv,gv.tpl.free.el
 var c=card(mini(t.id,gv),isF?'白紙から自由にデザイン':t.name,m,function(){if(isF&&S.tpl==='free'){FreeEditor.open();return}applyTemplate(t.id,{fresh:true});if(isF)FreeEditor.open()},function(){return !S.cur&&S.tpl===t.id});c.title=t.description||t.name;if(isF){var cnn=c.querySelector('.cn');cnn.style.whiteSpace='normal';cnn.style.lineHeight='1.3';g.appendChild(c)}else{var cw=el('div','cw');cw.appendChild(c);var cb=el('button','cconv');cb.type='button';cb.innerHTML='<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h13l-3-3M20 16H7l3 3"/></svg><span>自由編集に変換</span>';cb.title='このデザインを元に自由編集（文字・図形・項目を自由に動かせる形に変換します）';cb.onclick=function(ev){ev.stopPropagation();convertToFree(t.id)};cw.appendChild(cb);g.appendChild(cw)}});box.appendChild(s)});
 markCards()}
 
-/* ステップ2：試験の情報（固定文字・日付・時間割の項目だけ） */
+/* ---------- 文章の一括編集・まとめて置き換え（{{差し込み}}の中は対象外） ---------- */
+function freeTextEls(){var fr=S.tpl==='free'&&V.tpl&&V.tpl.free;if(!fr||!fr.elements)return [];return fr.elements.filter(function(e){return e.type==='text'&&!e.det&&String(e.text||'').replace(/\{\{[^}]*\}\}/g,'').trim()})}
+function rpStr(t,f,r,cnt){var n=0,o=String(t==null?'':t).split(/(\{\{[^}]*\}\})/).map(function(p,i){if(i%2||!f)return p;var a=p.split(f);n+=a.length-1;return a.join(r)}).join('');if(cnt)return n;return o}
+function bulkEach(f,r,w){var n=0;
+V.items.forEach(function(it){if(it.source==='fixed'){var c=rpStr(it.value,f,r,1);if(c){n+=c;if(w)it.value=rpStr(it.value,f,r)}}
+else if(it.source==='schedule')(it.rows||[]).forEach(function(x){['t','c'].forEach(function(k){var c=rpStr(x[k],f,r,1);if(c){n+=c;if(w)x[k]=rpStr(x[k],f,r)}})})});
+if(S.tpl==='free'&&V.tpl&&V.tpl.free&&V.tpl.free.elements)V.tpl.free.elements.forEach(function(e){if(e.type!=='text'||e.det)return;var c=rpStr(e.text,f,r,1);if(c){n+=c;if(w)e.text=rpStr(e.text,f,r)}});return n}
+function bulkApply(f,r){histFlush();var n=bulkEach(f,r,false);if(!n)return 0;plab='まとめて置き換え';bulkEach(f,r,true);save();histFlush();afterDesignChange();
+toast('「'+f+'」を'+n+'件、「'+r+'」に置き換えました','元に戻す',function(){undo()},12000);return n}
+function bulkUI(){var w=el('div','bulk'),a=el('input'),b=el('input'),go=btn('すべて置き換え'),nt=el('span','bn');
+a.type=b.type='text';a.placeholder='探す文字';b.placeholder='置き換える文字';a.setAttribute('aria-label','探す文字');b.setAttribute('aria-label','置き換える文字');
+var upd=function(){var n=a.value?bulkEach(a.value,b.value,false):0;nt.textContent=a.value?(n?n+'件':'見つかりません'):'';go.disabled=!n};
+a.oninput=b.oninput=upd;go.onclick=function(){if(a.value&&bulkApply(a.value,b.value)){a.value='';b.value='';upd()}};
+w.appendChild(a);w.appendChild(el('span','ba','→'));w.appendChild(b);w.appendChild(go);w.appendChild(nt);upd();w.refresh=upd;return w}
+var bulkAdv=bulkUI();$('bulkadv').appendChild(bulkAdv);$('bulkadv').addEventListener('toggle',function(){bulkAdv.refresh()});
+/* ステップ2：試験の情報（固定文字・日付・時間割の項目＋自由デザインの文字） */
 function infoText(P,label,get,set,ph){var g=el('div','fgrp');var l=el('label',null,label);g.appendChild(l);var i=el('input');i.type='text';i.value=get();if(ph)i.placeholder=ph;i.oninput=function(){set(i.value);save();render()};g.appendChild(i);P.appendChild(g);return g}
 function drawInfo(){var box=$('ws2');if(box.hidden)return;box.textContent='';
 whead(box,'試験の情報','今回の試験に合わせて、内容を入れてください。名前や受験番号は次のステップで名簿から入ります。');
@@ -1453,6 +1520,12 @@ var b=el('input');b.type='text';b.value=r.c;b.placeholder='英語';b.setAttribut
 a.oninput=function(){r.t=a.value;save();render()};b.oninput=function(){r.c=b.value;save();render()};x.onclick=function(){it.rows.splice(ri,1);save();dr();render()};
 s.appendChild(a);s.appendChild(b);s.appendChild(x);sb.appendChild(s)});
 var ad=btn('＋ 行を追加');ad.onclick=function(){it.rows.push({t:'',c:''});save();dr();render();var ins=sb.querySelectorAll('.sch');if(ins.length)ins[ins.length-1].querySelector('input').focus()};sb.appendChild(ad)};dr();box.appendChild(g2)}});
+var fte=freeTextEls();
+if(fte.length){var fh=el('div','fgrp');fh.appendChild(el('label',null,'デザイン内の文字（'+fte.length+'件）'));var fl=el('div','ftl');fh.appendChild(fl);
+fte.forEach(function(e,i){var t=String(e.text),ml=t.indexOf('\n')>=0,r=el('div','ftx'),lb=el('span','ftk',(e.name&&e.name!=='テキスト'?e.name:'')||t.replace(/\{\{[^}]*\}\}/g,'').replace(/\s+/g,' ').trim().slice(0,12));lb.title=t;r.appendChild(lb);
+var ip=ml?el('textarea'):el('input');if(ml)ip.rows=Math.min(4,t.split('\n').length);else ip.type='text';ip.value=t;ip.setAttribute('aria-label',lb.textContent);
+ip.oninput=function(){e.text=ip.value;save();render()};r.appendChild(ip);fl.appendChild(r)});box.appendChild(fh);n+=fte.length}
+if(n){var bd=document.createElement('details');bd.className='bulkd';bd.appendChild(el('summary',null,'まとめて置き換え'));bd.appendChild(bulkUI());box.appendChild(bd)}
 if(!n)box.appendChild(el('div','empty','このデザインには、ここで変えられる項目がありません。そのまま次へ進めます。'));
 box.appendChild(el('p','fhint','項目の追加・並べ替えや色・文字の大きさは、右上の「詳細編集」から変えられます。'))}
 
@@ -1586,7 +1659,7 @@ label:function(st){return st.sample?'サンプル（名簿なし）':listLabel(r
 pickImage:function(cb){openFiles({pick:true,title:'画像',cb:function(b){resizeImage(b,cb)}})},resizeImage:resizeImage,toast:toast,save:function(){saveMain()},undo:function(){undo()},redo:function(){redo()},
 hist:function(){return {u:!$('undo').disabled,r:!$('redo').disabled}},hlabel:function(t){plab=t},histList:function(){histFlush();return {labels:hlab.slice(),i:hi}},histTo:function(j){histJump(j)},
 act:function(n){if(n==='saveas')saveAs();else if(n==='pdf')makePdf();else if(n==='print')doPrint();else if(n==='json')$('fexp').click();else if(n==='roster'){FreeEditor.close();showRoster()}},name:function(){return $('hname').textContent},
-ensureFree:function(){if(S.tpl!=='free')applyTemplate('free')},onClose:function(){drawFields();render()}});
+ensureFree:function(){if(S.tpl!=='free')applyTemplate('free')},onClose:function(){drawFields();render();var fr=V.tpl&&V.tpl.free;if(S.tpl==='free'&&fr&&fr.elements&&fr.elements.length>2)offerSave()}});
 var fontEvt=function(){clearTimeout(rt);rt=setTimeout(function(){if(FreeEditor.isOpen())return;if(S.tpl==='free')render();else Array.prototype.forEach.call($('pages').querySelectorAll('.ticket'),fitAll)},150)};
 if(document.fonts&&document.fonts.addEventListener)document.fonts.addEventListener('loadingdone',fontEvt);window.addEventListener('juken-fonts',fontEvt);
 DesignImport.init({sample:function(){return mkStu(0,null)},fitAll:fitAll,toast:toast,
@@ -1595,7 +1668,8 @@ openLast:function(id){if(openPreset(id)){setStep(3);toast('前回のデザイン
 apply:function(o){var nv=JT.mkVals('free',{orient:o.orient,items:o.items,tpl:{free:{bg:o.bg,elements:o.elements,guides:[]}}});
 S.tpl='free';V=nv;clearCur();importName=o.name;lastFile='';selId='';navPos=0;afterDesignChange();resetBase();hideDraft();
 if(o.rosterLines){V.items.forEach(function(it){var ls=o.rosterLines[it.label];if(ls)texts[it.id]=ls.join('\n')});drawRoster()}
-if(UI.mode!=='easy')setMode('easy');setStep(3);render()}});
+if(UI.mode!=='easy')setMode('easy');setStep(3);render();offerSave()}});
+function offerSave(){if(S.cur||AS.offered)return;AS.offered=true;toast('このデザインを保存しますか','保存',function(){saveMain()},15000)}
 /* 持ち込みフォントの共有（ファイル保管に kind=doc・メモ「font:<id>|<名前>」で保存。デザインが使うとき自動で取得） */
 if(window.JukenFonts&&JukenFonts.setShare)JukenFonts.setShare({
 upload:async function(o){var nm=(o.file&&o.file.name)||(o.name+'.ttf');var blob=new Blob([o.buf],{type:'application/octet-stream'});await fPut(blob,{name:nm,kind:'doc',mime:'application/octet-stream',folder:'フォント（共有）',note:'font:'+o.id+'|'+o.name});toast('フォント「'+o.name+'」をチームに共有しました')},
