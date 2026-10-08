@@ -76,7 +76,8 @@ var CSS = [
 '#dimp .dp-side{flex:none;width:340px;border-left:1px solid var(--bd);background:var(--panel);display:flex;flex-direction:column;min-height:0}',
 '#dimp .dp-sc{flex:1;overflow:auto;padding:14px}',
 '#dimp .dp-sf{padding:10px 14px;border-top:1px solid var(--bd);display:flex;flex-direction:column;gap:8px}',
-'#dimp .dp-sf .pri{padding:12px;font-size:15px;font-weight:700;border-radius:10px}',
+'#dimp .dp-sf button{padding:12px;font-size:15px;font-weight:700;border-radius:10px}',
+'#dimp .dp-adv{font-size:12px;margin:0 0 12px}#dimp .dp-adv>summary{cursor:pointer;color:var(--mut);padding:4px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
 '#dimp .dp-sum{font-size:12px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);margin:0 0 12px}',
 '#dimp .dp-sum summary{padding:6px 10px;font-weight:700;font-size:12px;background:transparent}',
 '#dimp .dp-sum div{padding:2px 10px 8px;line-height:1.6;color:var(--mut)}',
@@ -715,10 +716,7 @@ function drawSide() {
   var s = M.side, keep = s.querySelector('.dp-sc'), top = keep ? keep.scrollTop : 0; s.textContent = '';
   var sc = el('div', 'dp-sc'); s.appendChild(sc);
   sc.appendChild(el('h2', null, '生徒ごとに変わる文字をクリックしてください'));
-  sc.appendChild(el('p', 'dp-sub', M.stats && M.stats.bgOnly ? (hasDet() ? '取り込んだ' + M.stats.what + 'は背景になりました。見つかった文字（点線の枠）をクリックして項目を選ぶと、元の文字を隠して差し込みます。見つからない場所は「差し込み枠を追加」で指定できます。' : '取り込んだ' + M.stats.what + 'は背景になりました。「差し込み枠を追加」で、受験番号や氏名を入れる場所をドラッグで指定します。') : '受験番号・氏名など、人によって変わる文字をクリックして項目を選びます。試験日や会場など全員同じものは、そのままで構いません。'));
-  orientRow(sc);
-  methodNote(sc);
-  summary(sc);
+  sc.appendChild(el('p', 'dp-sub', M.stats && M.stats.bgOnly ? (hasDet() ? '受験番号・氏名など、人ごとに変わる文字（点線の枠）をクリックして選びます。見つからない場所は「差し込み枠を追加」で指定できます。' : '「差し込み枠を追加」を押して、受験番号や氏名を入れる場所をドラッグで指定します。') : '受験番号・氏名など、人によって変わる文字をクリックして選びます。試験日や会場など全員同じものは、そのままで構いません。'));
   /* おすすめ */
   var pend = (M.sugg || []).filter(function (x) { return !M.map[x.eid] && elOf(x.eid); });
   if (pend.length) {
@@ -727,7 +725,7 @@ function drawSide() {
     all.onclick = function () { pend.forEach(function (x) { mapEl(x.eid, x.label); }); drawStage(); drawSide(); H.toast(pend.length + '件を割り当てました'); }; sec.appendChild(all);
     pend.forEach(function (x) {
       var r = el('div', 'dp-sg'), tx = el('span', 'tx'); tx.appendChild(el('b', null, x.label)); tx.appendChild(document.createTextNode('　←『' + JTX.first(String(M.orig[x.eid] || '').replace(/\s+/g, ' ').trim(), 14) + '』（' + x.why + '）'));
-      tx.title = x.why + '（確度：' + DD.confWord(x.conf == null ? 0.7 : x.conf) + '）'; r.appendChild(tx); if (x.conf != null) r.appendChild(el('span', 'cf', '確度' + DD.confWord(x.conf))); var ok = btn('適用'); ok.onclick = function (ev) { ev.stopPropagation(); mapEl(x.eid, x.label); drawStage(); drawSide(); }; r.appendChild(ok);
+      tx.title = x.why + '（確度：' + DD.confWord(x.conf == null ? 0.7 : x.conf) + '）'; r.appendChild(tx); if (x.conf != null && DD.confWord(x.conf) === '低') r.appendChild(el('span', 'cf', '要確認')); var ok = btn('適用'); ok.onclick = function (ev) { ev.stopPropagation(); mapEl(x.eid, x.label); drawStage(); drawSide(); }; r.appendChild(ok);
       r.onclick = function () { M.sel = x.eid; var h = M.hits && M.hits.querySelector('[data-eid="' + x.eid + '"]'); if (h) h.scrollIntoView({ block: 'center', behavior: 'smooth' }); openPop(x.eid); };
       sec.appendChild(r);
     });
@@ -759,14 +757,18 @@ function drawSide() {
     var rb = btn(M.wantRoster ? '✓ ' + nm + 'から名簿も読み取る' : nm + 'から名簿も読み取る（' + nPages + unit + '）', '全ページの同じ位置の文字を、名簿の貼り付け欄に入れます'); rb.style.width = '100%'; if (M.wantRoster) rb.className = 'on';
     rb.onclick = function () { M.wantRoster = !M.wantRoster; if (M.wantRoster && isP) readRoster(true); else { drawSide(); } }; rs.appendChild(rb);
     var info;
-    if (isP) info = M.wantRoster ? (M.rosterLines ? M.rosterN + '名分を読み取りました（名簿の欄に入ります。この端末内だけで処理され、保存・送信されません）。' : '「このデザインで名簿を入れる」を押すと読み取ります。') : '生徒ごとに1枚ずつ作ってあるファイルなら、割り当てた項目の文字を全スライドから集めて、名簿に入れます。';
-    else if (isPdfT) info = M.wantRoster ? '「このデザインで名簿を入れる」を押すと、全ページの文字情報から読み取ります（正確）。この端末内だけで処理され、保存・送信されません。' : '生徒ごとに1ページずつのPDFなら、割り当てた項目の文字を全ページから集めて、名簿に入れます。';
-    else info = M.wantRoster ? '「このデザインで名簿を入れる」を押すと、各ページの文字を読み取ります（時間がかかります）。読み取った内容は確認画面で直せます。この端末内だけで処理され、保存・送信されません。' : '生徒ごとに1ページずつあるなら、割り当てた場所の文字を全ページから読み取って名簿に入れます（読み取り結果は確認してから入ります）。';
+    if (isP) info = M.wantRoster ? (M.rosterLines ? M.rosterN + '名分を読み取りました（名簿の欄に入ります。この端末内だけで処理され、保存・送信されません）。' : '「次へ：名簿を入れる」を押すと読み取ります。') : '生徒ごとに1枚ずつ作ってあるファイルなら、割り当てた項目の文字を全スライドから集めて、名簿に入れます。';
+    else if (isPdfT) info = M.wantRoster ? '「次へ：名簿を入れる」を押すと、全ページの文字情報から読み取ります（正確）。この端末内だけで処理され、保存・送信されません。' : '生徒ごとに1ページずつのPDFなら、割り当てた項目の文字を全ページから集めて、名簿に入れます。';
+    else info = M.wantRoster ? '「次へ：名簿を入れる」を押すと、各ページの文字を読み取ります（時間がかかります）。読み取った内容は確認画面で直せます。この端末内だけで処理され、保存・送信されません。' : '生徒ごとに1ページずつあるなら、割り当てた場所の文字を全ページから読み取って名簿に入れます（読み取り結果は確認してから入ります）。';
     info = el('p', 'dp-sub', info); info.style.marginTop = '6px'; rs.appendChild(info);
     sc.appendChild(rs);
   }
+  methodNote(sc);
+  var adv = document.createElement('details'); adv.className = 'dp-adv'; adv.open = innerWidth > 820 && !!(M.stats && (M.stats.skippedTotal || M.stats.emf.length || M.stats.aspectDiff));
+  adv.appendChild(el('summary', null, '用紙の向き・取り込み結果（A4 ' + (M.orient === 'l' ? '横' : '縦') + '）'));
+  var advB = el('div'); adv.appendChild(advB); orientRow(advB); summary(advB); sc.appendChild(adv);
   var ft = el('div', 'dp-sf');
-  var go2 = btn('このデザインで名簿を入れる', null, 'pri'); go2.onclick = finish;
+  var go2 = btn('次へ：名簿を入れる', null, pend.length ? null : 'pri'); go2.onclick = finish;
   var n = Object.keys(M.map).filter(function (k) { return elOf(k); }).length;
   if (!n) { var hint = el('p', 'dp-sub', '※ 差し込む文字がまだありません。このまま進むと、全員同じ受験票になります。'); hint.style.margin = '0'; ft.appendChild(hint); }
   ft.appendChild(go2); s.appendChild(ft);
