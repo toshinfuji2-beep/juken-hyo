@@ -165,6 +165,7 @@ summary .rs{font-weight:400;font-size:12px;color:var(--mut);margin-left:6px}
 .sl-a .chk{white-space:nowrap;margin:0}
 .sl-ai{display:inline-flex;flex-wrap:wrap;gap:4px;align-items:center;max-width:100%}.sl-ai[hidden]{display:none}
 .sl-ai input{width:4.2em;padding:2px 4px;font-size:12px}.sl-ai input[type=text]{width:5em}
+select.ordsel{width:auto;padding:2px 4px;font-size:12px;white-space:nowrap}select.ordsel[hidden]{display:none}#ordwrap{display:inline-flex}
 .rnd{display:inline-flex;gap:4px;align-items:center;flex-wrap:nowrap;white-space:nowrap}.rnd[hidden]{display:none}.rnd input[type=checkbox],.sl-ai .rnd input{width:auto}.rnd button{padding:2px 8px;font-size:12px;white-space:nowrap}.rnd button[hidden]{display:none}
 .sl-m div{font-size:11px;margin:2px 0 0;line-height:1.4;overflow-wrap:anywhere}
 details.sfs{grid-column:1/-1;margin:6px 0 0;border:1px dashed var(--bd);background:transparent}
@@ -572,7 +573,7 @@ button.dg,.dg{color:var(--err)}
 </div>
 <div id="loaded" hidden>
 <div class="row" style="margin-top:6px"><span id="cnt" style="font-weight:700;flex:1;min-width:0"></span><button id="rclr" type="button" style="padding:2px 8px;font-size:12px">全てクリア</button></div>
-<div class="row" style="margin-top:8px"><button id="sall" type="button">全選択</button><button id="snone" type="button">全解除</button><span id="selcnt" class="note"></span></div>
+<div class="row" style="margin-top:8px"><button id="sall" type="button">全選択</button><button id="snone" type="button">全解除</button><span id="ordwrap"></span><span id="selcnt" class="note"></span></div>
 <div id="list"></div>
 </div>
 </div>
@@ -607,8 +608,8 @@ function opt(sel,list,cur){list.forEach(function(o){var op=el('option',null,o[1]
 function fld(label,ctl,cls){var d=el('div',cls||'');d.appendChild(el('label',null,label));d.appendChild(ctl);return d}
 
 /* ---------- UI状態（モード・ズーム等はlocalStorageに記憶） ---------- */
-var UIK='juken-hyo-ui-v1',UI={zoom:'fit',all:false,mode:'easy',tab:'items',view:'grid',autosave:true};
-try{var u0=JSON.parse(localStorage.getItem(UIK)||'{}');if(u0&&typeof u0==='object'){if(u0.zoom&&u0.zoom!=='fit'&&+u0.zoom>=25&&+u0.zoom<=300)UI.zoom=String(Math.round(+u0.zoom));UI.all=!!u0.all;if(u0.mode==='adv')UI.mode='adv';if(typeof u0.tab==='string')UI.tab=u0.tab;if(u0.view==='list')UI.view='list';if(u0.autosave===false)UI.autosave=false}}catch(e){}
+var UIK='juken-hyo-ui-v1',UI={zoom:'fit',all:false,mode:'easy',tab:'items',view:'grid',autosave:true,order:'roster'};
+try{var u0=JSON.parse(localStorage.getItem(UIK)||'{}');if(u0&&typeof u0==='object'){if(u0.zoom&&u0.zoom!=='fit'&&+u0.zoom>=25&&+u0.zoom<=300)UI.zoom=String(Math.round(+u0.zoom));UI.all=!!u0.all;if(u0.mode==='adv')UI.mode='adv';if(typeof u0.tab==='string')UI.tab=u0.tab;if(u0.view==='list')UI.view='list';if(u0.autosave===false)UI.autosave=false;if(u0.order==='no')UI.order='no'}}catch(e){}
 function saveUi(){try{localStorage.setItem(UIK,JSON.stringify(UI))}catch(e){}}
 var AS={t:null,key:'',stop:'',fail:0,cur:'',at:'',thumbAt:0,inAt:0,ptr:false,offered:false};
 
@@ -1205,8 +1206,8 @@ function colIdx(name){var n=normH(name);if(!n)return -1;for(var i=0;i<headers.le
 function autoNum(a,idx){return C.autoNum(a,idx)}
 /* 自動の番号：連番／ランダム（重複なし）の切り替えと振り直し。after: 変更後の再描画 */
 function randCtl(it,after){var w=el('span','rnd'),lb=el('label','chk'),cx=el('input');cx.type='checkbox';cx.checked=!!it.auto.random;lb.appendChild(cx);lb.appendChild(document.createTextNode('ランダム'));lb.title='重複しない番号をランダムに振ります（開始番号〜桁数の範囲）';w.appendChild(lb);
-var rb=btn('振り直す','ランダムの番号を別の並びにします');rb.hidden=!it.auto.random;w.appendChild(rb);
-cx.onchange=function(){it.auto.random=cx.checked;if(cx.checked&&!it.auto.seed)it.auto.seed=C.newSeed();rb.hidden=!cx.checked;save();after()};
+var rb=btn('振り直す','ランダムの番号を別の並びにします');rb.hidden=!it.auto.random;w.appendChild(rb);var os=orderSel();os.hidden=!it.auto.random;w.appendChild(os);
+cx.onchange=function(){it.auto.random=cx.checked;if(cx.checked&&!it.auto.seed)it.auto.seed=C.newSeed();rb.hidden=!cx.checked;os.hidden=!cx.checked;save();after()};
 rb.onclick=function(){var old=it.auto.seed;it.auto.seed=C.newSeed();save();after();toast('番号を振り直しました','元に戻す',function(){it.auto.seed=old;save();after()})};return w}
 function colVal(st,it){if(!st.row){var nm=it.column||it.label,g=groupOf(nm);return g?SAMPLE[g]:'〈'+nm+'〉'}
 var ix=slotIndex[it.id];return ix>=0?(st.row[ix]||''):''}
@@ -1335,7 +1336,8 @@ its.forEach(function(x){if(!no&&/受験番号/.test(x.label))no=x;if(!nm&&/氏�
 if(!nm)nm=its.filter(function(x){return /氏名|名前/.test(x.label)})[0]||its.filter(function(x){return x.source==='column'})[0];
 return (no?itemVal(no,st):String(i+1))+' '+((nm&&itemVal(nm,st))||'（氏名なし）')}
 function drawList(){var l=$('list');l.textContent='';
-rows.forEach(function(r,i){var lb=el('label');var c=el('input');c.type='checkbox';c.checked=!!sel[i];
+var ord=rows.map(function(_,i){return i});if(UI.order==='no')ord=sortStu(rows.map(function(r,i){return mkStu(i,r)})).map(function(st){return st.idx});
+ord.forEach(function(i){var r=rows[i];var lb=el('label');var c=el('input');c.type='checkbox';c.checked=!!sel[i];
 c.onchange=function(){sel[i]=c.checked;render()};lb.appendChild(c);
 lb.appendChild(document.createTextNode((badRows[i]?'⚠ ':'')+listLabel(r,i)));if(badRows[i]){lb.className='bad';lb.title='文字化けの疑いがあります'}l.appendChild(lb)})}
 $('sall').onclick=function(){rows.forEach(function(_,i){sel[i]=true});drawList();render()};
@@ -1363,7 +1365,15 @@ $('sample').onclick=function(){var csv='\ufeff'+SAMPLE_CSV;
 var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download='sample_meibo.csv';a.click();setTimeout(function(){URL.revokeObjectURL(a.href)},1000)};
 /* ---------- プレビュー ---------- */
 function current(){if(!rows.length)return [mkStu(0,null)];var out=[];
-rows.forEach(function(r,i){if(sel[i])out.push(mkStu(i,r))});return out}
+rows.forEach(function(r,i){if(sel[i])out.push(mkStu(i,r))});return sortStu(out)}
+/* 並び順：名簿の順／受験番号順（ランダムで振った後に番号順で印刷できるように）。番号は名簿の行で決まるので、並べ替えても番号は変わらない */
+function noItem(){return V.items.filter(function(x){return /受験番号/.test(x.label)&&!x.hidden})[0]||V.items.filter(function(x){return x.source==='autonumber'||/番号/.test(x.label)})[0]}
+function sortStu(list){if(UI.order!=='no')return list;var it=noItem();if(!it)return list;
+var k=list.map(function(st,i){var v='';try{v=String(itemVal(it,st)||'')}catch(e){}return {st:st,v:v,i:i}});
+k.sort(function(a,b){if(!a.v!==!b.v)return a.v?-1:1;var c=a.v.localeCompare(b.v,'ja',{numeric:true});return c||a.i-b.i});return k.map(function(x){return x.st})}
+function orderSel(){var s=el('select');s.className='ordsel';s.setAttribute('aria-label','並び順');s.title='印刷・PDF・表示の並び順';opt(s,[['roster','名簿の順'],['no','受験番号順']],UI.order);
+s.onchange=function(){setOrder(s.value)};return s}
+function setOrder(v){UI.order=v==='no'?'no':'roster';saveUi();navPos=0;Array.prototype.forEach.call(document.querySelectorAll('select.ordsel'),function(x){x.value=UI.order});if(rows.length)drawList();render()}
 var PXMM=96/25.4;
 function applyPageCss(){var p=JT.pageSize(V),s=document.getElementById('pgsz');if(!s){s=document.createElement('style');s.id='pgsz';document.head.appendChild(s)}
 s.textContent='@page{size:A4 '+(p.w>p.h?'landscape':'portrait')+';margin:0}@media print{.pw{width:'+p.w+'mm!important;height:'+p.h+'mm!important}}'}
@@ -1707,7 +1717,7 @@ upload:async function(o){var nm=(o.file&&o.file.name)||(o.name+'.ttf');var blob=
 fetch:async function(id){if(!sb||!uid)return null;var q=sb.from('juken_files').select('*');if(q.like)q=q.like('note','font:%');var r=await q;if(r.error||!r.data)return null;var row=r.data.filter(function(x){return typeof x.note==='string'&&x.note.indexOf('font:'+id+'|')===0})[0];if(!row)return null;
 var url=await signedUrl(row.path);var rs=await fetch(url);if(!rs.ok)return null;return {buf:await rs.arrayBuffer(),name:row.note.slice(('font:'+id+'|').length)||row.name}}});
 var booted=false;
-function boot(){if(booted)return;booted=true;drawTplSel();drawPreSel();drawFields();drawItems();setMode(UI.mode,true);render();histInit()}
+function boot(){if(booted)return;booted=true;$('ordwrap').appendChild(orderSel());drawTplSel();drawPreSel();drawFields();drawItems();setMode(UI.mode,true);render();histInit()}
 /* ---------- ファイル保管（Supabase Storage: juken-files / 表: juken_files） ---------- */
 var BUCKET='juken-files',FT='juken_files',FMAX=52428800;
 var FL={rows:[],loaded:false,loading:false,err:'',folder:'*',tab:'all',q:'',extra:[],urls:{},pick:null,q2:[],upBusy:false};
