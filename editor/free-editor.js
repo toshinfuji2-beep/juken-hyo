@@ -360,6 +360,7 @@ var CSS = `#fe{position:fixed;inset:0;z-index:70;display:flex;flex-direction:col
 #fe .fe-combo.f input{padding-right:18px;width:132px}
 #fe .fe-combo.z input{padding-right:18px;width:54px;text-align:left}
 #fe .fe-rbs-lab{font-size:11px;color:var(--mut)}
+#fe .fe-hint{white-space:nowrap;display:block;align-self:center;padding:0 4px;text-align:left}
 .fe-gal{display:flex;align-items:stretch;border:1px solid var(--bd);background:var(--panel);border-radius:2px;align-self:center;height:66px}
 .fe-gal .gv{display:flex;gap:3px;padding:3px;overflow:hidden;scroll-behavior:smooth}
 .fe-gal .ga{display:flex;flex-direction:column;border-left:1px solid var(--bd);width:16px}
@@ -772,7 +773,7 @@ function openMenu(x, y, items, anchor) {
 document.addEventListener('mousedown', function (e) { if (pop && !pop.contains(e.target) && !(pop._anchor && pop._anchor.contains(e.target))) closePop(); if (mini && !mini.contains(e.target) && !(S.editing)) hideMini(); }, true);
 
 /* ---------- 構築 ---------- */
-var TABS = [['home', 'ホーム'], ['insert', '挿入'], ['design', 'デザイン'], ['merge', '差し込み'], ['view', '表示']];
+var TABS = [['home', 'ホーム'], ['merge', '差し込み・印刷'], ['insert', '挿入'], ['view', '表示'], ['design', 'デザイン']];
 function build() {
   var st = document.createElement('style'); st.id = 'fe-css'; st.textContent = CSS; document.head.appendChild(st);
   root = h('div'); root.id = 'fe'; root.hidden = true; root.setAttribute('role', 'dialog'); root.setAttribute('aria-label', 'デザイン編集');
@@ -1777,6 +1778,20 @@ RT.home = function (X1) {
 
   return [
 
+    grp('よく使う', [
+
+      rb({ big: 1, i: 'textbox', l: '文字を\n置く', t: 'テキスト ボックス', d: 'ページ上をドラッグして、文字を入れる枠を描きます。', fn: function () { startDraw('text', TB_DEF); } }),
+
+      rb({ big: 1, i: 'ph', l: '差し込み\n欄を置く', drop: 1, t: '差し込みフィールド', d: '受験番号・氏名など、生徒ごとに入れ替わる欄を置きます。', fn: function (e, b) { fieldPop(b); } }),
+
+      rb({ big: 1, i: 'image', l: '画像', drop: 1, t: '画像', d: 'このデバイス・素材・地図・ロゴから画像を挿入します。', fn: function (e, b) { imgMenu(b, false); } }),
+
+      rb({ big: 1, i: 'print', l: '印刷・\nPDF', drop: 1, t: '印刷・PDF', d: '選択中の生徒の受験票を印刷、またはPDFにします。', fn: function (e, b) { openMenu(0, 0, [{ l: '印刷', ic: 'print', fn: function () { H.act('print'); } }, { l: 'PDFとして保存', ic: 'pdf', fn: function () { H.act('pdf'); } }], b); } }),
+
+      col(tx('span', 'fe-rbs-lab fe-hint', '文字を直すには'), tx('span', 'fe-rbs-lab fe-hint', '文字をダブルクリック'))
+
+    ]),
+
     grp('クリップボード', [
 
       rb({ big: 1, i: 'paste', l: '貼り付け', t: '貼り付け', d: 'コピーまたは切り取った要素を貼り付けます。', k: 'Ctrl+V', dis: !(S.clip && S.clip.length), fn: pasteSel }),
@@ -1917,7 +1932,7 @@ RT.merge = function (X1) {
 
     grp('名簿', [rb({ big: 1, i: 'people', l: '名簿の確認', t: '名簿の確認', d: '名簿を読み込み、印刷する生徒を選ぶ画面に移ります。', fn: function () { H.act('roster'); } })]),
 
-    grp('完了', [rb({ big: 1, i: 'print', l: '完了と印刷', drop: 1, t: '完了と印刷', d: '選択中の生徒の受験票を印刷、またはPDFにします。', fn: function (e, b) { openMenu(0, 0, [{ l: '印刷', ic: 'print', fn: function () { H.act('print'); } }, { l: 'PDFとして保存', ic: 'pdf', fn: function () { H.act('pdf'); } }], b); } })])
+    grp('印刷', [rb({ big: 1, i: 'print', l: '印刷・PDF', drop: 1, t: '印刷・PDF', d: '選択中の生徒の受験票を印刷、またはPDFにします。', fn: function (e, b) { openMenu(0, 0, [{ l: '印刷', ic: 'print', fn: function () { H.act('print'); } }, { l: 'PDFとして保存', ic: 'pdf', fn: function () { H.act('pdf'); } }], b); } })])
 
   ];
 
