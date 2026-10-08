@@ -131,6 +131,8 @@ summary .rs{font-weight:400;font-size:12px;color:var(--mut);margin-left:6px}
 #drop .row{justify-content:center;margin-top:6px}
 #drop.over{background:rgba(59,130,246,.1)}
 #other{margin:8px 0 0}
+#s3host #rosterBlk{display:flex;flex-direction:column}#s3host #other{order:-1;margin:0 0 8px}
+#appRoot[data-mode=easy] #topbar #save,#appRoot[data-mode=easy] #topbar #smore{background:var(--panel);color:var(--fg);border-color:var(--bd)}
 #other>summary{font-weight:400;font-size:12px;padding:5px 8px}
 #other .sec{padding:6px 8px}
 #pastebox{margin:8px 0 0;border:0}
@@ -541,7 +543,7 @@ button.dg,.dg{color:var(--err)}
 </section>
 </div>
 <div id="pane" tabindex="0">
-<div id="bar"><span id="pcount"></span><span class="seg" id="nav"><button id="nprev" type="button" title="前の1名 (←)" aria-label="前の1名">◀</button><span id="npos"></span><button id="nnext" type="button" title="次の1名 (→)" aria-label="次の1名">▶</button></span><button id="fedit" class="pri" type="button" hidden title="文字・図形・画像を自由に配置するエディタを開きます">デザイン編集</button><button id="fconv" type="button" hidden title="いまのデザインを、自由に動かせる要素に変換して編集します（名簿の値・固定の文字・日付はそのまま入ります）">自由編集にする</button><button id="tall" type="button" title="全員をまとめて表示／1名ずつ表示">全員表示</button><span class="seg adv-only"><button id="zfit" type="button" title="画面幅に合わせる">幅に合わせる</button><button id="z100" type="button" title="実寸（A4=100%）">100%</button></span><button id="pdfsave" class="adv-only" type="button" title="全員分の受験票PDFを作り、ファイル保管に保存します">PDFを保存</button><button class="pri adv-only" id="print" type="button">印刷 / PDF保存</button></div>
+<div id="bar"><span id="pcount"></span><span class="seg" id="nav"><button id="nprev" type="button" title="前の1名 (←)" aria-label="前の1名">◀</button><span id="npos"></span><button id="nnext" type="button" title="次の1名 (→)" aria-label="次の1名">▶</button></span><button id="fedit" class="pri" type="button" hidden title="文字・図形・画像を自由に配置するエディタを開きます">デザイン編集</button><button id="fconv" type="button" hidden title="いまのデザインを、自由に動かせる要素に変換して編集します（名簿の値・固定の文字・日付はそのまま入ります）">自由に編集</button><button id="tall" type="button" title="全員をまとめて表示／1名ずつ表示">全員表示</button><span class="seg adv-only"><button id="zfit" type="button" title="画面幅に合わせる">幅に合わせる</button><button id="z100" type="button" title="実寸（A4=100%）">100%</button></span><button id="pdfsave" class="adv-only" type="button" title="全員分の受験票PDFを作り、ファイル保管に保存します">PDFを保存</button><button class="pri adv-only" id="print" type="button">印刷 / PDF保存</button></div>
 <div id="pages"></div>
 </div>
 </div>
@@ -551,7 +553,7 @@ button.dg,.dg{color:var(--err)}
 <div id="slots"></div>
 <div class="sl-foot adv-only"><p class="note" id="slhint" style="margin-top:0">名簿から入れる項目は「項目」で種類を「名簿の列」にすると、ここに欄が増えます。</p><button id="cadd" type="button">＋名簿の項目を追加</button></div>
 <p class="note">※名簿（個人情報）はこの端末の中だけで処理され、送信されません。保存もされません。ページを閉じる・再読込で消えます。</p>
-<details id="other"><summary>ファイルから読み込む（Excel・CSV）／サンプルで試す</summary><div class="sec">
+<details id="other"><summary>Excel・CSVファイルからまとめて読み込む／サンプルで試す</summary><div class="sec">
 <p class="note" style="margin-top:0">1行目が見出しの表を読み込むと、見出しが項目名と一致する列が上の各欄に入ります。</p>
 <div id="drop"><div class="dz-t">CSV / Excelファイルをここにドロップ</div><div class="row"><button id="fbtn" type="button">ファイルを選択</button><button id="trysample" type="button">サンプルで試す</button><input id="file" type="file" accept=".csv,.xlsx,.xls" hidden></div></div>
 <details id="pastebox"><summary>表ごと貼り付けて読み込み</summary><textarea id="paste" rows="3" placeholder="Excelからコピーしたタブ区切り・1行目は見出し"></textarea>
@@ -1204,6 +1206,7 @@ rows=[];for(var i=0;i<R.n;i++)rows.push(slots.map(function(sl){return R.vals[sl.
 var ns={};rows.forEach(function(_,i){ns[i]=sel[i]===undefined?true:sel[i]});sel=ns}
 function mismatch(){var f=slots.filter(function(sl){return R.cnt[sl.key]>0});if(f.length<2)return null;
 var mx=f[0],mn=f[0];f.forEach(function(sl){if(R.cnt[sl.key]>R.cnt[mx.key])mx=sl;if(R.cnt[sl.key]<R.cnt[mn.key])mn=sl});return R.cnt[mx.key]===R.cnt[mn.key]?null:{mx:mx,mn:mn}}
+function emptyReqNames(){return rows.length?slots.filter(function(sl){return sl.req&&!R.has[sl.key]}).map(function(sl){return sl.label||sl.key}):[]}
 function emptyReq(){return rows.length?slots.filter(function(sl){return sl.req&&!R.has[sl.key]}).length:0}
 var slotEls={};
 function growTa(ta){ta.style.height='auto';ta.style.height=Math.min(190,Math.max(82,ta.scrollHeight+2))+'px'}
@@ -1548,7 +1551,7 @@ $('wsc').textContent=has?(n?n+'枚（A4）':'選択なし'):'—';
 var w=$('wwarn'),msg='';if(!has)msg='名簿が入っていません。印刷するには「名簿」のステップで貼り付けてください。';
 else if(!n)msg='印刷する人が選ばれていません。「印刷する人を選ぶ」で選んでください。';
 else if(mm)msg='項目ごとの件数がずれています。名簿のステップで行がそろっているか確認してください。';
-else if(bad)msg='未入力の項目が'+bad+'つあります（空欄のまま印刷されます）。';
+else if(bad){var en=emptyReqNames();msg=(en.length&&en.length<=3?'「'+en.join('」「')+'」が未入力です':'未入力の項目が'+bad+'つあります')+'（空欄のまま印刷されます）。'}
 w.hidden=!msg;w.textContent=msg;
 var ok=has&&n>0;$('wpdf').disabled=!ok;$('wnext').disabled=!ok;
 var d=dirtyNow();$('wsst').textContent=S.cur?(d?'未保存の変更があります':'保存済み'+(cur&&cur.at?'（'+fmtAt(cur.at)+'）':'')):'まだ保存していません（保存しなくても印刷できます）。';
