@@ -192,11 +192,19 @@ function known(id) {
 
 /* ---------- ctx（render に渡るツールキット） ---------- */
 var FONT = { gothic: '"Yu Gothic","Meiryo","Hiragino Sans",sans-serif', mincho: '"Yu Mincho","Hiragino Mincho ProN","MS PMincho",serif' };
-/* 自動の番号。random のときは seed で決まる「重複しない並べ替え」（同じ seed なら毎回同じ番号、範囲は開始番号〜桁数の最大） */
-function rmix(x, s, r) { var h = Math.imul(x ^ s ^ Math.imul(r + 1, 0x9E3779B9), 0x85EBCA6B); h ^= h >>> 13; h = Math.imul(h, 0xC2B2AE35); return (h ^ (h >>> 16)) >>> 0; }
-function rperm(i, n, s) { var b = 1; while (Math.pow(4, b) < n) b++; var m = (1 << b) - 1, x = i;
-  do { var L = x >>> b, R = x & m; for (var r = 0; r < 4; r++) { var t = R; R = L ^ (rmix(R, s, r) & m); L = t; } x = L * (m + 1) + R; } while (x >= n);
-  return x; }
+/* 自動の番号。random のときは seed で決まる「重複しない並べ替え」（同じ seed なら毎回同じ番号、範囲は開始番号〜桁数の最大）。
+   並べ替えは乱数（mulberry32）による Fisher–Yates の部分シャッフルで、どの並びも同じ確率になる。入れ替えた所だけ覚えるので桁が大きくても軽い */
+var RP = {};
+function rperm(i, n, s) {
+  var k = s + ':' + n, c = RP[k];
+  if (!c) { c = RP[k] = { st: (s ^ 0x6D2B79F5) >>> 0, sw: {}, out: [] }; }
+  function rnd() { var t = c.st = (c.st + 0x6D2B79F5) >>> 0; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
+  while (c.out.length <= i) {
+    var a = c.out.length, b = a + Math.floor(rnd() * (n - a)), va = a in c.sw ? c.sw[a] : a, vb = b in c.sw ? c.sw[b] : b;
+    c.sw[b] = va; delete c.sw[a]; c.out.push(vb);
+  }
+  return c.out[i];
+}
 function autoNum(a, idx) {
   var d = Math.max(1, a.digits || 3), st = +a.start || 0, n = Math.pow(10, d) - st, v = st + idx;
   if (a.random && n > 1 && idx < n && d <= 8) v = st + rperm(idx, n, (+a.seed || 1) | 0);
