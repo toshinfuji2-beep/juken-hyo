@@ -58,6 +58,7 @@ button.pri{background:var(--ac);color:var(--acfg);border-color:var(--ac)}
 #bar button{padding:4px 9px;font-size:12px}
 #pcount{flex:1 1 120px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:700}
 .seg{display:flex;gap:0;align-items:center}
+#zseg{flex:none;display:inline-flex;align-items:stretch}#zseg button{min-width:30px;padding-left:8px;padding-right:8px}#zsel{width:auto;max-width:150px;border-radius:0;margin-left:-1px;padding:2px 4px;font-size:12px;white-space:nowrap;text-overflow:ellipsis}#zseg #zin{margin-left:-1px}
 .seg button{border-radius:0;margin-left:-1px}.seg button:first-child{border-radius:4px 0 0 4px;margin-left:0}.seg button:last-child{border-radius:0 4px 4px 0}
 .seg span{padding:0 8px;font-size:12px;white-space:nowrap;border:1px solid var(--bd);border-left:0;border-right:0;background:var(--panel);align-self:stretch;display:flex;align-items:center}
 button.on{background:var(--ac);color:var(--acfg);border-color:var(--ac)}
@@ -550,7 +551,7 @@ button.dg,.dg{color:var(--err)}
 </section>
 </div>
 <div id="pane" tabindex="0">
-<div id="bar"><span id="pcount"></span><span class="seg" id="nav"><button id="nprev" type="button" title="前の1名 (←)" aria-label="前の1名">◀</button><span id="npos"></span><button id="nnext" type="button" title="次の1名 (→)" aria-label="次の1名">▶</button></span><button id="fedit" class="pri" type="button" hidden title="文字・図形・画像を自由に配置するエディタを開きます">デザイン編集</button><button id="fconv" type="button" hidden title="いまのデザインを、自由に動かせる要素に変換して編集します（名簿の値・固定の文字・日付はそのまま入ります）">自由に編集</button><button id="tall" type="button" title="全員をまとめて表示／1名ずつ表示">全員表示</button><span class="seg adv-only"><button id="zfit" type="button" title="画面幅に合わせる">幅に合わせる</button><button id="z100" type="button" title="実寸（A4=100%）">100%</button></span><button id="pdfsave" class="adv-only" type="button" title="全員分の受験票PDFを作り、ファイル保管に保存します">PDFをファイル保管へ</button><button class="pri adv-only" id="print" type="button">印刷 / PDF保存</button></div>
+<div id="bar"><span id="pcount"></span><span class="seg" id="nav"><button id="nprev" type="button" title="前の1名 (←)" aria-label="前の1名">◀</button><span id="npos"></span><button id="nnext" type="button" title="次の1名 (→)" aria-label="次の1名">▶</button></span><button id="fedit" class="pri" type="button" hidden title="文字・図形・画像を自由に配置するエディタを開きます">デザイン編集</button><button id="fconv" type="button" hidden title="いまのデザインを、自由に動かせる要素に変換して編集します（名簿の値・固定の文字・日付はそのまま入ります）">自由に編集</button><button id="tall" type="button" title="全員をまとめて表示／1名ずつ表示">全員表示</button><span class="seg" id="zseg"><button id="zout" type="button" title="縮小（Ctrl＋マウスホイールでも変えられます）" aria-label="縮小">−</button><select id="zsel" aria-label="表示倍率" title="表示倍率"><option value="fit">幅に合わせる</option><option value="50">50%</option><option value="75">75%</option><option value="100">100%（実寸）</option><option value="125">125%</option><option value="150">150%</option><option value="200">200%</option></select><button id="zin" type="button" title="拡大（Ctrl＋マウスホイールでも変えられます）" aria-label="拡大">＋</button></span><button id="pdfsave" class="adv-only" type="button" title="全員分の受験票PDFを作り、ファイル保管に保存します">PDFをファイル保管へ</button><button class="pri adv-only" id="print" type="button">印刷 / PDF保存</button></div>
 <div id="pages"></div>
 </div>
 </div>
@@ -606,7 +607,7 @@ function fld(label,ctl,cls){var d=el('div',cls||'');d.appendChild(el('label',nul
 
 /* ---------- UI状態（モード・ズーム等はlocalStorageに記憶） ---------- */
 var UIK='juken-hyo-ui-v1',UI={zoom:'fit',all:false,mode:'easy',tab:'items',view:'grid',autosave:true};
-try{var u0=JSON.parse(localStorage.getItem(UIK)||'{}');if(u0&&typeof u0==='object'){if(u0.zoom==='100')UI.zoom='100';UI.all=!!u0.all;if(u0.mode==='adv')UI.mode='adv';if(typeof u0.tab==='string')UI.tab=u0.tab;if(u0.view==='list')UI.view='list';if(u0.autosave===false)UI.autosave=false}}catch(e){}
+try{var u0=JSON.parse(localStorage.getItem(UIK)||'{}');if(u0&&typeof u0==='object'){if(u0.zoom&&u0.zoom!=='fit'&&+u0.zoom>=25&&+u0.zoom<=300)UI.zoom=String(Math.round(+u0.zoom));UI.all=!!u0.all;if(u0.mode==='adv')UI.mode='adv';if(typeof u0.tab==='string')UI.tab=u0.tab;if(u0.view==='list')UI.view='list';if(u0.autosave===false)UI.autosave=false}}catch(e){}
 function saveUi(){try{localStorage.setItem(UIK,JSON.stringify(UI))}catch(e){}}
 var AS={t:null,key:'',stop:'',fail:0,cur:'',at:'',thumbAt:0,inAt:0,ptr:false,offered:false};
 
@@ -1361,7 +1362,7 @@ var PXMM=96/25.4;
 function applyPageCss(){var p=JT.pageSize(V),s=document.getElementById('pgsz');if(!s){s=document.createElement('style');s.id='pgsz';document.head.appendChild(s)}
 s.textContent='@page{size:A4 '+(p.w>p.h?'landscape':'portrait')+';margin:0}@media print{.pw{width:'+p.w+'mm!important;height:'+p.h+'mm!important}}'}
 function render(){var list=current(),box=$('pages');box.textContent='';
-applyPageCss();var pz=JT.pageSize(V),avail=Math.max(200,$('pane').clientWidth-32);var sc=zoom==='100'&&UI.mode==='adv'?1:Math.min(1,avail/(pz.w*PXMM));
+applyPageCss();var pz=JT.pageSize(V),avail=Math.max(200,$('pane').clientWidth-32);var sc=zoom==='fit'?Math.min(1,avail/(pz.w*PXMM)):(+zoom||100)/100;curSc=sc;zoomUi();
 var fl=[],T=tpl();
 list.forEach(function(st){var w=el('div','pw');w.style.width=(pz.w*PXMM*sc)+'px';w.style.height=(pz.h*PXMM*sc)+'px';
 var t=JT.render(S.tpl,st,V);if(window.JukenCheck&&JukenCheck.planned())JukenCheck.apply(t);t.style.transform='scale('+sc+')';w.appendChild(t);box.appendChild(w);fl.push(t)});
@@ -1576,13 +1577,21 @@ for(var i=0;i<pages.length;i++){var off=one&&i!==navPos;pages[i].classList.toggl
 $('nav').hidden=!one;$('tall').hidden=!has;$('tall').textContent=showAll?'1名ずつ':'全員表示';$('tall').classList.toggle('on',showAll);
 $('npos').textContent=(navPos+1)+' / '+n;$('nprev').disabled=navPos<=0;$('nnext').disabled=navPos>=n-1;
 $('pcount').textContent=!has?'サンプル表示':n===0?'印刷対象が選択されていません':one?listLabel(rows[list[navPos].idx],list[navPos].idx):'全員表示：'+n+'枚（A4）';
-$('fedit').hidden=S.tpl!=='free';$('fconv').hidden=S.tpl==='free';$('zfit').classList.toggle('on',zoom!=='100');$('z100').classList.toggle('on',zoom==='100');
+$('fedit').hidden=S.tpl!=='free';$('fconv').hidden=S.tpl==='free';zoomUi();
 applySel();positionPop();updFinal()}
 function go(d){var n=current().length;if(!n||showAll)return;navPos=Math.max(0,Math.min(n-1,navPos+d));applyView()}
 $('nprev').onclick=function(){go(-1)};$('nnext').onclick=function(){go(1)};
 $('tall').onclick=function(){showAll=!showAll;UI.all=showAll;saveUi();applyView()};
-$('zfit').onclick=function(){zoom='fit';UI.zoom='fit';saveUi();render()};
-$('z100').onclick=function(){zoom='100';UI.zoom='100';saveUi();render()};
+var ZST=[25,33,50,67,75,90,100,125,150,175,200,250,300],curSc=1;
+function zoomUi(){var z=$('zsel');if(!z)return;var v=zoom==='fit'?'fit':String(zoom),o=z.querySelector('option[data-x]');if(o)o.remove();
+if(v!=='fit'&&!z.querySelector('option[value="'+v+'"]')){o=el('option',null,v+'%');o.value=v;o.setAttribute('data-x','1');z.appendChild(o)}
+z.value=v;z.options[0].textContent=zoom==='fit'?'幅に合わせる（'+Math.round(curSc*100)+'%）':'幅に合わせる';$('zout').disabled=curSc<=ZST[0]/100+1e-6;$('zin').disabled=curSc>=ZST[ZST.length-1]/100-1e-6}
+function setZoom(z){var p=$('pane'),cx=p.scrollLeft+p.clientWidth/2,cy=p.scrollTop+p.clientHeight/2,old=curSc;zoom=String(z);UI.zoom=zoom;saveUi();render();
+if(old&&zoom!=='fit'){var r=curSc/old;p.scrollLeft=cx*r-p.clientWidth/2;p.scrollTop=cy*r-p.clientHeight/2}}
+function zoomStep(d){var c=Math.round(curSc*100),n=d>0?ZST.filter(function(x){return x>c+0.5})[0]:ZST.filter(function(x){return x<c-0.5}).pop();if(n)setZoom(n)}
+$('zsel').onchange=function(){setZoom(this.value)};$('zout').onclick=function(){zoomStep(-1)};$('zin').onclick=function(){zoomStep(1)};
+$('pane').addEventListener('wheel',function(e){if(!(e.ctrlKey||e.metaKey))return;e.preventDefault();zoomStep(e.deltaY<0?1:-1)},{passive:false});
+
 $('pages').addEventListener('scroll',function(){positionPop()});
 
 /* ---------- プレビュー：クリックで項目を選択・ポップオーバー編集 ---------- */
@@ -1659,6 +1668,7 @@ if(/^\s*\{[\s\S]*"format"\s*:\s*"juken-design"/.test(text)){e.preventDefault();t
 /* ---------- キーボード ---------- */
 document.addEventListener('keydown',function(e){if(!booted)return;var k=e.key;
 if((e.ctrlKey||e.metaKey)&&!e.altKey){var lk=k.toLowerCase();
+if((k==='+'||k===';'||k==='='||k==='-'||k==='0')&&!/^(INPUT|TEXTAREA|SELECT)$/.test((e.target&&e.target.tagName)||'')&&!(e.target&&e.target.isContentEditable)&&!modalOpen&&!(window.FreeEditor&&FreeEditor.isOpen&&FreeEditor.isOpen())){e.preventDefault();if(k==='0')setZoom('fit');else zoomStep(k==='-'?-1:1);return}
 if(lk==='s'){e.preventDefault();if(modalOpen)return;if(e.shiftKey)saveAs();else saveMain();return}
 if(modalOpen)return;
 if(lk==='z'||lk==='y'){if(isTextual(e.target)&&e.target.tagName!=='SELECT')return;e.preventDefault();if(lk==='y'||e.shiftKey)redo();else undo();return}return}
