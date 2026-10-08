@@ -662,7 +662,7 @@ function matchOriginal(e, btnEl, box, fs) {
   if (!txt) { box.textContent = '元の文字が読み取れていません。'; return; }
   btnEl.disabled = true; box.textContent = '書体を調べています…';
   var cancelled = function () { return !M || M.pop === null; };
-  g.FontMatch.rank(M.pix, r, txt, { cancelled: cancelled, onProgress: function (i, n) { if (box.isConnected) box.textContent = '書体を調べています… ' + i + '/' + n; } }).then(function (rs) {
+  g.FontMatch.rank(M.pix, r, txt, { needKanji: /氏名|名前|カナ|フリガナ|ふりがな/.test(M.map[e.id] || '') || JTX.isKana(txt), cancelled: cancelled, onProgress: function (i, n) { if (box.isConnected) box.textContent = '書体を調べています… ' + i + '/' + n; } }).then(function (rs) {
     btnEl.disabled = false; if (!box.isConnected) return; box.textContent = '';
     if (!rs.length) { box.textContent = '近い書体を判定できませんでした。「書体を見比べる」で選んでください。'; return; }
     var seen = {}, top = rs.filter(function (x) { if (seen[x.id]) return false; seen[x.id] = 1; return true; }).slice(0, 5);

@@ -1182,7 +1182,8 @@ var bad=!!mm&&c>0&&(c!==R.n||sl===mm.mx);e.n.className='sl-n'+(c&&!bad?' on':'')
 e.m.textContent='';
 var gk=groupOf(sl.label);if((gk==='name'||gk==='kana')&&R.vals[sl.key]&&R.vals[sl.key].length){var vs=R.vals[sl.key],nk=vs.filter(function(x){return JukenText.classifyName(x)==='カナ氏名'}).length,nj=vs.filter(function(x){return JukenText.classifyName(x)==='氏名'}).length;
 var wrong=gk==='name'?(nk>=Math.max(1,vs.length*.8)):(nj>=Math.max(1,vs.length*.8));
-if(wrong){var other=slots.filter(function(o){return o!==sl&&groupOf(o.label)===(gk==='name'?'kana':'name')})[0];var dw=el('div','w',gk==='name'?'カナ（ふりがな）だけが入っています。カナ氏名の欄に貼るものかもしれません ':'漢字が入っています。氏名の欄に貼るものかもしれません ');if(other&&!R.has[other.key]){var mb=btn('「'+other.label+'」の欄へ移す');mb.onclick=function(){texts[other.key]=texts[sl.key];texts[sl.key]='';keepHdr={};drawRoster();rosterInput()};dw.appendChild(mb)}e.m.appendChild(dw)}}
+var other=slots.filter(function(o){return o!==sl&&groupOf(o.label)===(gk==='name'?'kana':'name')})[0];
+if(wrong&&other){var dw=el('div','w',gk==='name'?'カナ（ふりがな）だけが入っています。カナ氏名の欄に貼るものかもしれません ':'漢字が入っています。氏名の欄に貼るものかもしれません ');if(other&&!R.has[other.key]){var mb=btn('「'+other.label+'」の欄へ移す');mb.onclick=function(){texts[other.key]=texts[sl.key];texts[sl.key]='';keepHdr={};drawRoster();rosterInput()};dw.appendChild(mb)}e.m.appendChild(dw)}}
 if(R.hdr[sl.key]!==undefined){var d=el('div','i','1行目の見出し『'+R.hdr[sl.key]+'』を除きました ');var a=el('a',null,'元に戻す');a.onclick=function(){keepHdr[sl.key]=true;rosterInput()};d.appendChild(a);e.m.appendChild(d)}
 if(R.multi[sl.key]){var d2=el('div','w','複数の列が含まれています。1列だけコピーしてください');var b=btn('1列目だけ使う');
 b.onclick=function(){var prev=texts[sl.key]||'';var t=prev.split(/\r?\n/).map(function(x){return x.split('\t')[0]}).join('\n');texts[sl.key]=t;e.ta.value=t;rosterInput();

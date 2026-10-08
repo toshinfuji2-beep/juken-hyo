@@ -4,7 +4,7 @@
    - 書体は使うときだけ読み込む（JukenFonts.use ＋ document.fonts.load） */
 (function (g) {
 'use strict';
-var GW = 192, GH = 40;
+var GW = 192, GH = 40, KANJI_PROBE = '山田佐藤鈴木高橋渡辺伊藤太郎花子';
 
 /* canvas の矩形 r={x,y,w,h}（px）→ インク（背景と違う画素）の濃さ配列 GW×GH と縦横比。インクが無ければ null */
 function inkGrid(src, r) {
@@ -58,13 +58,14 @@ function rank(src, rect, text, o) {
       if (i >= ids.length || (o.cancelled && o.cancelled())) { out.sort(function (a, b) { return a.score - b.score; }); done(out.slice(0, 8)); return; }
       var id = ids[i++], f = JF.get(id); if (o.onProgress) o.onProgress(i, ids.length);
       Promise.resolve(JF.use(id)).then(function () {
-        return Promise.all(ws.map(function (w) { return document.fonts.load(w + ' 40px ' + JF.css(id), tx).catch(function () { }); }));
+        return Promise.all(ws.map(function (w) { return document.fonts.load(w + ' 40px ' + JF.css(id), o.needKanji ? tx + KANJI_PROBE : tx).catch(function () { }); }));
       }).then(function () {
         if (g.JukenCheck) { g.JukenCheck.resetMemo(); }
         var tested = {};
         ws.forEach(function (w) {
           var sw = JF.snap(id, w); if (tested[sw]) return; tested[sw] = 1;
           var fam = f.family; if (g.JukenCheck && g.JukenCheck.isProbeOK() && !Array.from(tx).every(function (ch) { return /\s/.test(ch) || g.JukenCheck.hasGlyph(fam, ch, sw, ''); })) return;   /* 字形が無い書体は除く */
+          if (o.needKanji && g.JukenCheck && g.JukenCheck.isProbeOK() && !Array.from(KANJI_PROBE).every(function (ch) { return g.JukenCheck.hasGlyph(fam, ch, sw, ''); })) return;   /* 名前欄：漢字の無い書体は除く */
           var gr = renderGrid(JF.css(id), sw, tx); if (gr) out.push({ id: id, weight: sw, score: diff(target, gr) });
         });
       }).catch(function () { }).then(function () { setTimeout(next, 0); });

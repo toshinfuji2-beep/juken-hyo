@@ -136,6 +136,10 @@ function suggest(els, opt) {
   }
   if (kOut && !nOut && byId[kOut.eid]) { var nm = pairNear(byId[kOut.eid], '氏名', false); if (nm) { out.push({ eid: nm.id, label: '氏名', why: 'ふりがなの下の漢字', conf: 0.62 - pen }); used[nm.id] = 1; } }
   else if (nOut && !kOut && byId[nOut.eid]) { var kk = pairNear(byId[nOut.eid], 'カナ氏名', true); if (kk) { out.push({ eid: kk.id, label: 'カナ氏名', why: '氏名の上のふりがな', conf: 0.62 - pen }); used[kk.id] = 1; } }
+  /* 名前欄が1つだけで、見本の値がカナだっただけ（「フリガナ」などの見出しが無い）なら「氏名」にする：漢字でもカナでも差し込めるように */
+  if (!out.some(function (o) { return o.label === '氏名'; })) out.forEach(function (o) {
+    if (o.label === 'カナ氏名' && /値がカナだけなので|カナ（ひらがな）だけの文字/.test(o.why)) { o.label = '氏名'; o.why = o.why.replace('（値がカナだけなので）', '') + '（名前欄はここだけなので漢字・カナどちらも可）'; }
+  });
   return out;
 }
 /* ラベルらしい箱の一覧 */
