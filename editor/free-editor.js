@@ -870,7 +870,7 @@ function drawTabs() {
 function toggleRibbon() { S.rcol = !S.rcol; S.rpeek = false; saveUI(); drawFrame(); drawTabs(); relayout(); }
 
 /* ---------- バックステージ（ファイルタブ） ---------- */
-var BS = [['info', '情報', 'info'], ['save', '保存', 'save'], ['saveas', '名前を付けて保存', 'saveas'], ['pdf', 'PDFとして保存', 'pdf'], ['print', '印刷', 'print'], ['json', '書き出し（JSON）', 'ph'], ['close', 'エディタを閉じる', 'close']];
+var BS = [['info', '情報', 'info'], ['save', '保存', 'save'], ['saveas', '名前を付けて保存', 'saveas'], ['pdf', 'PDFをファイル保管へ', 'pdf'], ['print', '印刷', 'print'], ['json', '書き出し（JSON）', 'ph'], ['close', 'エディタを閉じる', 'close']];
 function closeBackstage() { if (R.bs) { R.bs.remove(); R.bs = null; } S.bs = ''; }
 function openBackstage(sec) {
   closePop(); hideMini(); if (S.editing) finishEdit(true);
@@ -889,7 +889,7 @@ function openBackstage(sec) {
     [['デザイン名', H.name()], ['保存の状態', S.st.t || '（変更なし）'], ['用紙', pageText()], ['要素の数', elems().length + '個'], ['差し込み項目', Vv.items.length + '個'], ['名簿', real ? ls.length + '名を選択中' : '未読み込み（サンプルで表示）']].forEach(function (x) { dl.appendChild(tx('dt', null, x[0])); dl.appendChild(tx('dd', null, x[1])); });
     r.appendChild(dl);
   } else if (sec === 'saveas') { r.appendChild(tx('h2', null, '名前を付けて保存')); r.appendChild(tx('p', null, '別の名前で保存します。いまのデザインは元の名前のまま残ります。')); r.appendChild(big('saveas', '名前を付けて保存…', '保存先のフォルダーと名前を指定します', function () { H.act('saveas'); })); }
-  else if (sec === 'pdf') { r.appendChild(tx('h2', null, 'PDFとして保存')); r.appendChild(tx('p', null, '選択中の生徒の受験票を、1人1ページのPDFにします。')); r.appendChild(big('pdf', 'PDFとして保存', '印刷用のA4・PDFファイルを作ります', function () { H.act('pdf'); })); }
+  else if (sec === 'pdf') { r.appendChild(tx('h2', null, 'PDFをファイル保管へ')); r.appendChild(tx('p', null, '選択中の生徒の受験票をPDFにして、ファイル保管に保存します。')); r.appendChild(big('pdf', 'PDFをファイル保管へ', 'A4・1人1ページのPDFを作り、ファイル保管に保存します', function () { H.act('pdf'); })); }
   else if (sec === 'print') { r.appendChild(tx('h2', null, '印刷')); r.appendChild(tx('p', null, '選択中の生徒の受験票を印刷します。')); r.appendChild(big('print', '印刷', 'ブラウザーの印刷画面を開きます', function () { H.act('print'); })); }
   else if (sec === 'json') { r.appendChild(tx('h2', null, '書き出し（JSON）')); r.appendChild(tx('p', null, 'デザインを .juken.json ファイルとして書き出します。別のパソコンで読み込めます。')); r.appendChild(big('ph', 'ファイルに書き出し', 'デザインの設定をJSONファイルにします', function () { H.act('json'); })); }
   d.appendChild(l); d.appendChild(r); root.appendChild(d); tipify(d);

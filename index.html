@@ -107,6 +107,13 @@ input[type=color]{width:100%;height:32px;padding:2px;border:1px solid var(--bd);
 .sv{position:relative;display:inline-flex;flex:none}
 .eh1 .sv #save{border-radius:4px 0 0 4px;padding:2px 12px;font-weight:700}
 .eh1 .sv #smore{border-radius:0 4px 4px 0;border-left:1px solid rgba(255,255,255,.45);padding:2px 6px;font-size:11px}
+.wsec2{display:flex;flex-wrap:wrap;gap:6px;margin:var(--s2) 0}.wsec2 button{flex:0 1 auto;padding:6px 12px;font-size:13px;white-space:nowrap}
+#omenu{position:absolute;right:0;top:calc(100% + 4px);z-index:30;min-width:180px;max-width:80vw;background:var(--panel);border:1px solid var(--bd);border-radius:6px;box-shadow:0 6px 24px rgba(0,0,0,.3);padding:4px}
+#omenu button{display:block;width:100%;text-align:left;border:0;background:transparent;padding:8px 10px;font-size:13px}
+#omenu button:hover,#omenu button:focus-visible{background:var(--bg)}
+#oem{padding:4px 10px;font-size:11px;color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-bottom:1px solid var(--bd);margin-bottom:2px}
+#oem:empty{display:none}
+#omwrap{display:none}
 #smenu{position:absolute;right:0;top:calc(100% + 4px);z-index:30;min-width:170px;background:var(--panel);border:1px solid var(--bd);border-radius:6px;box-shadow:0 6px 24px rgba(0,0,0,.3);padding:4px}
 #smenu button{display:block;width:100%;text-align:left;border:0;background:transparent;padding:6px 10px;font-size:13px}
 #smenu button:hover{background:var(--bg)}
@@ -322,7 +329,7 @@ button.dg,.dg{color:var(--err)}
 #topbar #uem{flex:none;max-width:180px;text-align:right}
 #topbar .sv #save{border-radius:8px 0 0 8px;padding:4px 12px;font-weight:700}
 #topbar .sv #smore{border-radius:0 8px 8px 0;border-left:1px solid rgba(255,255,255,.45);padding:4px 7px}
-@media(max-width:700px){#uem{display:none}.tb-btns{margin-left:0;width:100%}#sst .stx{display:none}}
+@media(max-width:700px){#uem,#fopen,#lout{display:none}#omwrap{display:inline-flex}#omore{font-size:18px;line-height:1;padding:2px 10px!important}.tb-btns{margin-left:0;width:100%}#sst .stx{display:none}}
 /* ウィザード */
 #wiz{padding:var(--s5) var(--s5) 0;display:flex;flex-direction:column;min-height:100%}
 @media(max-width:700px){#wiz{padding:var(--s4) var(--s4) 0}}
@@ -501,9 +508,9 @@ button.dg,.dg{color:var(--err)}
 <button id="undo" class="adv-only" type="button" title="元に戻す (Ctrl+Z)" aria-label="元に戻す" disabled>↶</button><button id="redo" class="adv-only" type="button" title="やり直し (Ctrl+Shift+Z / Ctrl+Y)" aria-label="やり直し" disabled>↷</button>
 <button id="dopen" type="button" title="保存したデザインを開く・整理する">デザイン</button>
 <button id="fopen" type="button" title="ファイル保管（受験票PDF・画像素材・資料）">ファイル</button>
-<span class="sv"><button id="save" class="pri" type="button" title="保存 (Ctrl+S)">保存</button><button id="smore" class="pri" type="button" title="その他の保存方法" aria-label="その他の保存方法" aria-haspopup="true" aria-expanded="false">▾</button><div id="smenu" hidden><button id="sas" type="button">名前を付けて保存</button><button id="spdf" type="button">PDFを作成して保存</button><button id="sfile" type="button">ファイルに書き出し</button><button id="sauto" type="button"></button></div></span>
+<span class="sv"><button id="save" class="pri" type="button" title="保存 (Ctrl+S)">保存</button><button id="smore" class="pri" type="button" title="その他の保存方法" aria-label="その他の保存方法" aria-haspopup="true" aria-expanded="false">▾</button><div id="smenu" hidden><button id="sas" type="button">名前を付けて保存</button><button id="spdf" type="button">PDFをファイル保管へ</button><button id="sfile" type="button">ファイルに書き出し</button><button id="sauto" type="button"></button></div></span>
 <button id="modebtn" type="button" class="ghost">詳細編集</button>
-<span id="uem"></span><button id="lout" type="button" class="ghost">ログアウト</button>
+<span id="uem"></span><button id="lout" type="button" class="ghost">ログアウト</button><span class="sv" id="omwrap"><button id="omore" type="button" class="ghost" title="その他（ファイル・ログアウト）" aria-label="その他" aria-haspopup="true" aria-expanded="false">⋯</button><div id="omenu" hidden><button id="ofile" type="button">ファイル保管</button><div id="oem"></div><button id="olout" type="button">ログアウト</button></div></span>
 </div>
 </header>
 <div class="body">
@@ -518,7 +525,7 @@ button.dg,.dg{color:var(--err)}
 <h2 class="wh">名簿を入れる</h2><p class="wsub">項目ごとにExcelの1列をコピーして、下の欄に貼り付けます。1行が1人分です。</p>
 <div class="hintbox"><table class="xl" aria-hidden="true"><tr><th></th><th>A</th><th>B</th></tr><tr><th>1</th><td class="hl">受験番号</td><td>氏名</td></tr><tr><th>2</th><td class="hl">101</td><td>藤沢 太郎</td></tr><tr><th>3</th><td class="hl">102</td><td>湘南 花子</td></tr></table><div><b>Excelの列をまるごとコピー</b>して、同じ項目の欄に貼り付けてください。1行目の見出しは自動で除きます。</div></div>
 <div id="s3host"></div>
-<div id="qact" hidden><button id="qprint" type="button" class="pri bigbtn">印刷</button><button id="qpdf" type="button" class="bigbtn">PDFを保存</button><div id="qstat"></div></div>
+<div id="qact" hidden><button id="qprint" type="button" class="pri bigbtn">印刷</button><button id="qpdf" type="button" class="bigbtn">PDFをファイル保管へ</button><div id="qstat"></div></div>
 </div>
 <div class="wstep" id="ws4" data-s="4" hidden></div>
 </div>
@@ -543,7 +550,7 @@ button.dg,.dg{color:var(--err)}
 </section>
 </div>
 <div id="pane" tabindex="0">
-<div id="bar"><span id="pcount"></span><span class="seg" id="nav"><button id="nprev" type="button" title="前の1名 (←)" aria-label="前の1名">◀</button><span id="npos"></span><button id="nnext" type="button" title="次の1名 (→)" aria-label="次の1名">▶</button></span><button id="fedit" class="pri" type="button" hidden title="文字・図形・画像を自由に配置するエディタを開きます">デザイン編集</button><button id="fconv" type="button" hidden title="いまのデザインを、自由に動かせる要素に変換して編集します（名簿の値・固定の文字・日付はそのまま入ります）">自由に編集</button><button id="tall" type="button" title="全員をまとめて表示／1名ずつ表示">全員表示</button><span class="seg adv-only"><button id="zfit" type="button" title="画面幅に合わせる">幅に合わせる</button><button id="z100" type="button" title="実寸（A4=100%）">100%</button></span><button id="pdfsave" class="adv-only" type="button" title="全員分の受験票PDFを作り、ファイル保管に保存します">PDFを保存</button><button class="pri adv-only" id="print" type="button">印刷 / PDF保存</button></div>
+<div id="bar"><span id="pcount"></span><span class="seg" id="nav"><button id="nprev" type="button" title="前の1名 (←)" aria-label="前の1名">◀</button><span id="npos"></span><button id="nnext" type="button" title="次の1名 (→)" aria-label="次の1名">▶</button></span><button id="fedit" class="pri" type="button" hidden title="文字・図形・画像を自由に配置するエディタを開きます">デザイン編集</button><button id="fconv" type="button" hidden title="いまのデザインを、自由に動かせる要素に変換して編集します（名簿の値・固定の文字・日付はそのまま入ります）">自由に編集</button><button id="tall" type="button" title="全員をまとめて表示／1名ずつ表示">全員表示</button><span class="seg adv-only"><button id="zfit" type="button" title="画面幅に合わせる">幅に合わせる</button><button id="z100" type="button" title="実寸（A4=100%）">100%</button></span><button id="pdfsave" class="adv-only" type="button" title="全員分の受験票PDFを作り、ファイル保管に保存します">PDFをファイル保管へ</button><button class="pri adv-only" id="print" type="button">印刷 / PDF保存</button></div>
 <div id="pages"></div>
 </div>
 </div>
@@ -899,6 +906,11 @@ $('sas').onclick=function(){closeSM();saveAs()};$('sfile').onclick=function(){cl
 function closeSM(){$('smenu').hidden=true;$('smore').setAttribute('aria-expanded','false')}
 $('smore').onclick=function(e){e.stopPropagation();var h=!$('smenu').hidden;$('smenu').hidden=h;this.setAttribute('aria-expanded',h?'false':'true')};
 document.addEventListener('click',function(e){if(!$('smenu').hidden&&!$('smenu').contains(e.target))closeSM()});
+function closeOM(){$('omenu').hidden=true;$('omore').setAttribute('aria-expanded','false')}
+$('omore').onclick=function(e){e.stopPropagation();var h=!$('omenu').hidden;$('omenu').hidden=h;this.setAttribute('aria-expanded',h?'false':'true');if(!h){$('oem').textContent=$('uem').textContent;$('ofile').focus()}};
+$('ofile').onclick=function(){closeOM();$('fopen').click()};$('olout').onclick=function(){closeOM();$('lout').click()};
+document.addEventListener('click',function(e){if(!$('omenu').hidden&&!$('omenu').contains(e.target))closeOM()});
+$('omwrap').addEventListener('keydown',function(e){if($('omenu').hidden)return;if(e.key==='Escape'){e.preventDefault();e.stopPropagation();closeOM();$('omore').focus()}else if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();var b=[$('ofile'),$('olout')],i=b.indexOf(document.activeElement);b[(i+(e.key==='ArrowDown'?1:b.length-1)+(i<0?1:0))%b.length].focus()}else if(e.key==='Tab'&&!e.shiftKey&&document.activeElement===$('olout'))closeOM()});
 $('sst').onclick=function(){if(ss==='error'||AS.stop===S.cur||dirtyNow())saveMain()};
 /* ---------- 自動保存（共有に保存済みのデザインを、操作が約3秒止まったら静かに上書き） ---------- */
 function z2(n){return n<10?'0'+n:''+n}
@@ -1537,9 +1549,9 @@ function drawFinal(){var box=$('ws4');if(box.hidden)return;box.textContent='';
 whead(box,'確認して印刷','右の受験票を確認してください。問題なければ印刷します。');
 var dl=el('dl','sum');dl.id='wsum';[['デザイン','wsn'],['名簿','wsr'],['印刷する枚数','wsc']].forEach(function(r){dl.appendChild(el('dt',null,r[0]));var d=el('dd');d.id=r[1];dl.appendChild(d)});box.appendChild(dl);
 var wn=el('div','wnote');wn.id='wwarn';wn.hidden=true;box.appendChild(wn);
-var pd=btn('PDFを保存','全員分の受験票PDFを作り、ファイル保管に保存します');pd.id='wpdf';pd.className='bigbtn';pd.onclick=makePdf;box.appendChild(pd);
-var sv=btn('このデザインを保存','共有デザインとして保存（任意）');sv.id='wsave';sv.className='bigbtn';sv.onclick=saveMain;box.appendChild(sv);
-var sa=btn('別の名前で保存…');sa.id='wsaveas';sa.className='ghost';sa.onclick=saveAs;sa.style.marginBottom='8px';box.appendChild(sa);
+var ar=el('div','wsec2');var pd=btn('PDFをファイル保管へ','全員分の受験票PDFを作り、ファイル保管に保存します');pd.id='wpdf';pd.onclick=makePdf;ar.appendChild(pd);
+var sv=btn('このデザインを保存','共有デザインとして保存（任意）');sv.id='wsave';sv.onclick=saveMain;ar.appendChild(sv);
+var sa=btn('別の名前で保存…');sa.id='wsaveas';sa.className='ghost';sa.onclick=saveAs;ar.appendChild(sa);box.appendChild(ar);
 var st=el('div');st.id='wsst';box.appendChild(st);
 var dt=document.createElement('details');dt.id='wsel';var sm=el('summary',null,'印刷する人を選ぶ');dt.appendChild(sm);var h4=el('div');h4.id='s4host';dt.appendChild(h4);box.appendChild(dt);
 h4.appendChild($('loaded'))}
@@ -1813,10 +1825,10 @@ function cleanFn(n){return String(n||'').replace(/[\\\/:*?"<>|\u0000-\u001f]+/g,
 function dlBlob(b,name){var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(a.href)},30000)}
 async function makePdf(){if(pdfBusy||modalOpen)return;var list=current();if(rows.length&&!list.length){alert('PDFにする生徒が選択されていません。');return}
 var base=cleanFn(S.curName||importName||V.hdr||tpl().name)||'受験票',dn=stamp(new Date());
-var d=await fdlg({title:'受験票PDFを作成して保存',text:list.length+'ページ（A4・1名1ページ）のPDFを作り、ファイル保管に保存します。',fields:[{k:'folder',label:'保存先フォルダ（空欄で未分類）',value:base,list:fNames(),max:60},{k:'name',label:'ファイル名',value:base+'_受験票_'+dn+'.pdf',max:120,req:1},{k:'note',label:'メモ',type:'area',value:'',max:500},{k:'dl',type:'check',label:'端末にもダウンロード',value:false}],warn:'このPDFには生徒の氏名などが含まれます。ログインしたスタッフ全員が閲覧できます。',ok:'作成して保存'});
+var d=await fdlg({title:'PDFをファイル保管へ',text:list.length+'ページ（A4・1名1ページ）のPDFを作り、ファイル保管に保存します。',fields:[{k:'folder',label:'保存先フォルダ（空欄で未分類）',value:base,list:fNames(),max:60},{k:'name',label:'ファイル名',value:base+'_受験票_'+dn+'.pdf',max:120,req:1},{k:'note',label:'メモ',type:'area',value:'',max:500},{k:'dl',type:'check',label:'端末にもダウンロード',value:false}],warn:'このPDFには生徒の氏名などが含まれます。ログインしたスタッフ全員が閲覧できます。',ok:'PDFを作って保存'});
 if(!d)return;var fname=cleanFn(d.name)||base+'_受験票';if(!/\.pdf$/i.test(fname))fname+='.pdf';
-if(!(await fontGate('PDFを保存')))return;
-pdfBusy=true;var cancel=false,host=null,pg=progDlg('PDFを作成して保存',function(){cancel=true});
+if(!(await fontGate('PDFをファイル保管へ')))return;
+pdfBusy=true;var cancel=false,host=null,pg=progDlg('PDFを作成中',function(){cancel=true});
 try{pg.set('ライブラリを読み込み中…');await loadScript(H2C);await loadScript(JSPDF);if(document.fonts&&document.fonts.ready)await document.fonts.ready;
 host=el('div');var pz=JT.pageSize(V),land=pz.w>pz.h;host.style.cssText='position:fixed;left:0;top:0;width:'+pz.w+'mm;height:'+pz.h+'mm;z-index:-1;overflow:hidden;pointer-events:none;background:#fff';document.body.appendChild(host);
 var T=tpl(),pdf=null,n=list.length,sc=200/96;
@@ -1835,7 +1847,7 @@ var blob=pdf.output('blob');pg.set('保存中…（'+fmtSize(blob.size)+'）',1)
 if(d.dl)dlBlob(blob,fname);
 var row=null,err='';try{row=await fPut(blob,{name:fname,kind:'pdf',mime:'application/pdf',folder:d.folder,note:d.note})}catch(e){err=fErr(e)}
 pg.close();pdfBusy=false;
-if(row){toast('PDFを保存しました（'+n+'ページ・'+fmtSize(blob.size)+'）','ファイルを開く',function(){FL.folder=row.folder||'';FL.tab='pdf';openFiles()},9000)}
+if(row){toast('PDFをファイル保管に保存しました（'+n+'ページ・'+fmtSize(blob.size)+'）','ファイルを開く',function(){FL.folder=row.folder||'';FL.tab='pdf';openFiles()},9000)}
 else{if(!d.dl)dlBlob(blob,fname);alert('ファイル保管への保存に失敗しました。\n'+err+'\n\nPDFは端末にダウンロードしました。')}
 }catch(e){if(host)host.remove();pg.close();pdfBusy=false;alert('PDFを作成できませんでした。'+(e&&e.message==='lib'?'\n作成に必要なライブラリを読み込めません。通信状況を確認してください。':'\n'+((e&&e.message)||e)))}}
 $('pdfsave').onclick=makePdf;$('spdf').onclick=function(){closeSM();makePdf()};
