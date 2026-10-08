@@ -197,9 +197,9 @@ html,body{background:#fff}
 .pw.off{position:static!important;visibility:visible!important;left:auto!important}
 .pw{margin:0!important}
 .pw [data-item],.pw [data-edit]{outline:0!important}
-.pw{width:210mm!important;height:297mm!important;box-shadow:none;overflow:hidden;page-break-after:always;break-after:page}
+.pw{box-shadow:none;overflow:hidden;page-break-after:always;break-after:page}
 .pw .ticket{position:static;transform:none!important}
-@page{size:A4;margin:0}}
+}
 
 #login{position:fixed;inset:0;z-index:100;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:16px}
 #login[hidden]{display:none}
@@ -346,6 +346,7 @@ button.dg,.dg{color:var(--err)}
 .card .cm{display:flex;align-items:center;gap:6px;min-width:0}
 .chip{display:inline-block;font-size:11px;padding:0 8px;border-radius:999px;background:var(--bg);border:1px solid var(--bd);color:var(--mut);white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .swt{display:inline-flex;gap:2px;flex:none}.swt i{width:10px;height:10px;border-radius:50%;border:1px solid rgba(0,0,0,.2)}
+.mini.land{aspect-ratio:297/210}
 .mini{position:relative;width:100%;aspect-ratio:210/297;overflow:hidden;background:#fff;border:1px solid var(--bd);border-radius:4px;pointer-events:none}
 .mini .ticket{position:absolute;left:0;top:0;transform-origin:0 0}
 .mini img.tb{width:100%;height:100%;object-fit:cover;object-position:top;display:block}
@@ -779,26 +780,26 @@ function chk(r){if(r.error)throw r.error;return r}
 /* ---------- ミニサムネイル（A4ページの縮小表示）・保存用サムネイル ---------- */
 function mkStu(idx,row){return {idx:idx,row:row,sample:!row,col:function(it){return colVal(this,it)}}}
 var miniRO=null;
-function mini(tid,vals){var box=el('div','mini'),t=JT.render(tid,mkStu(0,null),vals);box.appendChild(t);box._t=t;
-if(!miniRO&&window.ResizeObserver)miniRO=new ResizeObserver(function(es){es.forEach(function(e){var b=e.target,w=b.clientWidth;if(!w||!b._t)return;b._t.style.transform='scale('+(w/(210*C.PXMM))+')';if(!b._f){b._f=1;fitAll(b._t)}})});
+function mini(tid,vals){var pz=JT.pageSize(vals),box=el('div','mini'+(pz.w>pz.h?' land':'')),t=JT.render(tid,mkStu(0,null),vals);box.appendChild(t);box._t=t;box._pw=pz.w;
+if(!miniRO&&window.ResizeObserver)miniRO=new ResizeObserver(function(es){es.forEach(function(e){var b=e.target,w=b.clientWidth;if(!w||!b._t)return;b._t.style.transform='scale('+(w/(b._pw*C.PXMM))+')';if(!b._f){b._f=1;fitAll(b._t)}})});
 if(miniRO)miniRO.observe(box);else{t.style.transform='scale(.15)';setTimeout(function(){fitAll(t)},0)}
 return box}
-function thumbBox(src){var box=el('div','mini'),i=el('img','tb');i.src=src;i.alt='';box.appendChild(i);return box}
-function designThumb(p){return p.thumb?thumbBox(p.thumb):mini(p.tpl,JT.mkVals(p.tpl,p.vals))}
+function thumbBox(src,land){var box=el('div','mini'+(land?' land':'')),i=el('img','tb');i.src=src;i.alt='';box.appendChild(i);return box}
+function designThumb(p){return p.thumb?thumbBox(p.thumb,p.tpl==='free'&&p.vals&&p.vals.orient==='l'):mini(p.tpl,JT.mkVals(p.tpl,p.vals))}
 function loadImg(src){return new Promise(function(ok,ng){var i=new Image();i.onload=function(){ok(i)};i.onerror=function(){ng(new Error('img'))};i.src=src})}
 async function inlineImgs(t){var ims=t.querySelectorAll('img');
 for(var i=0;i<ims.length;i++){var m=ims[i];if(/^data:/.test(m.src))continue;if(!m.naturalWidth){m.remove();continue}
 var s=Math.min(1,700/Math.max(m.naturalWidth,m.naturalHeight)),c=document.createElement('canvas');c.width=Math.round(m.naturalWidth*s);c.height=Math.round(m.naturalHeight*s);c.getContext('2d').drawImage(m,0,0,c.width,c.height);m.src=c.toDataURL('image/png')}}
-function ticketSvg(t){var w=Math.round(210*C.PXMM),h=Math.round(297*C.PXMM);
+function ticketSvg(t,pz){var w=Math.round(pz.w*C.PXMM),h=Math.round(pz.h*C.PXMM);
 return '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'"><foreignObject x="0" y="0" width="'+w+'" height="'+h+'"><div xmlns="http://www.w3.org/1999/xhtml"><style><![CDATA['+JT.cssText()+']]></style>'+new XMLSerializer().serializeToString(t)+'</div></foreignObject></svg>'}
 /* 先頭ページを小さく描いたJPEG(dataURL, 約60KB以下)。氏名などは含めない（サンプル表示）。SVG→canvas、だめならhtml2canvas */
 async function makeThumb(tid,vals){
-var host=el('div');host.style.cssText='position:fixed;left:-99999px;top:0;width:210mm;height:297mm;overflow:hidden;background:#fff;pointer-events:none';document.body.appendChild(host);
+var host=el('div');var pz=JT.pageSize(vals);host.style.cssText='position:fixed;left:-99999px;top:0;width:'+pz.w+'mm;height:'+pz.h+'mm;overflow:hidden;background:#fff;pointer-events:none';document.body.appendChild(host);
 try{var t=JT.render(tid,mkStu(0,null),vals);host.appendChild(t);fitAll(t);await JukenFonts.prepare(t,6000);fitAll(t);
 var ims=Array.prototype.slice.call(t.querySelectorAll('img'));await Promise.all(ims.map(function(m){return m.complete?0:new Promise(function(r){m.onload=m.onerror=r})}));
-var W=300,H=Math.round(W*297/210),cv=document.createElement('canvas');cv.width=W;cv.height=H;var x=cv.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,W,H);var ok=false;
-try{var tt=t.cloneNode(true);host.appendChild(tt);await inlineImgs(tt);var im=await loadImg('data:image/svg+xml;charset=utf-8,'+encodeURIComponent(ticketSvg(tt)));x.drawImage(im,0,0,W,H);cv.toDataURL('image/jpeg',.5);ok=true}catch(e){ok=false;x.fillStyle='#fff';x.fillRect(0,0,W,H)}
-if(!ok){await loadScript(H2C);var big=await window.html2canvas(t,{scale:W/(210*C.PXMM),backgroundColor:'#ffffff',logging:false,useCORS:true});x.drawImage(big,0,0,W,H)}
+var W=300,H=Math.round(W*pz.h/pz.w),cv=document.createElement('canvas');cv.width=W;cv.height=H;var x=cv.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,W,H);var ok=false;
+try{var tt=t.cloneNode(true);host.appendChild(tt);await inlineImgs(tt);var im=await loadImg('data:image/svg+xml;charset=utf-8,'+encodeURIComponent(ticketSvg(tt,pz)));x.drawImage(im,0,0,W,H);cv.toDataURL('image/jpeg',.5);ok=true}catch(e){ok=false;x.fillStyle='#fff';x.fillRect(0,0,W,H)}
+if(!ok){await loadScript(H2C);var big=await window.html2canvas(t,{scale:W/(pz.w*C.PXMM),backgroundColor:'#ffffff',logging:false,useCORS:true});x.drawImage(big,0,0,W,H)}
 var q=.72,u=cv.toDataURL('image/jpeg',q);while(u.length>80000&&q>.3){q-=.1;u=cv.toDataURL('image/jpeg',q)}return u}
 finally{host.remove()}}
 async function thumbFor(tp,vals){try{return await makeThumb(tp,vals)}catch(e){return null}}
@@ -1291,10 +1292,12 @@ var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{typ
 function current(){if(!rows.length)return [mkStu(0,null)];var out=[];
 rows.forEach(function(r,i){if(sel[i])out.push(mkStu(i,r))});return out}
 var PXMM=96/25.4;
+function applyPageCss(){var p=JT.pageSize(V),s=document.getElementById('pgsz');if(!s){s=document.createElement('style');s.id='pgsz';document.head.appendChild(s)}
+s.textContent='@page{size:A4 '+(p.w>p.h?'landscape':'portrait')+';margin:0}@media print{.pw{width:'+p.w+'mm!important;height:'+p.h+'mm!important}}'}
 function render(){var list=current(),box=$('pages');box.textContent='';
-var avail=Math.max(200,$('pane').clientWidth-32);var sc=zoom==='100'&&UI.mode==='adv'?1:Math.min(1,avail/(210*PXMM));
+applyPageCss();var pz=JT.pageSize(V),avail=Math.max(200,$('pane').clientWidth-32);var sc=zoom==='100'&&UI.mode==='adv'?1:Math.min(1,avail/(pz.w*PXMM));
 var fl=[],T=tpl();
-list.forEach(function(st){var w=el('div','pw');w.style.width=(210*PXMM*sc)+'px';w.style.height=(297*PXMM*sc)+'px';
+list.forEach(function(st){var w=el('div','pw');w.style.width=(pz.w*PXMM*sc)+'px';w.style.height=(pz.h*PXMM*sc)+'px';
 var t=JT.render(S.tpl,st,V);if(window.JukenCheck&&JukenCheck.planned())JukenCheck.apply(t);t.style.transform='scale('+sc+')';w.appendChild(t);box.appendChild(w);fl.push(t)});
 fl.forEach(fitAll);
 if(rows.length)drawList();$('selcnt').textContent=rows.length?('選択 '+list.length+' / '+rows.length+'名'):'';
@@ -1313,7 +1316,7 @@ async function doPrint(){
 if(rows.length&&!current().length){alert('印刷する生徒が選択されていません。');return}
 try{await JukenFonts.prepare($('pages'));Array.prototype.forEach.call($('pages').querySelectorAll('.ticket'),fitAll)}catch(e){}
 if(!(await fontGate('印刷する')))return;
-window.print()}
+applyPageCss();window.print()}
 $('print').onclick=doPrint;$('qprint').onclick=doPrint;$('qpdf').onclick=function(){makePdf()};
 var rt;window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(render,100)});
 zoom=UI.zoom;showAll=UI.all;
@@ -1589,7 +1592,7 @@ if(document.fonts&&document.fonts.addEventListener)document.fonts.addEventListen
 DesignImport.init({sample:function(){return mkStu(0,null)},fitAll:fitAll,toast:toast,
 lastExt:function(){var c=presets.filter(function(p){return p.tpl==='free'&&p.vals&&JSON.stringify(p.vals).indexOf('"id":"bg"')>=0}).sort(function(a,b){return tsNum(b.at)-tsNum(a.at)})[0];return c?{id:c.id,name:c.name}:null},
 openLast:function(id){if(openPreset(id)){setStep(3);toast('前回のデザインを開きました。名簿を貼り付けてください')}},
-apply:function(o){var nv=JT.mkVals('free',{items:o.items,tpl:{free:{bg:o.bg,elements:o.elements,guides:[]}}});
+apply:function(o){var nv=JT.mkVals('free',{orient:o.orient,items:o.items,tpl:{free:{bg:o.bg,elements:o.elements,guides:[]}}});
 S.tpl='free';V=nv;clearCur();importName=o.name;lastFile='';selId='';navPos=0;afterDesignChange();resetBase();hideDraft();
 if(o.rosterLines){V.items.forEach(function(it){var ls=o.rosterLines[it.label];if(ls)texts[it.id]=ls.join('\n')});drawRoster()}
 if(UI.mode!=='easy')setMode('easy');setStep(3);render()}});
@@ -1738,7 +1741,7 @@ if(!d)return;var fname=cleanFn(d.name)||base+'_受験票';if(!/\.pdf$/i.test(fna
 if(!(await fontGate('PDFを保存')))return;
 pdfBusy=true;var cancel=false,host=null,pg=progDlg('PDFを作成して保存',function(){cancel=true});
 try{pg.set('ライブラリを読み込み中…');await loadScript(H2C);await loadScript(JSPDF);if(document.fonts&&document.fonts.ready)await document.fonts.ready;
-host=el('div');host.style.cssText='position:fixed;left:0;top:0;width:210mm;height:297mm;z-index:-1;overflow:hidden;pointer-events:none;background:#fff';document.body.appendChild(host);
+host=el('div');var pz=JT.pageSize(V),land=pz.w>pz.h;host.style.cssText='position:fixed;left:0;top:0;width:'+pz.w+'mm;height:'+pz.h+'mm;z-index:-1;overflow:hidden;pointer-events:none;background:#fff';document.body.appendChild(host);
 var T=tpl(),pdf=null,n=list.length,sc=200/96;
 for(var i=0;i<n;i++){if(cancel)break;pg.set('PDF作成中 '+(i+1)+'/'+n,i/n);
 host.textContent='';var t=JT.render(S.tpl,list[i],V);host.appendChild(t);if(JukenCheck.planned())JukenCheck.apply(t);fitAll(t);await JukenFonts.prepare(t);fitAll(t);
@@ -1747,8 +1750,8 @@ var ims=Array.prototype.slice.call(t.querySelectorAll('img'));await Promise.all(
 await new Promise(function(r){requestAnimationFrame(function(){setTimeout(r,0)})});
 var cv=await window.html2canvas(t,{scale:sc,backgroundColor:'#ffffff',useCORS:true,logging:false});
 var img=cv.toDataURL('image/jpeg',.9);cv.width=cv.height=0;
-if(!pdf)pdf=new window.jspdf.jsPDF({unit:'mm',format:'a4',orientation:'portrait',compress:true});else pdf.addPage('a4','p');
-pdf.addImage(img,'JPEG',0,0,210,297,undefined,'FAST')}
+if(!pdf)pdf=new window.jspdf.jsPDF({unit:'mm',format:'a4',orientation:land?'landscape':'portrait',compress:true});else pdf.addPage('a4',land?'l':'p');
+pdf.addImage(img,'JPEG',0,0,pz.w,pz.h,undefined,'FAST')}
 host.remove();host=null;
 if(cancel||!pdf){pg.close();pdfBusy=false;toast('PDFの作成を中止しました');return}
 var blob=pdf.output('blob');pg.set('保存中…（'+fmtSize(blob.size)+'）',1);pg.nocancel();

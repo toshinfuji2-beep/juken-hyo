@@ -290,7 +290,23 @@ function nameItems(V) {
 }
 
 /* ---------- 初期レイアウト（新しい白紙のフリーデザインに入れる、ほどよい見本） ---------- */
+function starterLand(V) {
+  var els = [], ft = JF_.valid(V.font) ? V.font : 'gothic';
+  function add(t, p) { var e = newElement(t, p); if (e) els.push(e); return e; }
+  var nmI = nameItems(V), no = nmI.no, kn = nmI.kn, ruby = nmI.ruby;
+  add('text', { name: 'タイトル', x: 15, y: 10, w: 267, h: 14, text: '{{ヘッダー}}', size: 20, weight: 700, color: 'accent', valign: 'middle', font: ft, fit: 'shrink' });
+  add('line', { name: 'タイトル罫線', x: 15, y: 26, w: 267, stroke: 'accent', strokeWidth: 1.5 });
+  if (no) add('field', { name: no.label, x: 15, y: 31, w: 130, h: 22, itemId: no.id, size: 30, font: ft });
+  if (kn && kn !== no) add('field', { name: kn.label, x: 152, y: 31, w: 130, h: 22, itemId: kn.id, size: 20, font: ft, ruby: ruby ? ruby.id : '' });
+  var rest = V.items.filter(function (i) { return !i.hidden && i !== no && i !== kn && i !== ruby; });
+  if (rest.length) add('table', { name: '情報テーブル', x: 15, y: 58, w: 160, h: Math.max(20, Math.min(42, tableH(rowsOf(rest)))), itemIds: rest.map(function (i) { return i.id; }), font: ft });
+  if (V.foldOn !== false) add('fold', { name: '折り線', y: 105, w: 297, label: V.foldLabel == null ? '＜山折り＞' : V.foldLabel });
+  add('notes', { name: '注意事項', x: 182, y: 58, w: 100, h: 140, title: V.noteTitle || '' });
+  add('image', { name: '地図', x: 15, y: 112, w: 80, h: 80, src: 'map' });
+  return els;
+}
 function starter(V) {
+  if (V.orient === 'l') return starterLand(V);
   var els = [], ft = JF_.valid(V.font) ? V.font : 'gothic';
   function add(t, p) { var e = newElement(t, p); if (e) els.push(e); return e; }
   function find(re, not) { return C.findItem(V, re, not); }
@@ -372,7 +388,7 @@ JT.register({
   id: 'free',
   name: 'フリーデザイン',
   category: '自由編集',
-  description: 'A4に文字・図形・画像・項目を自由に配置して作るデザイン（「デザイン編集」で作成）。',
+  description: 'A4（縦・横）に文字・図形・画像・項目を自由に配置して作るデザイン（「デザイン編集」で作成）。',
   swatch: ['#ffffff', '#1e40af', '#e5e7eb'],
   defaults: { accent: '#1e40af', secondary: '#e8edf3', font: 'gothic', hdr: '○○模試　受験票', noteTitle: '注意事項' },
   uses: ['header', 'badge', 'mark', 'accent', 'secondary', 'font', 'notes', 'images', 'wm'],
@@ -386,7 +402,7 @@ JT.register({
     t.style.background = F.bg || '#ffffff';
     JF_.use(V.font); F.elements.forEach(function (e) { if (!e.hidden && e.font) JF_.use(e.font); });
     F.elements.forEach(function (e) { if (e.hidden) return; var n = renderEl(e, V, st, t, edit); if (n) t.appendChild(n); });
-    var wm = Cx.watermark(V, { top: 0, height: 297 }); if (wm) t.appendChild(wm);
+    var wm = Cx.watermark(V, { top: 0, height: JT.pageSize(V).h }); if (wm) t.appendChild(wm);
     return t;
   },
   styles: [

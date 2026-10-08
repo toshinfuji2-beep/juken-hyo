@@ -5,7 +5,7 @@
        r = { elements:[…free要素…], bg:'#ffffff', stats:{count, skipped:{種類:数}, emf:[…], images, aspectDiff, scale}, name }
      var t   = await PptxImport.slideTexts(pkg, i);       // {要素id:文字}（名簿の読み取り用。画像は読まない）
    要素の id はスライド内の位置（木の添字）から作るため、同じ型から複製したスライド同士では同じ id になる。
-   単位：PowerPoint の EMU（1mm=36000）→ A4（210×297mm）へ縦横比を保って拡大縮小し、中央に置く。 */
+   単位：PowerPoint の EMU（1mm=36000）→ A4（縦210×297mm／横297×210mm。opts.orient か、スライドが横長なら横）へ縦横比を保って拡大縮小し、中央に置く。 */
 (function (g) {
 'use strict';
 var EMU = 36000;           /* 1mm */
@@ -642,8 +642,9 @@ async function bgOf(cx, st) {
 async function convertSlide(pkg, i, opts) {
   opts = Object.assign({ maxPx: 1600, skipMedia: false }, opts || {});
   var cx = await slideCtx(pkg, i);
-  var cxx = pkg.sz.cx, cyy = pkg.sz.cy, wmm = cxx / EMU, hmm = cyy / EMU, S = Math.min(210 / wmm, 297 / hmm);
-  var T = { S: S, ox: (210 - wmm * S) / 2, oy: (297 - hmm * S) / 2, pkg: pkg, cx: cx };
+  var cxx = pkg.sz.cx, cyy = pkg.sz.cy, wmm = cxx / EMU, hmm = cyy / EMU;
+  var orient = opts.orient === 'p' || opts.orient === 'l' ? opts.orient : (wmm > hmm ? 'l' : 'p'), PGW = orient === 'l' ? 297 : 210, PGH = orient === 'l' ? 210 : 297, S = Math.min(PGW / wmm, PGH / hmm);
+  var T = { S: S, ox: (PGW - wmm * S) / 2, oy: (PGH - hmm * S) / 2, pkg: pkg, cx: cx };
   var st = { out: [], skipped: {}, emf: [], notes: [], images: 0, cx: cx, T: T, pkg: pkg, opts: opts, layout: cx.layout, master: cx.master, tag: 's', gid: null, locked: false, rels: cx.srels };
   var bg = await bgOf(cx, st), pageBg = bg.hex || '#ffffff';
   if (bg.img && !opts.skipMedia) {
@@ -679,9 +680,9 @@ async function convertSlide(pkg, i, opts) {
   var els = g.JukenFree ? g.JukenFree.normElements(st.out) : st.out;
   var dropped = st.out.length - els.length;
   var sk = st.skipped, skTotal = Object.keys(sk).reduce(function (a, k) { return a + sk[k]; }, 0);
-  var aspectDiff = Math.abs(wmm / hmm - 210 / 297) > 0.01;
+  var aspectDiff = Math.abs(wmm / hmm - PGW / PGH) > 0.01;
   return {
-    elements: els, bg: pageBg,
+    elements: els, bg: pageBg, orient: orient,
     stats: { count: els.length, skipped: sk, skippedTotal: skTotal, emf: st.emf, images: st.images, aspectDiff: aspectDiff, scale: S, size: { w: wmm, h: hmm }, dropped: dropped, notes: st.notes }
   };
 }

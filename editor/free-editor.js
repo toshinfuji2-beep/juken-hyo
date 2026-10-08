@@ -20,7 +20,7 @@ var FE = g.FreeEditor = {};
 
 var JF = g.JukenFree, JT = g.JukenTemplates, C = JT.ctx;
 
-var PXMM = 96 / 25.4, PW = 210, PH = 297;
+var PXMM = 96 / 25.4;
 
 var H = null, root = null, R = {}, pop = null, mini = null;
 
@@ -55,6 +55,23 @@ function tx(tag, cls, text) { var e = document.createElement(tag); if (cls) e.cl
 function $(s, r) { return (r || root).querySelector(s); }
 
 function V() { return H.V(); }
+/* 用紙の大きさ(mm)。向きはデザインの値 orient で決まる */
+function pW() { return JT.pageSize(V()).w; }
+function pH() { return JT.pageSize(V()).h; }
+function pageText() { return pW() > pH() ? 'A4 横（297 × 210 mm）' : 'A4 縦（210 × 297 mm）'; }
+function foldDef() { return pW() > pH() ? { y: 105, x: 0, w: 297 } : { y: 148.5, x: 0, w: 210 }; }
+function setOrient(o) {
+  var old = JT.pageSize(V()); if ((V().orient === 'l' ? 'l' : 'p') === o) return;
+  mut(function () {
+    V().orient = o; var nw = JT.pageSize(V());
+    elems().forEach(function (e) {
+      if (e.type === 'image' && e.locked && !e.x && !e.y && Math.abs(e.w - old.w) < 0.5 && Math.abs(e.h - old.h) < 0.5) { e.w = nw.w; e.h = nw.h; }
+      if (e.type === 'fold' && !e.x && Math.abs(e.w - old.w) < 0.5 && Math.abs(e.y - old.h / 2) < 0.5) { e.w = nw.w; e.y = nw.h / 2; }
+    });
+    S.themeC = null;
+  }, { label: '用紙の向きの変更' });
+  if (S.fit) setZoom(fitZoom(), null, null, true);
+}
 
 function F() { return H.V().tpl.free; }
 
@@ -869,7 +886,7 @@ function openBackstage(sec) {
   if (sec === 'info') {
     r.appendChild(tx('h2', null, '情報'));
     var dl = h('dl', 'fe-bsi'), ls = H.students(), real = ls.length && !ls[0].sample;
-    [['デザイン名', H.name()], ['保存の状態', S.st.t || '（変更なし）'], ['用紙', 'A4 縦（210 × 297 mm）'], ['要素の数', elems().length + '個'], ['差し込み項目', Vv.items.length + '個'], ['名簿', real ? ls.length + '名を選択中' : '未読み込み（サンプルで表示）']].forEach(function (x) { dl.appendChild(tx('dt', null, x[0])); dl.appendChild(tx('dd', null, x[1])); });
+    [['デザイン名', H.name()], ['保存の状態', S.st.t || '（変更なし）'], ['用紙', pageText()], ['要素の数', elems().length + '個'], ['差し込み項目', Vv.items.length + '個'], ['名簿', real ? ls.length + '名を選択中' : '未読み込み（サンプルで表示）']].forEach(function (x) { dl.appendChild(tx('dt', null, x[0])); dl.appendChild(tx('dd', null, x[1])); });
     r.appendChild(dl);
   } else if (sec === 'saveas') { r.appendChild(tx('h2', null, '名前を付けて保存')); r.appendChild(tx('p', null, '別の名前で保存します。いまのデザインは元の名前のまま残ります。')); r.appendChild(big('saveas', '名前を付けて保存…', '保存先のフォルダーと名前を指定します', function () { H.act('saveas'); })); }
   else if (sec === 'pdf') { r.appendChild(tx('h2', null, 'PDFとして保存')); r.appendChild(tx('p', null, '選択中の生徒の受験票を、1人1ページのPDFにします。')); r.appendChild(big('pdf', 'PDFとして保存', '印刷用のA4・PDFファイルを作ります', function () { H.act('pdf'); })); }
@@ -891,12 +908,12 @@ function openUndoList(anchor) {
 function fitZoom() {
   var W = R.scroll.clientWidth, Hh = R.scroll.clientHeight, pad = S.rulers ? [92, 84] : [64, 54];
   if (W < 100 || Hh < 100) return S.zoom;
-  var wfit = (W - pad[0]) / (PW * PXMM), hfit = (Hh - pad[1]) / (PH * PXMM);
+  var wfit = (W - pad[0]) / (pW() * PXMM), hfit = (Hh - pad[1]) / (pH() * PXMM);
   return clamp(S.fit === 'p' ? Math.min(wfit, hfit) : Math.min(wfit, Math.max(hfit, 0.8)), 0.1, 4);
 }
 function setZoom(z, cx, cy, fitting) {
   z = clamp(z, 0.1, 4); if (!fitting) S.fit = false;
-  var br = R.box.getBoundingClientRect(), s0 = sz(), mx = cx != null ? (cx - br.left) / s0 : PW / 2, my = cy != null ? (cy - br.top) / s0 : PH / 2;
+  var br = R.box.getBoundingClientRect(), s0 = sz(), mx = cx != null ? (cx - br.left) / s0 : pW() / 2, my = cy != null ? (cy - br.top) / s0 : pH() / 2;
   S.zoom = z; layout(); drawOv(); drawZoomBtns();
   if (!fitting) {
     var br2 = R.box.getBoundingClientRect(), vr = R.scroll.getBoundingClientRect(), s1 = sz();
@@ -905,7 +922,7 @@ function setZoom(z, cx, cy, fitting) {
   }
 }
 function layout() {
-  var s = sz(), w = PW * PXMM * S.zoom, hh = PH * PXMM * S.zoom;
+  var s = sz(), w = pW() * PXMM * S.zoom, hh = pH() * PXMM * S.zoom;
   R.box.style.width = w + 'px'; R.box.style.height = hh + 'px';
   if (S.page) { S.page.style.transform = 'scale(' + S.zoom + ')'; }
   R.zv.textContent = Math.round(S.zoom * 100) + '%'; R.zs.value = Math.round(S.zoom * 100);
@@ -917,7 +934,7 @@ function drawRulers() {
   var s = sz(), step = s * 10 >= 30 ? 10 : s * 10 >= 14 ? 20 : 50;
   [R.rt, R.rl].forEach(function (r, k) {
     r.textContent = '';
-    for (var mmv = 0; mmv <= (k ? PH : PW); mmv += step) { var sp = tx('span', null, String(mmv)); sp.style[k ? 'top' : 'left'] = (mmv * s) + 'px'; r.appendChild(sp); }
+    for (var mmv = 0; mmv <= (k ? pH() : pW()); mmv += step) { var sp = tx('span', null, String(mmv)); sp.style[k ? 'top' : 'left'] = (mmv * s) + 'px'; r.appendChild(sp); }
     var a = k ? '180deg' : '90deg', col = 'rgba(127,127,127,.7)';
     r.style.backgroundImage = 'linear-gradient(' + a + ',' + col + ' 1px,transparent 1px),linear-gradient(' + a + ',' + col + ' 1px,transparent 1px)';
     r.style.backgroundSize = k ? ('8px ' + (10 * s) + 'px,4px ' + (5 * s) + 'px') : ((10 * s) + 'px 8px,' + (5 * s) + 'px 4px');
@@ -972,7 +989,7 @@ function drawThumbs(now) {
   if (!now) { thTimer = setTimeout(function () { drawThumbs(true); }, 280); return; }
   var L = R.thl, keep = L.scrollTop; L.textContent = '';
   var list = H.students(), real = list.length > 0 && !list[0].sample, many = real && !S.raw && list.length > 1;
-  var pw = Math.max(64, S.thw - 56), ph = Math.round(pw * 297 / 210);
+  var pw = Math.max(64, S.thw - 56), ph = Math.round(pw * pH() / pW());
   if (thObs) { thObs.disconnect(); thObs = null; }
   if (window.IntersectionObserver) thObs = new IntersectionObserver(function (es) { es.forEach(function (en) { if (en.isIntersecting) { var p = en.target; thObs.unobserve(p); thRender(p, pw); } }); }, { root: L, rootMargin: '200px' });
   var n = many ? list.length : 1;
@@ -990,7 +1007,7 @@ function drawThumbs(now) {
 function thRender(p, pw) {
   if (p._d) return; p._d = 1; var list = H.students(), st = Object.create(p._i >= 0 ? (list[p._i] || H.sample()) : (list[clamp(S.pidx, 0, list.length - 1)] || H.sample()));
   st._edit = false; st._raw = S.raw && p._i < 0;
-  try { var pg = JT.render('free', st, V()); pg.style.transform = 'scale(' + (pw / (PW * PXMM)) + ')'; p.appendChild(pg); H.fitAll(pg); } catch (e) {}
+  try { var pg = JT.render('free', st, V()); pg.style.transform = 'scale(' + (pw / (pW() * PXMM)) + ')'; p.appendChild(pg); H.fitAll(pg); } catch (e) {}
 }
 function thumbSel() {
   if (!R.thl) return; var many = R.thl.children.length > 1;
@@ -1146,9 +1163,9 @@ function addEl(type, props) {
 
   var off = (S.addN++ % 6) * 4;
 
-  if (!props || props.x == null) e.x = r2(clamp((PW - e.w) / 2 + off, 0, PW - Math.min(e.w, PW)));
+  if (!props || props.x == null) e.x = r2(clamp((pW() - e.w) / 2 + off, 0, pW() - Math.min(e.w, pW())));
 
-  if (!props || props.y == null) e.y = r2(clamp((PH - e.h) / 2 + off, 0, PH));
+  if (!props || props.y == null) e.y = r2(clamp((pH() - e.h) / 2 + off, 0, pH()));
 
   mut(function () { elems().push(e); setSel([e.id]); }, { label: '挿入' });
 
@@ -1232,7 +1249,7 @@ function alignSel(kind) {
 
   var es = selEls().filter(function (e) { return !e.locked && !e.hidden; }); if (!es.length) return;
 
-  var bb = es.length === 1 ? { x: 0, y: 0, r: PW, b: PH, cx: PW / 2, cy: PH / 2 } : unionBox(es);
+  var bb = es.length === 1 ? { x: 0, y: 0, r: pW(), b: pH(), cx: pW() / 2, cy: pH() / 2 } : unionBox(es);
 
   mut(function () {
 
@@ -1256,7 +1273,7 @@ function centerPage(axis) {
 
   var es = selEls().filter(function (e) { return !e.locked && !e.hidden; }); if (!es.length) return; var bb = unionBox(es);
 
-  mut(function () { es.forEach(function (e) { if (axis === 'h') e.x = r2(e.x + PW / 2 - bb.cx); else e.y = r2(e.y + PH / 2 - bb.cy); }); }, { label: '配置の変更' });
+  mut(function () { es.forEach(function (e) { if (axis === 'h') e.x = r2(e.x + pW() / 2 - bb.cx); else e.y = r2(e.y + pH() / 2 - bb.cy); }); }, { label: '配置の変更' });
 
 }
 
@@ -1536,7 +1553,7 @@ function gallery(descs, mk, vis, cls) {
 
 /* デザイン（テーマ）・レイアウトのサムネイル */
 
-function thumbOf(pageFn) { var box = h('div', 'fe-thumb'), pg; try { pg = pageFn(); } catch (e) { return box; } pg.style.transform = 'scale(' + (36 / (210 * PXMM)) + ')'; box.style.width = '36px'; box.style.height = '51px'; box.appendChild(pg); return box; }
+function thumbOf(pageFn) { var box = h('div', 'fe-thumb'), pg; try { pg = pageFn(); } catch (e) { return box; } pg.style.transform = 'scale(' + (36 / (pW() * PXMM)) + ')'; box.style.width = '36px'; box.style.height = '51px'; box.appendChild(pg); return box; }
 
 function themeDescs() {
 
@@ -1550,7 +1567,7 @@ function themeDescs() {
 
     });
 
-    JF.LAYOUTS.forEach(function (L) { S.themeC.lay.push({ n: L.name, sub: L.desc, th: thumbOf(function () { return pageFor(L.build(Vv)); }), fn: function () { applyLayout(L.build(V())); } }); });
+    if (Vv.orient !== 'l') JF.LAYOUTS.forEach(function (L) { S.themeC.lay.push({ n: L.name, sub: L.desc, th: thumbOf(function () { return pageFor(L.build(Vv)); }), fn: function () { applyLayout(L.build(V())); } }); });
 
     S.themeC.lay.push({ n: '初期レイアウト', sub: 'タイトル・番号・表・折り線・注意事項', th: thumbOf(function () { return pageFor(JF.starter(Vv)); }), fn: function () { applyLayout(JF.starter(V())); } });
 
@@ -1588,7 +1605,7 @@ function toggleFold() {
 
   var fs = elems().filter(function (e) { return e.type === 'fold'; });
 
-  if (!fs.length) { addEl('fold', { y: 148.5, x: 0, w: 210 }); return; }
+  if (!fs.length) { addEl('fold', foldDef()); return; }
 
   var hid = fs.every(function (e) { return e.hidden; }); mut(function () { fs.forEach(function (e) { e.hidden = !hid; }); }, { label: '折り線の表示切り替え' });
 
@@ -1598,7 +1615,9 @@ function pageInfoPop(anchor) {
 
   var p = h('div', 'fe-pophost fe-wide'), fs = elems().filter(function (e) { return e.type === 'fold'; });
 
-  p.appendChild(tx('h5', null, 'ページ設定')); p.appendChild(tx('p', null, '用紙：A4 縦（210 × 297 mm）。受験票は印刷とPDFで同じ大きさになるため、用紙の大きさは変えられません。'));
+  p.appendChild(tx('h5', null, 'ページ設定')); p.appendChild(tx('p', null, '用紙：' + pageText() + '。向きを変えても要素の位置はそのままです（はみ出した要素は動かして直してください）。'));
+  p.appendChild(tx('h5', null, '用紙の向き'));
+  p.appendChild(radios([['p', '縦'], ['l', '横']], V().orient === 'l' ? 'l' : 'p', function (v) { closePop(); setOrient(v); }));
 
   p.appendChild(chkInput('折り線を表示', fs.length && !fs.every(function (e) { return e.hidden; }), function () { closePop(); toggleFold(); }));
 
@@ -1840,7 +1859,7 @@ RT.insert = function (X1) {
 
       rb({ big: 1, i: 'note', l: '注意事項', t: '注意事項', d: '注意事項の本文を表示するブロックを挿入します。', fn: function () { addEl('notes', { x: 15, y: 156, w: 112, h: 110, title: V().noteTitle || '' }); } }),
 
-      rb({ big: 1, i: 'fold', l: '折り線', t: '折り線', d: '山折り・谷折りの目印（破線と文字）を挿入します。', fn: function () { addEl('fold', { y: 148.5, x: 0, w: 210 }); } })
+      rb({ big: 1, i: 'fold', l: '折り線', t: '折り線', d: '山折り・谷折りの目印（破線と文字）を挿入します。', fn: function () { addEl('fold', foldDef()); } })
 
     ]),
 
@@ -1866,7 +1885,7 @@ RT.design = function (X1) {
 
       rb({ big: 1, i: 'drop', l: '背景の\n書式設定', t: '背景の書式設定', d: 'ページの背景色を変えます。', fn: function () { setSel([]); selChanged(); openPane('fmt', 'bg', 'shape'); } }),
 
-      rb({ big: 1, i: 'page', l: 'ページ設定', t: 'ページ設定', d: '用紙（A4）の情報と、折り線・グリッドの設定です。', fn: function (e, b) { pageInfoPop(b); } })
+      rb({ big: 1, i: 'page', l: 'ページ設定', t: 'ページ設定', d: '用紙（A4の縦・横）と、折り線・グリッドの設定です。', fn: function (e, b) { pageInfoPop(b); } })
 
     ])
 
@@ -2177,7 +2196,7 @@ function convertFrom(tid) {
   var srcV = JT.switchVals(tid, V());
   JF.convert(tid, srcV, H.students()[0] || H.sample()).then(function (r) {
     mut(function () {
-      var v = V(); F().elements = JF.normElements(r.elements); F().bg = r.bg || '#ffffff'; F().guides = []; S.sel = [];
+      var v = V(); v.orient = 'p'; S.themeC = null; F().elements = JF.normElements(r.elements); F().bg = r.bg || '#ffffff'; F().guides = []; S.sel = [];
       v.accent = srcV.accent; v.secondary = srcV.secondary; v.font = srcV.font;
       if (r.wm) { v.wmAnchor = 'page'; v.wmY = r.wm.y; }
     });
@@ -2346,7 +2365,7 @@ function drawFmtPane(P) {
 
       b.appendChild(prow('背景色', swatch(F().bg, false, function (v, lv) { F().bg = v || '#ffffff'; H.changed(!lv); lbl('背景の変更'); if (lv) { drawPage(); } else redraw(); }, F().bg)));
 
-      b.appendChild(tx('p', null, '用紙：A4 縦（210 × 297 mm）。要素を選ぶと、その書式がここに出ます。')).style.cssText = 'margin:0;font-size:11px;color:var(--mut)';
+      b.appendChild(tx('p', null, '用紙：' + pageText() + '。要素を選ぶと、その書式がここに出ます。')).style.cssText = 'margin:0;font-size:11px;color:var(--mut)';
 
     });
 
@@ -2561,7 +2580,7 @@ function drawSelPane(P) {
 function pageXY(ev) { var r = R.box.getBoundingClientRect(), s = sz(); return { x: (ev.clientX - r.left) / s, y: (ev.clientY - r.top) / s }; }
 function blurActive() { var a = document.activeElement; if (a && a !== document.body && root.contains(a) && a.blur && !S.editing) a.blur(); }
 function snapTargets(excl) {
-  var xs = [0, PW / 2, PW, 10, PW - 10], ys = [0, PH / 2, PH, 10, PH - 10];   /* ページの端・中央・余白(10mm) */
+  var xs = [0, pW() / 2, pW(), 10, pW() - 10], ys = [0, pH() / 2, pH(), 10, pH() - 10];   /* ページの端・中央・余白(10mm) */
   if (S.guides) F().guides.forEach(function (g) { (g.axis === 'x' ? xs : ys).push(g.pos); });
   elems().forEach(function (e) { if (e.hidden || excl.indexOf(e.id) >= 0) return; var a = JF.aabb(e); xs.push(a.x, a.cx, a.r); ys.push(a.y, a.cy, a.b); });
   return { xs: xs, ys: ys };
@@ -2837,7 +2856,7 @@ function onUp(ev) {
   if (d.mode === 'rot' || d.mode === 'rs' || d.mode === 'rotm' || d.mode === 'rsm') { if (d.moved) { lbl(d.mode === 'rot' || d.mode === 'rotm' ? '回転' : 'サイズ変更'); H.changed(true); redraw(); } else drawOv(); return; }
   if (d.mode === 'mq') { selChanged(); return; }
   if (d.mode === 'guide') {
-    var g = F().guides[d.gi]; var lim = d.axis === 'x' ? PW : PH;
+    var g = F().guides[d.gi]; var lim = d.axis === 'x' ? pW() : pH();
     if (g && (g.pos < 0 || g.pos > lim || (d.isNew && !d.moved))) F().guides.splice(d.gi, 1);
     lbl('ガイドの変更'); H.changed(true); drawOv(); drawPane();
   }

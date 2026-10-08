@@ -31,7 +31,7 @@ function convert(tid, V, st) {
   var fontsReady = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
   return fontsReady.then(function () {
     var host = document.createElement('div');
-    host.style.cssText = 'position:fixed;left:-6000px;top:0;width:210mm;height:297mm;opacity:0;pointer-events:none;overflow:hidden;background:#fff';
+    host.style.cssText = 'position:fixed;left:-6000px;top:0;width:' + JT.pageSize(V).w + 'mm;height:' + JT.pageSize(V).h + 'mm;opacity:0;pointer-events:none;overflow:hidden;background:#fff';
     document.body.appendChild(host);
     var stu = Object.create(st); stu._edit = false;
     var page = JT.render(tid, stu, V);

@@ -24,6 +24,8 @@ function loadScript(u) {
   }));
 }
 function btn(t, title, cls) { var b = el('button', cls || null, t); b.type = 'button'; if (title) b.title = title; return b; }
+/* 取り込み中の用紙（縦210×297／横297×210）。向きは M.orient */
+function pg() { return JT.pageSize({ orient: M && M.orient }); }
 function mm2px(v) { return v * PXMM * (M ? M.sc : 1); }
 function nextFrame() { return new Promise(function (r) { setTimeout(r, 0); }); }
 
@@ -217,10 +219,12 @@ function pdfFontAt(b) {
   for (i = 0; i < M.textItems.length; i++) { it = M.textItems[i]; if (it.font && cx >= it.x && cx <= it.x + it.w && cy >= it.y && cy <= it.y + it.h) return it.font; }
   return '';
 }
-function geoOf(cv) { var k = Math.min(210 / cv.width, 297 / cv.height); return { k: k, ox: (210 - cv.width * k) / 2, oy: (297 - cv.height * k) / 2, cw: cv.width, ch: cv.height }; }
+function geoOf(cv) { var P = pg(), k = Math.min(P.w / cv.width, P.h / cv.height); return { k: k, ox: (P.w - cv.width * k) / 2, oy: (P.h - cv.height * k) / 2, cw: cv.width, ch: cv.height }; }
 async function startBackground(src, ratio, what, cv, mode) {
-  var diff = Math.abs(ratio - 210 / 297) > 0.02;
-  M.elements = [{ type: 'image', id: 'bg', x: 0, y: 0, w: 210, h: 297, fit: 'contain', locked: true, name: '背景（' + what + '）', src: src }];
+  if (!M.orientSet) M.orient = ratio > 1 ? 'l' : 'p';
+  M.ratio = ratio;
+  var P = pg(), diff = Math.abs(ratio - P.w / P.h) > 0.02;
+  M.elements = [{ type: 'image', id: 'bg', x: 0, y: 0, w: P.w, h: P.h, fit: 'contain', locked: true, name: '背景（' + what + '）', src: src }];
   M.bg = '#ffffff';
   M.stats = { count: 1, skipped: {}, skippedTotal: 0, emf: [], aspectDiff: diff, bgOnly: true, what: what };
   M.sugg = []; M.det = {}; M.orig = {}; M.map = {}; M.custom = {}; M.fixed = {};
@@ -275,7 +279,7 @@ async function rescueLabels(boxes) {
     sb.forEach(function (o) { if (o !== a && o.x > a.x + a.w && Math.min(o.y + o.h, a.y + a.h) - Math.max(o.y, a.y) > 0.3 * a.h) rl = Math.min(rl, o.x - 1); });
     var regs = [{ x: a.x - 2, y: a.y + a.h + 0.5, w: Math.max(a.w * 2.5, 45), h: Math.max(a.h * 2, 13) }, { x: a.x + a.w + 1, y: a.y - 1, w: Math.max(5, Math.min(rl - (a.x + a.w + 1), 70)), h: a.h + 2 }];
     for (var j = 0; j < regs.length; j++) {
-      var rg = regs[j]; rg.x = Math.max(0, rg.x); rg.w = Math.min(rg.w, 210 - rg.x); rg.y = Math.max(0, rg.y); rg.h = Math.min(rg.h, 297 - rg.y);
+      var rg = regs[j]; rg.x = Math.max(0, rg.x); rg.w = Math.min(rg.w, pg().w - rg.x); rg.y = Math.max(0, rg.y); rg.h = Math.min(rg.h, pg().h - rg.y);
       if (!empty(rg)) continue;
       var ink = DD.inkBox(M.pix, toPx(rg)); if (!ink) continue;
       var r = await DD.ocrRegion(M.pix, ink, L.label, ocrProg), t = r.text;
@@ -301,7 +305,7 @@ async function buildDetected(lines, ocr) {
   boxes.forEach(function (b, i) { b.id = 'd' + (i + 1); sb.push({ id: b.id, text: b.text, x: b.x, y: b.y, w: b.w, h: b.h, size: b.size }); });
   var padMm = 0.8, padPx = padMm / G.k;
   boxes.forEach(function (b) {
-    var gl = b.x, gr = 210 - (b.x + b.w);
+    var gl = b.x, gr = pg().w - (b.x + b.w);
     boxes.forEach(function (o) {
       if (o === b) return;
       var ov = Math.min(b.y + b.h, o.y + o.h) - Math.max(b.y, o.y); if (ov < 0.5 * Math.min(b.h, o.h)) return;
@@ -396,18 +400,19 @@ async function startPptx(f) {
   if (!g.JSZip) { try { await loadScript(LIB.jszip); } catch (e) { throw new Error('ファイルを読み取る部品を読み込めませんでした。通信状況を確認してもう一度お試しください。'); } }
   var buf = await readBuf(f);
   M.pkg = await PptxImport.open(buf);
+  if (!M.orientSet) M.orient = M.pkg.sz.cx > M.pkg.sz.cy ? 'l' : 'p';
   if (M.pkg.slides.length === 1) { await pickSlide(0); return; }
-  var n = M.pkg.slides.length, thumbOpts = { maxPx: 260, skipMedia: false };
+  var n = M.pkg.slides.length, thumbOpts = { maxPx: 260, skipMedia: false, orient: M.orient };
   showPicker({ title: 'どのスライドをデザインにしますか？', sub: 'このファイルは' + n + 'ページあります。生徒ごとに1枚ずつ作ってある場合は、どれか1枚を選んでください（あとで、全スライドから名簿も読み取れます）。', count: n, thumb: async function (i, box) {
     var r = await PptxImport.convertSlide(M.pkg, i, thumbOpts);
-    var V = tempVals(r.elements, r.bg, []), t = JT.render('free', H.sample(), V), s = box.clientWidth / (210 * PXMM) || 0.15;
+    var V = tempVals(r.elements, r.bg, []), t = JT.render('free', H.sample(), V), s = box.clientWidth / (pg().w * PXMM) || 0.15; box.style.aspectRatio = pg().w + '/' + pg().h;
     t.style.transform = 'scale(' + s + ')'; box.appendChild(t); H.fitAll(t);
   }, label: function (i) { return (i + 1) + '枚目'; }, pick: function (i) { pickSlide(i); } });
 }
 async function pickSlide(i) {
   showBusy('スライドを変換しています…');
-  var r = await PptxImport.convertSlide(M.pkg, i, { maxPx: 1600 });
-  M.slideIdx = i; M.elements = r.elements; M.bg = r.bg; M.stats = r.stats;
+  var r = await PptxImport.convertSlide(M.pkg, i, { maxPx: 1600, orient: M.orient });
+  M.slideIdx = i; M.orient = r.orient; M.elements = r.elements; M.bg = r.bg; M.stats = r.stats;
   M.orig = {}; M.map = {}; M.custom = {}; M.fixed = {};
   r.elements.forEach(function (e) { if (e.type === 'text') M.orig[e.id] = e.text; });
   M.sugg = suggest();
@@ -483,7 +488,7 @@ function itemsForDraft() {
     return JT.mkItem(l, 'column', { column: l });
   });
 }
-function tempVals(elements, bg, items) { return JT.mkVals('free', { items: items, tpl: { free: { bg: bg, elements: elements, guides: [] } } }); }
+function tempVals(elements, bg, items) { return JT.mkVals('free', { orient: M && M.orient, items: items, tpl: { free: { bg: bg, elements: elements, guides: [] } } }); }
 function coverEl(e) {
   var c = e.cover; return { type: 'rect', id: 'cv_' + e.id, x: c.x, y: c.y, w: c.w, h: c.h, fill: c.fill, stroke: 'transparent', strokeWidth: 0, locked: true, name: '元の文字を隠す', groupId: 'g_' + e.id };
 }
@@ -515,9 +520,9 @@ function drawStage() {
   closePop(true);
   var keepSc = st.scrollTop; st.textContent = '';
   var availW = Math.max(160, st.clientWidth - 32), availH = Math.max(200, st.clientHeight - 32);
-  var sc = Math.min(availW / (210 * PXMM), availH / (297 * PXMM)); if (innerWidth <= 820) sc = Math.min(sc, availW / (210 * PXMM));
+  var P = pg(), sc = Math.min(availW / (P.w * PXMM), availH / (P.h * PXMM)); if (innerWidth <= 820) sc = Math.min(sc, availW / (P.w * PXMM));
   sc = Math.max(0.2, sc); M.sc = sc;
-  var inner = el('div', 'dp-inner'); inner.style.width = 210 * PXMM * sc + 'px'; inner.style.height = 297 * PXMM * sc + 'px'; M.inner = inner;
+  var inner = el('div', 'dp-inner'); inner.style.width = P.w * PXMM * sc + 'px'; inner.style.height = P.h * PXMM * sc + 'px'; M.inner = inner;
   var V = tempVals(stageElements(), M.bg, itemsForDraft()), t = JT.render('free', H.sample(), V);
   t.style.transform = 'scale(' + sc + ')'; inner.appendChild(t); st.appendChild(inner); H.fitAll(t);
   var hits = el('div', 'dp-hits' + (M.draw ? ' draw' : '')); inner.appendChild(hits); M.hits = hits;
@@ -554,7 +559,7 @@ function onDown(ev) {
     var up = function (e2) {
       document.removeEventListener('pointermove', move); document.removeEventListener('pointerup', up); box.remove();
       var p = pageMm(e2), x = Math.min(p0.x, p.x), y = Math.min(p0.y, p.y), w = Math.abs(p.x - p0.x), h = Math.abs(p.y - p0.y);
-      if (w < 5 || h < 3) { w = 60; h = 9; x = Math.max(0, Math.min(210 - w, p0.x - w / 2)); y = Math.max(0, Math.min(297 - h, p0.y - h / 2)); }
+      if (w < 5 || h < 3) { w = 60; h = 9; x = Math.max(0, Math.min(pg().w - w, p0.x - w / 2)); y = Math.max(0, Math.min(pg().h - h, p0.y - h / 2)); }
       M.draw = false; syncDrawBtn(); addFrame(x, y, w, h);
     };
     document.addEventListener('pointermove', move); document.addEventListener('pointerup', up); return;
@@ -690,11 +695,28 @@ function placePop(pop, e) {
 /* ---- 右パネル ---- */
 function syncDrawBtn() { var b = M.side && M.side.querySelector('.dp-draw'); if (b) { b.classList.toggle('on', !!M.draw); b.textContent = M.draw ? 'ページ上をドラッグして枠をかこむ（Escで中止）' : '＋ 差し込み枠を追加'; } if (M.hits) M.hits.classList.toggle('draw', !!M.draw); }
 function hasDet() { return Object.keys(M.det || {}).length > 0; }
+/* 用紙の向き：取り込み元の縦横で自動判定。違うときはここで切り替える（取り込みをやり直す） */
+async function setOrient(v) {
+  if (!M || M.orient === v) return; M.orient = v; M.orientSet = true;
+  var tk = M;
+  try {
+    if (M.kind === 'pptx') await pickSlide(M.slideIdx);
+    else if (M.stats && M.stats.bgOnly) await startBackground(M.elements[0].src, M.ratio, M.stats.what, M.pix, M.textItems ? 'text' : 'ocr');
+  } catch (e) { if (M === tk && !M.cancelled) showMap(); }
+}
+function orientRow(box) {
+  var d = el('div', 'dp-orient'); d.style.cssText = 'display:flex;align-items:center;gap:6px;margin:6px 0;white-space:nowrap';
+  d.appendChild(el('b', null, '用紙'));
+  [['p', '縦'], ['l', '横']].forEach(function (o) { var b = btn('A4 ' + o[1], o[1] === '縦' ? '縦向き（210×297mm）' : '横向き（297×210mm）。切り替えると取り込みをやり直します', M.orient === o[0] ? 'pri' : null); b.style.padding = '2px 10px'; b.onclick = function () { setOrient(o[0]); }; d.appendChild(b); });
+  var n = el('span', null, '切り替えると指定をやり直します'); n.style.cssText = 'font-size:11px;color:var(--mut);overflow:hidden;text-overflow:ellipsis;min-width:0'; d.appendChild(n);
+  box.appendChild(d);
+}
 function drawSide() {
   var s = M.side, keep = s.querySelector('.dp-sc'), top = keep ? keep.scrollTop : 0; s.textContent = '';
   var sc = el('div', 'dp-sc'); s.appendChild(sc);
   sc.appendChild(el('h2', null, '生徒ごとに変わる文字をクリックしてください'));
   sc.appendChild(el('p', 'dp-sub', M.stats && M.stats.bgOnly ? (hasDet() ? '取り込んだ' + M.stats.what + 'は背景になりました。見つかった文字（点線の枠）をクリックして項目を選ぶと、元の文字を隠して差し込みます。見つからない場所は「差し込み枠を追加」で指定できます。' : '取り込んだ' + M.stats.what + 'は背景になりました。「差し込み枠を追加」で、受験番号や氏名を入れる場所をドラッグで指定します。') : '受験番号・氏名など、人によって変わる文字をクリックして項目を選びます。試験日や会場など全員同じものは、そのままで構いません。'));
+  orientRow(sc);
   methodNote(sc);
   summary(sc);
   /* おすすめ */
@@ -770,7 +792,7 @@ function summary(box) {
   var S = M.stats, d = document.createElement('details'); d.className = 'dp-sum'; d.open = innerWidth > 820 && !!(S.skippedTotal || S.emf.length || S.aspectDiff);
   var sm = el('summary', null, S.bgOnly ? '取り込み結果（' + S.what + 'を背景にしました）' : '取り込み結果（' + S.count + '個の要素' + (S.skippedTotal ? '・' + S.skippedTotal + '個は取り込めず' : '') + '）'); d.appendChild(sm);
   var b = el('div'); d.appendChild(b);
-  if (S.aspectDiff) b.appendChild(el('p', 'w', S.bgOnly ? '元の縦横比がA4（210×297mm）と違うため、全体を縮小して中央に置きました（上下または左右に余白ができます）。' : 'スライドの縦横比がA4（210×297mm）と違うため、縦横比を保ったまま縮小して中央に置きました（余白ができます）。'));
+  if (S.aspectDiff) b.appendChild(el('p', 'w', S.bgOnly ? '元の縦横比がA4（' + (pg().w > pg().h ? '297×210' : '210×297') + 'mm）と違うため、全体を縮小して中央に置きました（上下または左右に余白ができます）。' : 'スライドの縦横比がA4（' + (pg().w > pg().h ? '297×210' : '210×297') + 'mm）と違うため、縦横比を保ったまま縮小して中央に置きました（余白ができます）。'));
   if (S.emf.length) b.appendChild(el('p', 'w', '読み込めない形式の画像が' + S.emf.length + '点あります（' + S.emf.map(function (x) { return x.type; }).filter(function (v, i, a) { return a.indexOf(v) === i; }).join('・') + '）。ブラウザでは表示できないため、枠だけ置きました。編集画面で右クリック→「図の変更」で差し替えてください。'));
   var ks = Object.keys(S.skipped || {}); if (ks.length) b.appendChild(el('p', 'w', '取り込めなかったもの：' + ks.map(function (k) { return k + ' ' + S.skipped[k] + '個'; }).join('、')));
   if (S.dropped) b.appendChild(el('p', 'w', '要素が多すぎたため、前面側の' + S.dropped + '個は省略しました。'));
@@ -933,7 +955,7 @@ async function finish() {
     else rosterLines = await readRosterOcr();
     if (!rosterLines) { if (OV && M && M.side) M.side.querySelectorAll('.dp-sf button').forEach(function (b) { b.disabled = false; }); return; }
   }
-  var info = { name: M.name, elements: elements, bg: M.bg, items: items, rosterLines: rosterLines, kind: M.kind };
+  var info = { name: M.name, orient: M.orient === 'l' ? 'l' : 'p', elements: elements, bg: M.bg, items: items, rosterLines: rosterLines, kind: M.kind };
   var nRows = rosterLines ? M.rosterN : 0, gh = M.garbleHit || 0;
   closeOverlay();
   H.apply(info);

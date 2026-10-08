@@ -70,7 +70,7 @@ function normItems(arr) {
    k=キー  type=text|check|number|color|select|lines|image  u=使う機能（テンプレートの uses で絞れる）
    tab=詳細編集のタブ  g=見出し  half=2列並び */
 var NOTES_W = '!こちらの受験票を折って試験当日に持参してください。\n入場の際、受験票の提示が必要です。\n!試験教室は8:30から開いています。試験時間の30分前までに試験教室に入場してください。\n試験教室の座席に着席する際に、机に貼られている受験番号と一致していることを確認してください。\n受験票は試験時間中机上に置きますので、何も書き込まないでください。（書き込みを発見した場合、不正行為となる可能性があります。）\n受験票は入学後の学生証交付の際に必要になりますので、大切に保管してください。';
-var FIELDS = [
+var FIELDS = [ { k: 'orient', type: 'select', label: '用紙の向き', opts: [['p', '縦'], ['l', '横']], def: 'p', u: 'orient', tab: 'none' },
   { k: 'hdr', type: 'text', label: 'タイトル（ヘッダー文字）', def: '2024年度　早稲田大学受験票', u: 'header', tab: 'items', g: 'ヘッダー' },
   { k: 'badge', type: 'text', label: 'バッジ文字', def: '折って試験当日持参', u: 'badge', tab: 'items', half: 1 },
   { k: 'badgeOn', type: 'check', label: 'バッジを表示', def: true, u: 'badge', tab: 'items', half: 1 },
@@ -149,6 +149,8 @@ function list() {
   return out;
 }
 function categories() { var seen = {}; return list().filter(function (t) { return !seen[t.category] && (seen[t.category] = 1); }).map(function (t) { return t.category; }); }
+/* 用紙の大きさ(mm)。横(orient:'l')にできるのはフリーデザインだけ（mkVals が他では 'p' に戻す） */
+function pageSize(V) { return V && V.orient === 'l' ? { w: 297, h: 210 } : { w: 210, h: 297 }; }
 function uses(t, u) { return !t || !t.uses || t.uses.indexOf(u) >= 0; }
 
 /* テンプレートの既定値（共通スキーマの既定 + テンプレートの defaults を上書き） */
@@ -166,6 +168,7 @@ function mkVals(id, saved) {
   if (!isObj(saved)) saved = {};
   var D = defaults(id), v = {};
   FIELDS.forEach(function (f) { v[f.k] = normField(f, saved[f.k], D[f.k]); });
+  if (id !== 'free') v.orient = 'p';
   v.items = Array.isArray(saved.items) ? normItems(saved.items) : (Array.isArray(D.items) ? normItems(clone(D.items)) : defItems());
   v.tpl = {};
   ORDER.forEach(function (tid) {
@@ -196,6 +199,7 @@ var ctx = {
   page: function (id, V, extraCls) {
     var t = el('div', 'ticket tpl-' + id + (extraCls ? ' ' + extraCls : ''));
     t.style.setProperty('--tac', V.accent); t.style.setProperty('--tac2', V.secondary);
+    if (V.orient === 'l') t.className += ' land';
     t.style.fontFamily = ctx.font(V); t._fits = []; return t;
   },
   /* 基本フォント。gothic / mincho は各テンプレート本来の書体のまま、それ以外（フォント一覧のid）はその書体 */
@@ -246,7 +250,7 @@ var ctx = {
   /* 折り線（foldOn が false なら null） */
   fold: function (V) {
     if (!V.foldOn) return null;
-    var fo = el('div', 'jt-fold'); fo.style.top = V.foldPos + 'mm'; fo.appendChild(el('span'));
+    var fo = el('div', 'jt-fold'); fo.style.top = V.foldPos + 'mm'; fo.style.width = pageSize(V).w + 'mm'; fo.appendChild(el('span'));
     if (V.foldLabel) fo.appendChild(ctx.edit(el('em', null, V.foldLabel), 'foldLabel'));
     fo.appendChild(el('span')); return fo;
   },
@@ -259,8 +263,9 @@ var ctx = {
 
 var BASE_CSS =
   '.ticket{position:relative;width:210mm;height:297mm;padding:15mm;background:#fff;color:#000;font-family:"Noto Sans JP","Yu Gothic","Hiragino Sans","Meiryo",sans-serif;font-size:10.5pt;line-height:1.5;display:flex;flex-direction:column;overflow:hidden}' +
+  '.ticket.land{width:297mm;height:210mm}' +
   '.ticket *{box-sizing:border-box}' +
-  '.jt-wm{position:absolute;left:105mm;white-space:nowrap;line-height:1;pointer-events:none;-webkit-print-color-adjust:exact;print-color-adjust:exact;-webkit-user-select:none;user-select:none}' +
+  '.jt-wm{position:absolute;left:50%;white-space:nowrap;line-height:1;pointer-events:none;-webkit-print-color-adjust:exact;print-color-adjust:exact;-webkit-user-select:none;user-select:none}' +
   '.jt-wm span{display:inline-block}' +
   '.jt-wm.editing{pointer-events:auto;-webkit-user-select:text;user-select:text}' +
   '@media screen{.jt-wm span{pointer-events:auto;cursor:pointer}.jt-wm.editing span{cursor:text}}' +
@@ -278,7 +283,7 @@ function cssText() { return Array.prototype.map.call(document.querySelectorAll('
 
 g.JukenTemplates = {
   register: register, get: get, list: list, categories: categories, uses: uses, ctx: ctx, render: render,
-  defaults: defaults, mkVals: mkVals, switchVals: switchVals, known: known, cssText: cssText,
+  pageSize: pageSize, defaults: defaults, mkVals: mkVals, switchVals: switchVals, known: known, cssText: cssText,
   FIELDS: FIELDS, LOOK: LOOK, SIZE: SIZE, mkItem: mkItem, defItems: defItems, normItems: normItems, normField: normField, DEFAULT_NOTES: NOTES_W
 };
 })(window);
