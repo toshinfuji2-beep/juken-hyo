@@ -55,7 +55,7 @@ function normItems(arr) {
     if (typeof x.id === 'string' && x.id) it.id = x.id;
     ['column', 'value', 'fallback'].forEach(function (k) { if (typeof x[k] === 'string') it[k] = x[k]; });
     if (Array.isArray(x.rows)) it.rows = x.rows.filter(function (r) { return r && typeof r === 'object'; }).map(function (r) { return { t: String(r.t || ''), c: String(r.c || '') }; });
-    if (x.auto && typeof x.auto === 'object') it.auto = { prefix: String(x.auto.prefix || ''), start: +x.auto.start || 0, digits: Math.max(1, +x.auto.digits || 3) };
+    if (x.auto && typeof x.auto === 'object') it.auto = { prefix: String(x.auto.prefix || ''), start: +x.auto.start || 0, digits: Math.max(1, +x.auto.digits || 3) }; if (x.auto.random) { it.auto.random = true; it.auto.seed = (+x.auto.seed | 0) || newSeed(); }
     it.autoEmpty = x.autoEmpty === true;
     if (x.width === 'half' || x.width === 'full') it.width = x.width;
     if (['S', 'M', 'L', 'XL'].indexOf(x.size) >= 0) it.size = x.size;
@@ -192,9 +192,19 @@ function known(id) {
 
 /* ---------- ctx（render に渡るツールキット） ---------- */
 var FONT = { gothic: '"Yu Gothic","Meiryo","Hiragino Sans",sans-serif', mincho: '"Yu Mincho","Hiragino Mincho ProN","MS PMincho",serif' };
-function autoNum(a, idx) { return (a.prefix || '') + String((+a.start || 0) + idx).padStart(Math.max(1, a.digits || 3), '0'); }
+/* 自動の番号。random のときは seed で決まる「重複しない並べ替え」（同じ seed なら毎回同じ番号、範囲は開始番号〜桁数の最大） */
+function rmix(x, s, r) { var h = Math.imul(x ^ s ^ Math.imul(r + 1, 0x9E3779B9), 0x85EBCA6B); h ^= h >>> 13; h = Math.imul(h, 0xC2B2AE35); return (h ^ (h >>> 16)) >>> 0; }
+function rperm(i, n, s) { var b = 1; while (Math.pow(4, b) < n) b++; var m = (1 << b) - 1, x = i;
+  do { var L = x >>> b, R = x & m; for (var r = 0; r < 4; r++) { var t = R; R = L ^ (rmix(R, s, r) & m); L = t; } x = L * (m + 1) + R; } while (x >= n);
+  return x; }
+function autoNum(a, idx) {
+  var d = Math.max(1, a.digits || 3), st = +a.start || 0, n = Math.pow(10, d) - st, v = st + idx;
+  if (a.random && n > 1 && idx < n && d <= 8) v = st + rperm(idx, n, (+a.seed || 1) | 0);
+  return (a.prefix || '') + String(v).padStart(d, '0');
+}
+function newSeed() { return (Math.random() * 0x7fffffff | 0) || 1; }
 var ctx = {
-  PXMM: PXMM, SIZE: SIZE, el: el, esc: esc, clone: clone, lines: lines, fmtDate: fmtDate, autoNum: autoNum,
+  PXMM: PXMM, SIZE: SIZE, el: el, esc: esc, clone: clone, lines: lines, fmtDate: fmtDate, autoNum: autoNum, newSeed: newSeed,
   /* A4の1ページ（.ticket.tpl-<id>）。--tac=アクセント色 --tac2=サブカラー。_fits に縮小対象を溜める */
   page: function (id, V, extraCls) {
     var t = el('div', 'ticket tpl-' + id + (extraCls ? ' ' + extraCls : ''));

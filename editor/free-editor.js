@@ -2176,6 +2176,8 @@ function valueEditor(b, it) {
     b.appendChild(prow('先頭の文字', textIn(it.auto.prefix, function (v) { mut(function () { it.auto.prefix = v; }); })));
     b.appendChild(prow('開始番号', numInput({ v: it.auto.start, min: 0, max: 99999, step: 1, label: '開始番号', on: function (v) { mut(function () { it.auto.start = v; }); } })));
     b.appendChild(prow('桁数', numInput({ v: it.auto.digits, min: 1, max: 8, step: 1, label: '桁数', on: function (v) { mut(function () { it.auto.digits = v; }); } })));
+    b.appendChild(prow('番号の並び', selInput([['seq', '連番'], ['rand', 'ランダム（重複なし）']], it.auto.random ? 'rand' : 'seq', function (v) { mut(function () { it.auto.random = v === 'rand'; if (it.auto.random && !it.auto.seed) it.auto.seed = JukenTemplates.ctx.newSeed(); }); })));
+    if (it.auto.random) { var rb = h('button', null, '振り直す'); rb.type = 'button'; rb.title = 'ランダムの番号を別の並びにします'; rb.onclick = function () { mut(function () { it.auto.seed = JukenTemplates.ctx.newSeed(); }); }; b.appendChild(prow('', rb)); }
   }
 }
 function itemBox(it, full, tb) {

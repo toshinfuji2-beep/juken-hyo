@@ -163,8 +163,9 @@ summary .rs{font-weight:400;font-size:12px;color:var(--mut);margin-left:6px}
 .sl-m{grid-column:2;min-width:0}
 .sl-a{grid-column:2;display:flex;align-items:center;flex-wrap:wrap;gap:4px 8px;font-size:12px;min-width:0}
 .sl-a .chk{white-space:nowrap;margin:0}
-.sl-ai{display:inline-flex;gap:4px;align-items:center}.sl-ai[hidden]{display:none}
+.sl-ai{display:inline-flex;flex-wrap:wrap;gap:4px;align-items:center;max-width:100%}.sl-ai[hidden]{display:none}
 .sl-ai input{width:4.2em;padding:2px 4px;font-size:12px}.sl-ai input[type=text]{width:5em}
+.rnd{display:inline-flex;gap:4px;align-items:center;flex-wrap:nowrap;white-space:nowrap}.rnd[hidden]{display:none}.rnd input[type=checkbox],.sl-ai .rnd input{width:auto}.rnd button{padding:2px 8px;font-size:12px;white-space:nowrap}.rnd button[hidden]{display:none}
 .sl-m div{font-size:11px;margin:2px 0 0;line-height:1.4;overflow-wrap:anywhere}
 details.sfs{grid-column:1/-1;margin:6px 0 0;border:1px dashed var(--bd);background:transparent}
 details.sfs>summary{padding:3px 8px;font-size:12px;color:var(--mut);cursor:pointer;background:transparent}
@@ -703,7 +704,7 @@ else if(it.source==='fixed'){var fi=el('input');fi.type='text';fi.value=it.value
 else if(it.source==='date'){var di=el('input');di.type='date';di.value=it.value;di.oninput=function(){it.value=di.value;save();render()};vb.appendChild(di)}
 else if(it.source==='autonumber'){var gr=el('div','grid3');var mk=function(lab,key,type){var i=el('input');i.type=type;i.value=it.auto[key];
 i.oninput=function(){it.auto[key]=type==='number'?(parseInt(i.value,10)||(key==='digits'?1:0)):i.value;save();render()};gr.appendChild(fld(lab,i))};
-mk('接頭辞','prefix','text');mk('開始番号','start','number');mk('桁数','digits','number');vb.appendChild(gr)}
+mk('接頭辞','prefix','text');mk('開始番号','start','number');mk('桁数','digits','number');vb.appendChild(gr);vb.appendChild(randCtl(it,function(){render()}))}
 else{var sb=el('div');var drs=function(){sb.textContent='';it.rows.forEach(function(r,ri){var s=el('div','sch');var a=el('input');a.type='text';a.value=r.t;a.placeholder='時間';
 var b=el('input');b.type='text';b.value=r.c;b.placeholder='科目';var x=btn('削除');
 a.oninput=function(){r.t=a.value;save();render()};b.oninput=function(){r.c=b.value;save();render()};
@@ -718,7 +719,7 @@ var as=opt(el('select'),[['','自動'],['left','左揃え'],['center','中央']]
 var hl=el('label','chk');var hk=el('input');hk.type='checkbox';hk.checked=it.hidden;hk.onchange=function(){it.hidden=hk.checked;save();drawItems();render()};hl.appendChild(hk);hl.appendChild(document.createTextNode('非表示'));dt.appendChild(hl);
 if(it.source==='column'){var fb=el('input');fb.type='text';fb.value=it.fallback;fb.placeholder='列の値が空のとき表示';fb.oninput=function(){it.fallback=fb.value;save();render()};dt.appendChild(fld('代替文字（空欄時）',fb,'wd'));
 var al=el('label','chk wd');var ac=el('input');ac.type='checkbox';ac.checked=it.autoEmpty;ac.onchange=function(){it.autoEmpty=ac.checked;save();drawItems();render()};al.appendChild(ac);al.appendChild(document.createTextNode('名簿が空のとき連番を入れる'));dt.appendChild(al);
-if(it.autoEmpty){[['prefix','接頭辞','text'],['start','開始番号','number'],['digits','桁数','number']].forEach(function(k){var i=el('input');i.type=k[2];i.value=it.auto[k[0]];i.oninput=function(){it.auto[k[0]]=k[2]==='number'?(parseInt(i.value,10)||(k[0]==='digits'?1:0)):i.value;save();render()};dt.appendChild(fld(k[1],i))})}}
+if(it.autoEmpty){[['prefix','接頭辞','text'],['start','開始番号','number'],['digits','桁数','number']].forEach(function(k){var i=el('input');i.type=k[2];i.value=it.auto[k[0]];i.oninput=function(){it.auto[k[0]]=k[2]==='number'?(parseInt(i.value,10)||(k[0]==='digits'?1:0)):i.value;save();render()};dt.appendChild(fld(k[1],i))});dt.appendChild(randCtl(it,function(){render()}))}}
 d.appendChild(dt)}
 box.appendChild(d)});drawRoster()}
 $('iadd').onclick=function(){var it=mkItem('新しい項目','fixed',{});V.items.push(it);openIt[it.id]=true;save();drawItems();render();
@@ -1201,7 +1202,12 @@ if(g==='name'){for(var j=0;j<headers.length;j++)if(/氏名|名前|name/i.test(he
 if(g==='kana'){for(var j2=0;j2<headers.length;j2++)if(/カナ|ｶﾅ|ふりがな|フリガナ|ﾌﾘｶﾞﾅ|kana/i.test(headers[j2]))return j2}
 return -1}
 function colIdx(name){var n=normH(name);if(!n)return -1;for(var i=0;i<headers.length;i++)if(normH(headers[i])===n)return i;var g=groupOf(name);return g?groupIdx(g):-1}
-function autoNum(a,idx){var d=Math.max(1,a.digits||3);return (a.prefix||'')+String((+a.start||0)+idx).padStart(d,'0')}
+function autoNum(a,idx){return C.autoNum(a,idx)}
+/* 自動の番号：連番／ランダム（重複なし）の切り替えと振り直し。after: 変更後の再描画 */
+function randCtl(it,after){var w=el('span','rnd'),lb=el('label','chk'),cx=el('input');cx.type='checkbox';cx.checked=!!it.auto.random;lb.appendChild(cx);lb.appendChild(document.createTextNode('ランダム'));lb.title='重複しない番号をランダムに振ります（開始番号〜桁数の範囲）';w.appendChild(lb);
+var rb=btn('振り直す','ランダムの番号を別の並びにします');rb.hidden=!it.auto.random;w.appendChild(rb);
+cx.onchange=function(){it.auto.random=cx.checked;if(cx.checked&&!it.auto.seed)it.auto.seed=C.newSeed();rb.hidden=!cx.checked;save();after()};
+rb.onclick=function(){var old=it.auto.seed;it.auto.seed=C.newSeed();save();after();toast('番号を振り直しました','元に戻す',function(){it.auto.seed=old;save();after()})};return w}
 function colVal(st,it){if(!st.row){var nm=it.column||it.label,g=groupOf(nm);return g?SAMPLE[g]:'〈'+nm+'〉'}
 var ix=slotIndex[it.id];return ix>=0?(st.row[ix]||''):''}
 
@@ -1289,7 +1295,7 @@ var w=el('div','sl-a'),lb=el('label','chk'),cx=el('input');cx.type='checkbox';cx
 var sp=el('span','sl-ai');sp.hidden=!it.autoEmpty;
 [['prefix','頭の文字','text'],['start','開始','number'],['digits','桁','number']].forEach(function(k){var i=el('input');i.type=k[2];i.value=it.auto[k[0]];i.setAttribute('aria-label',k[1]);i.title=k[1];i.placeholder=k[1];if(k[2]==='number')i.min=k[0]==='digits'?1:0;
 i.oninput=function(){it.auto[k[0]]=k[2]==='number'?(parseInt(i.value,10)||(k[0]==='digits'?1:0)):i.value;save();rosterInput()};sp.appendChild(i)});
-w.appendChild(sp);
+sp.appendChild(randCtl(it,function(){rosterInput()}));w.appendChild(sp);
 cx.onchange=function(){it.autoEmpty=cx.checked;sp.hidden=!cx.checked;sl.req=!it.hidden&&!it.fallback&&!it.autoEmpty;save();drawItems();rosterInfo();render()};return w}
 function drawRoster(){var box=$('slots');
 var ns=getSlots(),keys={};ns.forEach(function(s){keys[s.key]=1});
@@ -1621,7 +1627,7 @@ if(it.source==='column'){vl='名簿の列';vc=btn('貼り付け欄へ');vc.style
 else if(it.source==='fixed'){vl='固定文字';vc=el('input');vc.type='text';vc.value=it.value;vc.oninput=function(){it.value=vc.value;save();drawItems();render()}}
 else if(it.source==='date'){vl='日付';vc=el('input');vc.type='date';vc.value=it.value;vc.oninput=function(){it.value=vc.value;save();drawItems();render()}}
 else if(it.source==='autonumber'){vl='自動採番（接頭辞／開始／桁数）';vc=el('div','pg');[['prefix','text'],['start','number'],['digits','number']].forEach(function(k){var i=el('input');i.type=k[1];i.value=it.auto[k[0]];
-i.oninput=function(){it.auto[k[0]]=k[1]==='number'?(parseInt(i.value,10)||(k[0]==='digits'?1:0)):i.value;save();drawItems();render()};vc.appendChild(i)})}
+i.oninput=function(){it.auto[k[0]]=k[1]==='number'?(parseInt(i.value,10)||(k[0]==='digits'?1:0)):i.value;save();drawItems();render()};vc.appendChild(i)});vc.appendChild(randCtl(it,function(){drawItems();render()}))}
 else{vl='時間割';vc=btn('項目欄で編集');vc.style.width='auto';vc.style.padding='2px 8px';vc.onclick=function(){openRow(it.id)}}
 pop.appendChild(fld(vl,vc));
 var g=el('div','pg');
