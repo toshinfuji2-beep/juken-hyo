@@ -84,17 +84,29 @@ function suggest(els, opt) {
   var cands = els.filter(function (e) { return !isLab[e.id] && !GEN.test(normLbl(e.text)); });
   var sizeK = fuzzy ? 0.6 : 0.9, pen = fuzzy ? 0.12 : 0;
   /* ラベルと値の全組み合わせを近い順に並べ、近いものから1対1で決める（隣の項目のラベルに値を取られない） */
+  /* 値の種類がラベルに合うか：受験番号に名前、氏名に数字だけ、を対にしない（OCRでラベルを読み落としたときのずれ防止） */
+  function valueFits(lab, t) {
+    t = JTX.trim(String(t || '')); var num = /^[0-9A-Za-z０-９Ａ-Ｚａ-ｚ\-－.・\s]{1,14}$/.test(t) && /[0-9０-９]/.test(t), kind = JTX.classifyName(t);
+    if (/番号/.test(lab)) return num;
+    if (lab === '氏名' || lab === 'カナ氏名') return !num && !/^[0-9０-９\s\-－:：\/年月日時分]+$/.test(t);
+    return true;
+  }
+  function rowOwner(c, a) {
+    return labels.some(function (L2) { var b = L2.e; if (b === a) return false; var ov = Math.min(b.y + b.h, c.y + c.h) - Math.max(b.y, c.y); return ov > 0.3 * Math.min(b.h, c.h) && c.x >= b.x + b.w * 0.4 && c.x - (b.x + b.w) < 90; });
+  }
   var pairs = [];
   labels.forEach(function (L, li) {
     var a = L.e;
     cands.forEach(function (c) {
       if (c.size < a.size * sizeK) return;
+      if (!valueFits(L.label, c.text)) return;
       var ov = Math.min(a.y + a.h, c.y + c.h) - Math.max(a.y, c.y), mh = Math.min(a.h, c.h);
       var right = c.x - (a.x + a.w), sc, kind;
       if (ov > 0.3 * mh && c.x >= a.x + a.w * 0.4 && right < 90) { sc = Math.max(0, right) + Math.abs((c.y + c.h / 2) - (a.y + a.h / 2)) * 0.4; kind = 'r'; }
       else {
         var below = c.y - (a.y + a.h * 0.5), cxm = c.x + c.w / 2;
         if (below > 0 && below < 40 && cxm > a.x - 10 && cxm < a.x + a.w + 60) { sc = 100 + below * 1.5; kind = 'b'; } else return;
+        if (rowOwner(c, a)) return;   /* 同じ行の左に別のラベルがある値は、そのラベルのもの（上のラベルに取られない） */
       }
       pairs.push({ li: li, c: c, s: sc, kind: kind });
     });
