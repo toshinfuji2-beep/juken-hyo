@@ -1140,10 +1140,17 @@ else if(e.key==='Enter'){if(tn==='BUTTON')return;if(one){e.preventDefault();exOp
 else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='a'){e.preventDefault();EXP.sel={};EXP.items.forEach(function(i){EXP.sel[i.key]=true});exMarkSel()}})
 
 /* ---------- ファイル書き出し・読み込み（.juken.json） ---------- */
-function dlText(name,text){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'application/json'}));a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(a.href)},1000)}
-$('fexp').onclick=function(){var cp=S.cur&&byId(S.cur),nm=cp?cp.name:importName||'';
-var fn=(nm.replace(/[\x5c\/:*?"<>|\r\n]+/g,'_').trim()||'design')+'.juken.json';
-dlText(fn,JSON.stringify({format:'juken-design',version:1,name:nm,template:S.tpl,data:clone(V)},null,2));pstat('書き出しました（'+fn+'）')};
+/* 保存先を選べるブラウザ（Chrome/Edge）は保存ダイアログ、それ以外はダウンロード。大きいデザイン（背景画像入り）でも途中で切れないよう、URLはすぐ破棄しない */
+function dlText(name,text){var a=document.createElement('a');a.href=URL.createObjectURL(new Blob([text],{type:'application/json'}));a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(a.href)},60000)}
+async function saveJsonFile(name,text){
+if(window.showSaveFilePicker&&window.isSecureContext&&window.top===window){try{var h=await window.showSaveFilePicker({suggestedName:name,types:[{description:'受験票デザイン',accept:{'application/json':['.json']}}]});
+var w=await h.createWritable();await w.write(new Blob([text],{type:'application/json'}));await w.close();return h.name||name}
+catch(e){if(e&&e.name==='AbortError')return null}}
+dlText(name,text);return name}
+$('fexp').onclick=async function(){var cp=S.cur&&byId(S.cur),nm=cp?cp.name:(S.curName||importName||'');
+var fn=(nm.replace(/[\x5c\/:*?"<>|\r\n]+/g,'_').trim()||'design')+'.juken.json',txt;
+try{histFlush();txt=JSON.stringify({format:'juken-design',version:1,name:nm,template:S.tpl,data:clone(V)})}catch(e){toast('書き出せませんでした：'+((e&&e.message)||e));return}
+var r=await saveJsonFile(fn,txt);if(!r)return;var mb=txt.length/1048576,msg='ファイルに保存しました（'+r+(mb>=1?'・約'+mb.toFixed(1)+'MB':'')+'）';pstat(msg);toast(msg)};
 function importDesign(text){var o,notes=[];
 function fail(m){pstat(m,true);return false}
 try{o=JSON.parse(String(text).replace(/^﻿/,''))}catch(e){return fail('JSONとして読み取れませんでした。カンマや引用符の誤りがないか確認してください（'+e.message+'）')}
