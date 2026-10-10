@@ -562,7 +562,7 @@ button.dg,.dg{color:var(--err)}
 <div id="rosterBlk">
 <div id="slots"></div>
 <div class="sl-foot adv-only"><p class="note" id="slhint" style="margin-top:0">名簿から入れる項目は「項目」で種類を「名簿の列」にすると、ここに欄が増えます。</p><button id="cadd" type="button">＋名簿の項目を追加</button></div>
-<p class="note">※名簿（個人情報）はこの端末の中だけで処理され、送信されません。保存もされません。ページを閉じる・再読込で消えます。</p>
+<p class="note">※名簿（個人情報）はこの端末の中だけに保存され、送信されません。デザインごとに前回の名簿を覚えていて、開き直すと戻ります。消すときは「クリア」。</p>
 <details id="other"><summary>Excel・CSVファイルからまとめて読み込む／サンプルで試す</summary><div class="sec">
 <p class="note" style="margin-top:0">1行目が見出しの表を読み込むと、見出しが項目名と一致する列が上の各欄に入ります。</p>
 <div id="drop"><div class="dz-t">CSV / Excelファイルをここにドロップ</div><div class="row"><button id="fbtn" type="button">ファイルを選択</button><button id="trysample" type="button">サンプルで試す</button><input id="file" type="file" accept=".csv,.xlsx,.xls" hidden></div></div>
@@ -616,8 +616,8 @@ var AS={t:null,key:'',stop:'',fail:0,cur:'',at:'',thumbAt:0,inAt:0,ptr:false,off
 /* ---------- 状態・保存 ---------- */
 var SUPABASE_URL='https://qaovkxpyquedvfhiacek.supabase.co',SUPABASE_ANON_KEY='sb_publishable_xJ-VtOx2-5Z6we-ar1iKYQ_n_J6sNx7',uid=null;
 var KEY='juken-hyo-v3',KEY2='juken-hyo-v2',KEY1='juken-hyo-v1',PKEY='juken-hyo-presets-v1';
-var S={tpl:'waseda',cur:'',curAt:'',curName:'',bh:''},V=null;
-function loadS(o,copy){if(JT.get(o.tpl))S.tpl=o.tpl;(copy||['cur','curAt','curName','bh']).forEach(function(k){if(typeof o[k]==='string')S[k]=o[k]})}
+var S={tpl:'waseda',cur:'',curAt:'',curName:'',bh:'',fname:'',ffold:''},V=null;
+function loadS(o,copy){if(JT.get(o.tpl))S.tpl=o.tpl;(copy||['cur','curAt','curName','bh','fname','ffold']).forEach(function(k){if(typeof o[k]==='string')S[k]=o[k]})}
 try{var raw=localStorage.getItem(KEY),o0;
 if(raw){o0=JSON.parse(raw);if(o0&&typeof o0==='object'){loadS(o0);V=JT.mkVals(S.tpl,o0.v)}}
 else{raw=localStorage.getItem(KEY2);
@@ -625,7 +625,7 @@ if(raw){o0=JSON.parse(raw);if(o0&&typeof o0==='object'){loadS(o0,['cur','curAt',
 else{var r1=localStorage.getItem(KEY1);if(r1){var o1=JSON.parse(r1);if(o1&&typeof o1==='object'){S.tpl='simple';V=JT.mkVals('simple',o1)}}}}}catch(e){}
 if(!V)V=JT.mkVals(S.tpl,{});
 function tpl(){return JT.get(S.tpl)}
-function save(){try{localStorage.setItem(KEY,JSON.stringify({tpl:S.tpl,v:V,cur:S.cur,curAt:S.curAt,curName:S.curName,bh:S.bh}))}catch(e){}histSoon()}
+function save(){try{localStorage.setItem(KEY,JSON.stringify({tpl:S.tpl,v:V,cur:S.cur,curAt:S.curAt,curName:S.curName,bh:S.bh,fname:S.fname,ffold:S.ffold}))}catch(e){}histSoon()}
 var presets=[],trashed=[],localPresets=[];
 try{var pr=JSON.parse(localStorage.getItem(PKEY)||'[]');if(Array.isArray(pr))localPresets=pr.filter(function(p){return p&&typeof p.id==='string'&&typeof p.name==='string'&&JT.get(p.tpl)})}catch(e){}
 
@@ -749,8 +749,8 @@ function drawPreSel(){if(presetsLoaded&&S.cur&&!presets.some(function(p){return 
 $('save').disabled=$('sas').disabled=busy;drawMig();refreshDirty();
 if(UI.mode==='easy'&&step===1)drawGallery();
 if(!$('ex').hidden)exDraw()}
-function clearCur(){S.cur='';S.curAt='';S.curName='';AS.stop='';AS.offered=false}
-function setCur(id,name,at){AS.stop='';AS.thumbAt=Date.now();S.cur=id;S.curName=name;S.curAt=at||'';importName='';lastFile=''}
+function clearCur(){S.cur='';S.curAt='';S.curName='';S.fname='';S.ffold='';AS.stop='';AS.offered=false}
+function setCur(id,name,at){AS.stop='';AS.thumbAt=Date.now();S.cur=id;S.fname='';S.ffold='';S.curName=name;S.curAt=at||'';importName='';lastFile=''}
 function byId(id){for(var i=0;i<presets.length;i++)if(presets[i].id===id)return presets[i]}
 function drawMig(){var m=$('mig');m.hidden=!localPresets.length;if(localPresets.length)$('migt').textContent='このブラウザに保存されたデザインが'+localPresets.length+'件あります → 共有にアップロード'}
 
@@ -790,9 +790,14 @@ m.forEach(function(q){var id=q.slice(1,-1);if(warnedFont[id])return;var f=JukenF
 if(f.kind==='local'){if(!JukenFonts.has(id)){warnedFont[id]=1;toast('このデザインは「'+f.family+'」を使っていますが、このパソコンにはありません。近い書体の「'+JukenFonts.suggest(f.family)+'」で表示します。',null,null,14000)}}
 else if(f.kind==='up'){JukenFonts.ensureUp(id).then(function(r){if(!r&&!warnedFont[id]){warnedFont[id]=1;toast('このデザインが使う持ち込みフォント「'+f.name+'」が見つかりません。フォント一覧の「フォントを追加」から入れてください。',null,null,14000)}})}})}
 function afterDesignChange(){if((typeof bulkAdv!=="undefined"))bulkAdv.refresh();save();drawTplSel();drawPreSel();drawFields();drawItems();render();if(UI.mode==='easy'&&step===2)drawInfo();fontWarn()}
-function openPreset(id){var p=byId(id);if(!p)return false;
-if(dirtyNow()&&!confirm('保存していない変更があります。破棄して「'+p.name+'」を開きますか？'))return false;
-S.tpl=p.tpl;V=JT.mkVals(p.tpl,p.vals);setCur(p.id,p.name,p.at);afterDesignChange();resetBase();hideDraft();return true}
+/* 別のデザインを開く前：自動保存できるなら黙って保存、できなければ「保存して開く／保存せずに開く」を選ぶ */
+async function leaveOk(nm){if(!dirtyNow())return true;
+if(autoOk()&&!saving){await autoRun(true);if(!dirtyNow())return true}
+var q=await modal({title:'保存していない変更があります',text:'「'+nm+'」を開く前に、今の変更を保存しますか？',btns:[{label:'保存して開く',v:'save',pri:true},{label:'保存せずに開く',v:'drop'},{label:'キャンセル',v:'cancel'}]});
+if(!q||q.v==='cancel')return false;if(q.v==='drop')return true;var ok=await saveMain();return !!ok&&!dirtyNow()}
+async function openPreset(id){var p=byId(id);if(!p)return false;
+if(!(await leaveOk(p.name)))return false;var re=rPeek('p:'+p.id);
+S.tpl=p.tpl;V=JT.mkVals(p.tpl,p.vals);setCur(p.id,p.name,p.at);afterDesignChange();resetBase();hideDraft();rApply(re);return true}
 /* テンプレートの切り替え。内容（項目・文字・名簿）はそのまま、色・書体だけ新しいテンプレートの既定になる */
 function freeInit(v,fresh){if(window.JukenFree&&v.tpl&&v.tpl.free&&(fresh||!v.tpl.free.elements.length))v.tpl.free.elements=JukenFree.starter(v);return v}
 function applyTemplate(id,o){if(!JT.get(id))return;importName='';lastFile='';V=JT.switchVals(id,V);if(id==='free')freeInit(V,!!(o&&o.fresh)&&S.tpl!=='free');S.tpl=id;if(o&&o.fresh)clearCur();afterDesignChange();if(o&&o.fresh)resetBase()}
@@ -882,7 +887,7 @@ if(!q)return false;if(q.v==='alias'){name=name+' (2)';continue}
 saving=true;setBusy(true);setSS('saving');var up={template:tp,data:vals,updated_at:new Date().toISOString(),updated_by:uid};if(EXP.ok)up.thumb=th;
 r=chk(await sb.from(TBL).update(up).eq('id',ex.id).select('id,name,updated_at').single())}
 else chk(r);
-setCur(r.data.id,r.data.name,r.data.updated_at);EXP.lastFolder=folder;await loadPresetsQuiet();save();hideDraft();
+setCur(r.data.id,r.data.name,r.data.updated_at);EXP.lastFolder=folder;await loadPresetsQuiet();save();hideDraft();rSave();
 endSave();setSS('');toast('『'+name+'』に保存しました'+(folder?'（'+folder+'）':''));drawPreSel();return true}
 catch(e){endSave();saveFail(e);return false}}}
 async function saveOver(cp){if(!sizeOk(V))return false;saving=true;setBusy(true);setSS('saving');
@@ -899,7 +904,7 @@ var r=chk(await sb.from(TBL).update(up).eq('id',cp.id).select('id,name,updated_a
 markSaved(r.data);await loadPresetsQuiet();endSave();setSS('');toast('『'+r.data.name+'』に保存しました');drawPreSel();return true}
 catch(e){endSave();saveFail(e);return false}}
 async function saveMain(){if(saving||modalOpen)return;if(busy){toast('通信中です。少しお待ちください。');return}histFlush();
-if(!S.cur){return saveNew(defName(),'保存',EXP.lastFolder)}
+if(!S.cur){if(S.fname)return saveDesignFile(true);return saveNew(defName(),'保存',EXP.lastFolder)}
 if(!presetsLoaded){try{needAuth();await loadPresetsQuiet()}catch(e){return saveFail(e)}}
 var cp=byId(S.cur);if(!cp){clearCur();drawPreSel();return saveNew(defName(),'保存',EXP.lastFolder)}
 return saveOver(cp)}
@@ -1043,7 +1048,7 @@ exMarkSel()});
 $('exlist').addEventListener('dblclick',function(e){var d=e.target.closest('.exi');if(!d||e.target.closest('.mo')||e.target.classList.contains('ck'))return;var it=itemBy(d.getAttribute('data-k'));if(it)exOpenItem(it)});
 $('exlist').addEventListener('contextmenu',function(e){var d=e.target.closest('.exi');if(!d)return;e.preventDefault();var k=d.getAttribute('data-k');if(!EXP.sel[k]){EXP.sel={};EXP.sel[k]=true;EXP.anchor=k;exMarkSel()}showCtx(e.clientX,e.clientY,exMenu(exSelKeys()))});
 function exOpenItem(it){if(it.t==='f'){exGo(it.path);return}if(it.trash){toast('ゴミ箱の中のデザインは、先に「元に戻す」を押してください。');return}
-if(openPreset(it.p.id)){exClose();if(UI.mode==='easy')setStep(2);toast('『'+it.p.name+'』を開きました')}}
+openPreset(it.p.id).then(function(ok){if(ok){exClose();if(UI.mode==='easy')setStep(2);toast('『'+it.p.name+'』を開きました')}})}
 /* 右クリック／⋯メニュー */
 function closeCtx(){var m=$('ctxm');if(m)m.remove()}
 function showCtx(x,y,items,below){closeCtx();if(!items.length)return;var m=el('div');m.id='ctxm';m.setAttribute('role','menu');
@@ -1193,7 +1198,21 @@ else f+=c}
 if(f!==''||row.length){row.push(f);out.push(row)}
 return out}
 function decode(buf){return JukenText.decodeBytes(buf).text}
+/* 名簿はこの端末のlocalStorageだけに残す（送信しない）。今の名簿＋デザインごとの前回の名簿（最大20件） */
+var RK='juken-hyo-roster-v1';
+function rLoad(){try{var o=JSON.parse(localStorage.getItem(RK)||'{}');if(o&&typeof o==='object'&&!Array.isArray(o)){if(!o.by||typeof o.by!=='object')o.by={};return o}}catch(e){}return {by:{}}}
+function rHas(t){return !!t&&Object.keys(t).some(function(k){return t[k]})}
+function rKey(){return S.cur?'p:'+S.cur:S.fname?'f:'+S.ffold+'/'+S.fname:''}
+function rSave(){var o=rLoad(),k=rKey();o.cur={t:texts,h:keepHdr};if(k&&rHas(texts))o.by[k]={t:texts,h:keepHdr,at:Date.now()};
+Object.keys(o.by).sort(function(a,b){return (o.by[b].at||0)-(o.by[a].at||0)}).slice(20).forEach(function(x){delete o.by[x]});
+try{localStorage.setItem(RK,JSON.stringify(o))}catch(e){}}
+function rPeek(k){var e=rLoad().by[k];return e&&rHas(e.t)?e:null}
+/* 開いたデザインに前回の名簿があれば戻す。無ければ今の名簿をそのまま使う */
+function rApply(e){if(!e||JSON.stringify(e.t)===JSON.stringify(texts)){rSave();return}var prev=texts,ph=keepHdr;
+texts=clone(e.t);keepHdr=e.h||{};sel={};navPos=0;rosterChanged();rSave();
+toast('このデザインで前回使った名簿（'+rows.length+'名）を戻しました','元に戻す',function(){texts=prev;keepHdr=ph;sel={};navPos=0;rosterChanged()},9000)}
 var headers=[],rows=[],sel={},slots=[],slotIndex={},texts={},keepHdr={},lastSlots=[],R={n:0,cnt:{},has:{},hdr:{},multi:{},vals:{}},navPos=0,showAll=false,zoom='fit',selId='';
+(function(){var c=rLoad().cur;if(c&&c.t&&typeof c.t==='object'){texts=c.t;keepHdr=c.h&&typeof c.h==='object'?c.h:{}}})();
 /* 見出しの同義語（列名が見つからないときの自動推測） */
 var SG={name:['氏名','名前','生徒名','お名前','漢字氏名','氏名漢字','氏名（漢字）','氏名(漢字)','生徒氏名','name'],
 kana:['カナ氏名','カナ','フリガナ','ふりがな','よみ','読み','ヨミ','かな','氏名カナ','氏名（カナ）','氏名(カナ)','氏名フリガナ','氏名ふりがな','カナシメイ','ｶﾅ','ﾌﾘｶﾞﾅ','ｶﾅ氏名','フリガナ氏名'],
@@ -1319,7 +1338,7 @@ cb.onclick=function(){var prev=texts[sl.key]||'';if(!prev)return;texts[sl.key]='
 toast('「'+sl.label+'」をクリアしました','元に戻す',function(){texts[sl.key]=prev;ta.value=prev;growTa(ta);rosterInput()})};
 d.appendChild(ta);var ar=slotAuto(sl);if(ar)d.appendChild(ar);var m=el('div','sl-m');d.appendChild(m);var ss=slotStyle(sl);if(ss)d.appendChild(ss);box.appendChild(d);slotEls[sl.key]={ta:ta,n:n,m:m};growTa(ta)});
 rosterInfo()}
-function rosterInfo(){computeRoster();updRosterUI();var has=rows.length>0;$('loaded').hidden=!has;
+function rosterInfo(){computeRoster();rSave();updRosterUI();var has=rows.length>0;$('loaded').hidden=!has;
 $('cnt').textContent=rows.length+'名';$('rsum').textContent=has?rows.length+'名':'';drawList();updQact()}
 var rdT=null;
 function rosterInput(){rosterInfo();clearTimeout(rdT);rdT=setTimeout(render,120)}
@@ -1445,14 +1464,15 @@ function dirtyNow(){var cur=S.cur&&byId(S.cur),cs=dsnap();
 if(cur){if(!(dsBaseId===cur.id&&dsBasePAt===cur.at)){dsBase=baseDs(cur);dsBaseId=cur.id;dsBasePAt=cur.at}return dsBase!==null&&cs!==dsBase}
 return !!S.bh&&hsh(cs)!==S.bh}
 function refreshDirty(){var cur=S.cur&&byId(S.cur);
-var nm=cur?cur.name:S.cur&&S.curName?S.curName:(importName||(tpl().name+'（既定）'));$('hname').textContent=nm;$('hname').title=nm;
+var nm=cur?cur.name:S.cur&&S.curName?S.curName:S.fname?S.fname.replace(/\.juken\.json$/i,''):(importName||(tpl().name+'（既定）'));$('hname').textContent=nm;$('hname').title=nm;
 var d=dirtyNow(),st,tx,tip;
 if(ss==='error'&&!d&&!saving)ss='';
 if(ss==='saving'){st='saving';tx='保存中…';tip=tx}
 else if(ss==='error'){st='error';tx='保存に失敗しました（再試行）';tip=ssMsg||tx}
 else if(S.cur&&AS.stop===S.cur&&d){st='error';tx='他のスタッフが更新しています（クリックで確認）';tip=tx}
-else if(d){st='dirty';tx='未保存の変更あり';tip='未保存の変更あり（クリックまたはCtrl+Sで保存）'}
+else if(d){st='dirty';tx='未保存の変更あり';tip='未保存の変更あり（クリックまたはCtrl+Sで'+(!S.cur&&S.fname?'ファイル保管の「'+S.fname+'」に上書き':'保存')+'）'}
 else if(S.cur){st='saved';tx=AS.cur===S.curAt&&AS.at?'自動保存済み '+AS.at:'保存済み';tip=tx+((cur&&cur.at)||S.curAt?'（最終保存 '+fmtAt(S.curAt||cur.at)+'）':'')}
+else if(S.fname){st='saved';tx='保存済み';tip='ファイル保管に保存済み（'+(S.ffold||'未分類')+' / '+S.fname+'）'}
 else{st='new';tx='共有に未保存';tip='まだ共有に保存されていません（「保存」で保存）'}
 var b=$('sst');b.dataset.s=st;b.querySelector('.stx').textContent=tx;b.title=tip;b.setAttribute('aria-label',tx);
 var sv=$('save');sv.title='保存 (Ctrl+S)'+(S.cur&&(S.curAt||(cur&&cur.at))?'　最終保存 '+fmtAt(S.curAt||cur.at):'');sv.disabled=busy||saving;if(window.FreeEditor)FreeEditor.status(st,tx);updFinal();autoSched(d)}
@@ -1461,7 +1481,9 @@ var draftChecked=false;
 function hideDraft(){$('draftbar').hidden=true}
 function checkDraft(){if(draftChecked||!booted)return;if(S.cur&&!presetsLoaded)return;draftChecked=true;if(dirtyNow())$('draftbar').hidden=false}
 $('dfrest').onclick=hideDraft;
-$('dfdisc').onclick=function(){var p=S.cur&&byId(S.cur);if(p){S.tpl=p.tpl;V=JT.mkVals(p.tpl,p.vals)}else{V=JT.mkVals(S.tpl,{})}
+$('dfdisc').onclick=async function(){var p=S.cur&&byId(S.cur);
+if(!p&&S.fname){var f0=S.fname,d0=S.ffold;try{needSb();if(!FL.loaded){FL.loading=false;await fLoad()}}catch(e){}var fr=FL.rows.filter(function(r){return isDesignFile(r)&&(r.folder||'')===d0&&r.name===f0})[0];if(fr){hideDraft();openDesignFile(fr,true);return}}
+if(p){S.tpl=p.tpl;V=JT.mkVals(p.tpl,p.vals)}else{V=JT.mkVals(S.tpl,{})}
 hideDraft();afterDesignChange();resetBase();histInit();toast('前回の未保存の変更を破棄しました')};
 
 /* ---------- かんたんモード（4ステップ）／詳細編集（タブ） ---------- */
@@ -1516,7 +1538,7 @@ var s1=el('section','gsec'),h1=el('h3',null,'よく使うデザイン');h1.appen
 var rec=presets.slice().sort(function(a,b){return tsNum(b.at)-tsNum(a.at)}).slice(0,6);
 if(rec.length){var g=el('div','gal');s1.appendChild(g);
 rec.forEach(function(p){var m=el('div','cm');m.appendChild(el('span','chip',JT.get(p.tpl).name));if(p.folder)m.appendChild(el('span','chip',p.folder));
-g.appendChild(card(designThumb(p),p.name,m,function(){if(openPreset(p.id))toast('『'+p.name+'』を選びました')},function(){return S.cur===p.id}))})}
+g.appendChild(card(designThumb(p),p.name,m,function(){openPreset(p.id).then(function(ok){if(ok)toast('『'+p.name+'』を選びました')})},function(){return S.cur===p.id}))})}
 else s1.appendChild(el('div','empty',!presetsLoaded?(presetsErr||'読み込み中…'):'保存したデザインはまだありません。下のデザインを選んで、最後に「このデザインを保存」すると、ここに並びます。'));
 var more=btn('すべてのデザイン…','保存したデザインを整理・検索する');more.className='gmore';more.onclick=exOpen;s1.appendChild(more);
 if(EXP.ok===false){var nb=el('p','fhint','エクスプローラー機能を使うには supabase-explorer.sql を実行してください。');s1.appendChild(nb)}
@@ -1712,12 +1734,12 @@ var fontEvt=function(){clearTimeout(rt);rt=setTimeout(function(){if(FreeEditor.i
 if(document.fonts&&document.fonts.addEventListener)document.fonts.addEventListener('loadingdone',fontEvt);window.addEventListener('juken-fonts',fontEvt);
 DesignImport.init({sample:function(){return mkStu(0,null)},fitAll:fitAll,toast:toast,
 lastExt:function(){var c=presets.filter(function(p){return p.tpl==='free'&&p.vals&&JSON.stringify(p.vals).indexOf('"id":"bg"')>=0}).sort(function(a,b){return tsNum(b.at)-tsNum(a.at)})[0];return c?{id:c.id,name:c.name}:null},
-openLast:function(id){if(openPreset(id)){setStep(3);toast('前回のデザインを開きました。名簿を貼り付けてください')}},
+openLast:function(id){openPreset(id).then(function(ok){if(ok){setStep(3);toast(rows.length?'前回のデザインと名簿（'+rows.length+'名）を開きました':'前回のデザインを開きました。名簿を貼り付けてください')}})},
 apply:function(o){var nv=JT.mkVals('free',{orient:o.orient,items:o.items,tpl:{free:{bg:o.bg,elements:o.elements,guides:[]}}});
 S.tpl='free';V=nv;clearCur();importName=o.name;lastFile='';selId='';navPos=0;afterDesignChange();resetBase();hideDraft();
 if(o.rosterLines){V.items.forEach(function(it){var ls=o.rosterLines[it.label];if(ls)texts[it.id]=ls.join('\n')});drawRoster()}
 if(UI.mode!=='easy')setMode('easy');setStep(3);render();offerSave()}});
-function offerSave(){if(S.cur||AS.offered)return;AS.offered=true;toast('このデザインを保存しますか','保存',function(){saveMain()},15000)}
+function offerSave(){if(S.cur||S.fname||AS.offered)return;AS.offered=true;toast('このデザインを保存しますか','保存',function(){saveMain()},15000)}
 /* 持ち込みフォントの共有（ファイル保管に kind=doc・メモ「font:<id>|<名前>」で保存。デザインが使うとき自動で取得） */
 if(window.JukenFonts&&JukenFonts.setShare)JukenFonts.setShare({
 upload:async function(o){var nm=(o.file&&o.file.name)||(o.name+'.ttf');var blob=new Blob([o.buf],{type:'application/octet-stream'});await fPut(blob,{name:nm,kind:'doc',mime:'application/octet-stream',folder:'フォント（共有）',note:'font:'+o.id+'|'+o.name});toast('フォント「'+o.name+'」をチームに共有しました')},
@@ -1786,25 +1808,33 @@ var DMIME='application/x-juken-design';
 function isDesignFile(r){return !!r&&(r.mime===DMIME||/\.juken\.json$/i.test(r.name||''))}
 function designFileName(n){n=String(n||'').replace(/\.juken\.json$|\.json$/i,'').replace(/[\x5c\/:*?"<>|\r\n]+/g,'_').trim();return (n||'デザイン')+'.juken.json'}
 var lastDFolder=null;
-async function saveDesignFile(){if(saving||pdfBusy)return;histFlush();
-try{needSb();if(!FL.loaded){FL.loading=false;await fLoad()}}catch(e){toast('ファイル保管を読み込めませんでした：'+fErr(e));return}
-var cp=S.cur&&byId(S.cur),base=(cp?cp.name:(S.curName||importName||lastFile||''))||tpl().name;
-var d=await fdlg({title:'デザインをファイル保管に保存',text:'編集中のデザインを、ファイル保管にファイルとして保存します。フォルダと名前は自由に決められます（ログイン中のスタッフ全員が見られます）。',
-fields:[{k:'name',label:'名前',value:base,max:120,req:1},{k:'folder',label:'フォルダ（空欄で未分類）',value:lastDFolder!=null?lastDFolder:(cp&&cp.folder)||'',list:fNames(),max:60},{k:'note',label:'メモ',type:'area',value:'',max:500}],ok:'保存'});
-if(!d)return;var fname=designFileName(d.name),folder=(d.folder||'').trim();
-var old=FL.rows.filter(function(r){return isDesignFile(r)&&(r.folder||'')===folder&&r.name===fname})[0];
-if(old){var q=await modal({title:'同じ名前のファイルがあります',text:'「'+(folder||'未分類')+'」に「'+fname+'」があります。',btns:[{label:'上書き',v:'over',pri:true},{label:'別名で保存',v:'alias'},{label:'キャンセル',v:'cancel'}]});
-if(!q)return;if(q.v==='alias'){var k=2;while(FL.rows.some(function(r){return (r.folder||'')===folder&&r.name===designFileName(d.name+' ('+k+')')}))k++;fname=designFileName(d.name+' ('+k+')');old=null}}
-var txt;try{txt=JSON.stringify({format:'juken-design',version:1,name:fname.replace(/\.juken\.json$/i,''),template:S.tpl,data:clone(V)})}catch(e){toast('保存できませんでした：'+((e&&e.message)||e));return}
+/* over=true：ファイル保管から開いたデザインを、そのファイルに確認なしで上書き（Ctrl+S・保存ボタン） */
+async function saveDesignFile(over){if(saving||pdfBusy||busy)return false;histFlush();
+try{needSb();if(!FL.loaded){FL.loading=false;await fLoad()}}catch(e){toast('ファイル保管を読み込めませんでした：'+fErr(e));return false}
+var own=!S.cur&&S.fname,cp=S.cur&&byId(S.cur),base=(cp?cp.name:own?S.fname.replace(/\.juken\.json$/i,''):(S.curName||importName||lastFile||''))||tpl().name;
+var mine=own?FL.rows.filter(function(r){return isDesignFile(r)&&(r.folder||'')===S.ffold&&r.name===S.fname})[0]:null,fname,folder,old,d;
+if(over&&mine){fname=mine.name;folder=mine.folder||'';old=mine;d={note:mine.note||''}}else{
+d=await fdlg({title:'デザインをファイル保管に保存',text:'編集中のデザインを、ファイル保管にファイルとして保存します。フォルダと名前は自由に決められます（ログイン中のスタッフ全員が見られます）。',
+fields:[{k:'name',label:'名前',value:base,max:120,req:1},{k:'folder',label:'フォルダ（空欄で未分類）',value:own?S.ffold:lastDFolder!=null?lastDFolder:(cp&&cp.folder)||'',list:fNames(),max:60},{k:'note',label:'メモ',type:'area',value:mine?mine.note||'':'',max:500}],ok:'保存'});
+if(!d)return false;fname=designFileName(d.name);folder=(d.folder||'').trim();
+old=FL.rows.filter(function(r){return isDesignFile(r)&&(r.folder||'')===folder&&r.name===fname})[0];
+if(old&&old!==mine){var q=await modal({title:'同じ名前のファイルがあります',text:'「'+(folder||'未分類')+'」に「'+fname+'」があります。',btns:[{label:'上書き',v:'over',pri:true},{label:'別名で保存',v:'alias'},{label:'キャンセル',v:'cancel'}]});
+if(!q||q.v==='cancel')return false;if(q.v==='alias'){var k=2;while(FL.rows.some(function(r){return (r.folder||'')===folder&&r.name===designFileName(d.name+' ('+k+')')}))k++;fname=designFileName(d.name+' ('+k+')');old=null}}}
+var txt;try{txt=JSON.stringify({format:'juken-design',version:1,name:fname.replace(/\.juken\.json$/i,''),template:S.tpl,data:clone(V)})}catch(e){toast('保存できませんでした：'+((e&&e.message)||e));return false}
 var blob=new Blob([txt],{type:DMIME});setBusy(true);pstat('ファイル保管に保存中…');
 try{var row=await fPut(blob,{name:fname,kind:'doc',mime:DMIME,folder:folder,note:d.note||(old?old.note:'')});
 if(old){try{await sb.storage.from(BUCKET).remove([old.path]);await sb.from(FT).delete().eq('id',old.id)}catch(e){}FL.rows=FL.rows.filter(function(y){return y.id!==old.id})}
-lastDFolder=folder;setBusy(false);fDraw();var msg='ファイル保管に保存しました（'+(folder||'未分類')+' / '+fname+'・'+fmtSize(blob.size)+'）';pstat(msg);
-toast(msg,'ファイルを開く',function(){FL.folder=folder||'';FL.tab='design';openFiles()},9000)}
-catch(e){setBusy(false);pstat('保存できませんでした：'+fErr(e),true);toast('ファイル保管に保存できませんでした：'+fErr(e),'再試行',function(){saveDesignFile()},12000)}}
-async function openDesignFile(r){if(dirtyNow()&&!confirm('保存していない変更があります。破棄して「'+r.name+'」を開きますか？'))return;
+lastDFolder=folder;setBusy(false);
+/* 共有デザインを編集中でなければ、このファイルが「今のデザイン」になる（以後の保存はここへ上書き・未保存表示も消える） */
+if(!S.cur){S.fname=fname;S.ffold=folder;importName=fname.replace(/\.juken\.json$/i,'');resetBase();hideDraft();rSave()}
+fDraw();var msg='ファイル保管に保存しました（'+(folder||'未分類')+' / '+fname+'・'+fmtSize(blob.size)+'）';pstat(msg);
+toast(msg,over&&mine?null:'ファイルを開く',over&&mine?null:function(){FL.folder=folder||'';FL.tab='design';openFiles()},over&&mine?4000:9000);return true}
+catch(e){setBusy(false);pstat('保存できませんでした：'+fErr(e),true);toast('ファイル保管に保存できませんでした：'+fErr(e),'再試行',function(){saveDesignFile(over)},12000);return false}}
+async function openDesignFile(r,force){if(!force&&!(await leaveOk(r.name)))return;
 fStat('デザインを読み込み中…');try{var u=await signedUrl(r.path),x=await fetch(u);if(!x.ok)throw {message:'HTTP '+x.status};var t=await x.text();
-lastFile=String(r.name||'').replace(/\.juken\.json$|\.json$/i,'');if(importDesign(t)){closeFiles();toast('「'+r.name+'」を開きました')}else fStat('デザインとして読み込めませんでした',true)}catch(e){fStat(fErr(e),true)}}
+var nm=String(r.name||'').replace(/\.juken\.json$|\.json$/i,''),re=rPeek('f:'+(r.folder||'')+'/'+r.name);lastFile=nm;
+if(importDesign(t)){S.fname=r.name;S.ffold=r.folder||'';importName=nm;save();refreshDirty();rApply(re);closeFiles();
+pstat('「'+nm+'」を開きました。「保存」（Ctrl+S）でこのファイルに上書きされます。');toast('「'+nm+'」を開きました')}else fStat('デザインとして読み込めませんでした',true)}catch(e){fStat(fErr(e),true)}}
 function fVisible(){var q=FL.q.toLowerCase(),tab=FL.pick?'image':FL.tab;
 return FL.rows.filter(function(r){var dz=isDesignFile(r);if(tab==='design'?!dz:(tab!=='all'&&(r.kind!==tab||dz)))return false;if(FL.folder===''&&r.folder)return false;if(FL.folder!=='*'&&FL.folder!==''&&r.folder!==FL.folder)return false;
 if(q&&((r.name||'')+' '+(r.note||'')+' '+(r.folder||'')).toLowerCase().indexOf(q)<0)return false;return true}).sort(function(a,b){return tsNum(b.created_at)-tsNum(a.created_at)})}
