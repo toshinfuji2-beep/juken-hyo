@@ -1910,6 +1910,20 @@ fp.addEventListener('drop',function(e){if(!hasFiles(e))return;e.preventDefault()
 var H2C='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js',JSPDF='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js',libP={},pdfBusy=false;
 function loadScript(u){return libP[u]||(libP[u]=new Promise(function(ok,ng){var s=document.createElement('script');s.src=u;s.onload=ok;s.onerror=function(){delete libP[u];ng(new Error('lib'))};document.head.appendChild(s)}))}
 function cleanFn(n){return String(n||'').replace(/[\\\/:*?"<>|\u0000-\u001f]+/g,' ').replace(/\s+/g,' ').trim()}
+/* PDF化の前に、キャンバスを汚す画像（外部サイトのURL画像など）を取り直してdata URLに置き換える。取り直せない画像があれば分かる言葉で止める。o.imgs に src→data URL（失敗は''）をページ間で使い回す */
+function imgTainted(m){if(!m.naturalWidth)return false;try{var c=document.createElement('canvas');c.width=c.height=1;c.getContext('2d').drawImage(m,0,0,1,1);c.toDataURL();return false}catch(e){return true}}
+function blobUrl(b){return new Promise(function(ok,ng){var r=new FileReader();r.onload=function(){ok(r.result)};r.onerror=ng;r.readAsDataURL(b)})}
+async function refetchImg(src,o){o.imgs=o.imgs||{};if(src in o.imgs)return o.imgs[src];var d='';try{var x=await fetch(src,{mode:'cors'});if(x.ok){var b=await x.blob();if(/^image\//.test(b.type))d=await blobUrl(b)}}catch(e){}return o.imgs[src]=d}
+async function safeImgs(t,o){var bad=0;
+var ims=Array.prototype.slice.call(t.querySelectorAll('img'));
+for(var i=0;i<ims.length;i++){var m=ims[i],src=m.currentSrc||m.src;if(!src||/^data:image\/(?!svg)/.test(src)||!imgTainted(m))continue;
+var d=/^data:/.test(src)?'':await refetchImg(src,o);if(!d){bad++;continue}
+await new Promise(function(r){m.onload=m.onerror=r;m.src=d});if(imgTainted(m))bad++}
+var els=[t].concat(Array.prototype.slice.call(t.querySelectorAll('*')));
+for(var j=0;j<els.length;j++){var bi=getComputedStyle(els[j]).backgroundImage,mu=/url\("?([^")]+)"?\)/.exec(bi||'');if(!mu)continue;var u=mu[1];
+try{if(/^(data|blob):/.test(u)||new URL(u,location.href).origin===location.origin)continue}catch(e){continue}
+var d2=await refetchImg(u,o);if(d2)els[j].style.backgroundImage=bi.replace(mu[0],'url("'+d2+'")');else bad++}
+if(bad)throw new Error('PDFに入れられない画像が'+bad+'枚あります（外部サイトから読み込んだ画像は、ブラウザの制限でPDFに描けません）。\n自由編集でその画像を選び「アップロード」または「素材から選ぶ」で入れ直すと保存できます。')}
 function dlBlob(b,name){var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(a.href)},30000)}
 /* 全員分のPDFを作る（中止されたら null）。o.cancel を立てると次のページで止まる */
 async function buildPdf(list,pg,o){var host=null;
@@ -1920,6 +1934,7 @@ for(var i=0;i<n;i++){if(o.cancel)break;pg.set('PDF作成中 '+(i+1)+'/'+n,i/n);
 host.textContent='';var t=JT.render(S.tpl,list[i],V);host.appendChild(t);if(JukenCheck.planned())JukenCheck.apply(t);fitAll(t);await JukenFonts.prepare(t);fitAll(t);
 if(i===0||i===n-1||i===Math.floor(n/2)){var vr=await JukenCheck.verify([t]);if(vr.notLoaded.length||vr.missing.some(function(m){return !m.fb})){throw new Error('文字の確認に失敗しました（'+(vr.notLoaded.length?'フォントが読み込めていません：'+vr.notLoaded.join('、'):'字形のない文字があります')+'）。フォントを選び直してください。')}}
 var ims=Array.prototype.slice.call(t.querySelectorAll('img'));await Promise.all(ims.map(function(m){return m.complete?0:new Promise(function(r){m.onload=m.onerror=r})}));
+await safeImgs(t,o);
 await new Promise(function(r){requestAnimationFrame(function(){setTimeout(r,0)})});
 var cv=await window.html2canvas(t,{scale:sc,backgroundColor:'#ffffff',useCORS:true,logging:false});
 var img=cv.toDataURL('image/jpeg',.9);cv.width=cv.height=0;
