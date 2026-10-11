@@ -488,6 +488,8 @@ function ensureUp(id) {
   }).then(function (r) { delete upLoading[id]; return r; }, function () { if (REG[id]) REG[id].loading = false; delete upLoading[id]; return null; }));
 }
 function loadUps() { return idbAll().then(function (all) { return Promise.all(all.map(function (e) { return addFace(e.id, e.buf, e.name).catch(function () { }); })); }).catch(function () { }); }
+/* 持ち込みフォントの実データ（PDFのネイティブ描画でSVGに埋め込む用） */
+function upBuf(id) { return idbAll().then(function (all) { var e = all.filter(function (x) { return x.id === id; })[0]; return e ? e.buf : null; }).catch(function () { return null; }); }
 function hash6(u8) { var h = 5381, n = Math.min(u8.length, 65536); for (var i = 0; i < n; i++) h = ((h << 5) + h + u8[i]) | 0; h = (h ^ u8.length) >>> 0; return ('000000' + h.toString(16)).slice(-6); }
 /* ファイル → 登録。戻り値 Promise<{id,name,buf}> */
 function addFontFile(file) {
@@ -613,7 +615,7 @@ g.JukenFonts = {
   recent: recent, pushRecent: pushRecent, fromName: fromName, fromCss: fromCss, fillSelect: fillSelect, openPicker: openPicker, closePicker: closePicker,
   gfUrl: gfUrl, previewCss: previewCss,
   localSupported: localSupported, loadLocal: loadLocal, localListed: localListed, autoLocal: autoLocal, chosenLocals: chosenLocals, pushLocal: pushLocal,
-  addFontFile: addFontFile, removeUp: removeUp, ensureUp: ensureUp, setShare: setShare, openManager: openManager, upList: upList,
+  addFontFile: addFontFile, removeUp: removeUp, ensureUp: ensureUp, upBuf: upBuf, setShare: setShare, openManager: openManager, upList: upList,
   favList: favList, isFav: isFav, toggleFav: toggleFav, suggest: suggest, openCompare: openCompare
 };
 if (typeof indexedDB !== 'undefined') loadUps();

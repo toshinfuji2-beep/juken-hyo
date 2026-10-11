@@ -818,8 +818,9 @@ function loadImg(src){return new Promise(function(ok,ng){var i=new Image();i.onl
 async function inlineImgs(t){var ims=t.querySelectorAll('img');
 for(var i=0;i<ims.length;i++){var m=ims[i];if(/^data:/.test(m.src))continue;if(!m.naturalWidth){m.remove();continue}
 var s=Math.min(1,700/Math.max(m.naturalWidth,m.naturalHeight)),c=document.createElement('canvas');c.width=Math.round(m.naturalWidth*s);c.height=Math.round(m.naturalHeight*s);c.getContext('2d').drawImage(m,0,0,c.width,c.height);m.src=c.toDataURL('image/png')}}
-function ticketSvg(t,pz){var w=Math.round(pz.w*C.PXMM),h=Math.round(pz.h*C.PXMM);
-return '<svg xmlns="http://www.w3.org/2000/svg" width="'+w+'" height="'+h+'"><foreignObject x="0" y="0" width="'+w+'" height="'+h+'"><div xmlns="http://www.w3.org/1999/xhtml"><style><![CDATA['+JT.cssText()+']]></style>'+new XMLSerializer().serializeToString(t)+'</div></foreignObject></svg>'}
+/* x={s:倍率,css:追加CSS(埋め込みフォント),st:外側のdivのstyle}。省略時はサムネイル用の等倍SVG */
+function ticketSvg(t,pz,x){x=x||{};var w=Math.round(pz.w*C.PXMM),h=Math.round(pz.h*C.PXMM),k=x.s||1,sz=k===1?'':' viewBox="0 0 '+w+' '+h+'"';
+return '<svg xmlns="http://www.w3.org/2000/svg" width="'+Math.round(w*k)+'" height="'+Math.round(h*k)+'"'+sz+'><foreignObject x="0" y="0" width="'+w+'" height="'+h+'"><div xmlns="http://www.w3.org/1999/xhtml"'+(x.st?' style="'+x.st+'"':'')+'><style><![CDATA['+JT.cssText()+(x.css||'')+']]></style>'+new XMLSerializer().serializeToString(t)+'</div></foreignObject></svg>'}
 /* 先頭ページを小さく描いたJPEG(dataURL, 約60KB以下)。氏名などは含めない（サンプル表示）。SVG→canvas、だめならhtml2canvas */
 async function makeThumb(tid,vals){
 var host=el('div');var pz=JT.pageSize(vals);host.style.cssText='position:fixed;left:-99999px;top:0;width:'+pz.w+'mm;height:'+pz.h+'mm;overflow:hidden;background:#fff;pointer-events:none';document.body.appendChild(host);
@@ -1914,17 +1915,73 @@ function cleanFn(n){return String(n||'').replace(/[\\\/:*?"<>|\u0000-\u001f]+/g,
 function imgTainted(m){if(!m.naturalWidth)return false;try{var c=document.createElement('canvas');c.width=c.height=1;c.getContext('2d').drawImage(m,0,0,1,1);c.toDataURL();return false}catch(e){return true}}
 function blobUrl(b){return new Promise(function(ok,ng){var r=new FileReader();r.onload=function(){ok(r.result)};r.onerror=ng;r.readAsDataURL(b)})}
 async function refetchImg(src,o){o.imgs=o.imgs||{};if(src in o.imgs)return o.imgs[src];var d='';try{var x=await fetch(src,{mode:'cors'});if(x.ok){var b=await x.blob();if(/^image\//.test(b.type))d=await blobUrl(b)}}catch(e){}return o.imgs[src]=d}
-async function safeImgs(t,o){var bad=0;
+/* 画像の種類と場所を言葉にする（エラー表示用） */
+function imgKind(s){return /^data:image\/svg/i.test(s)?'SVG画像':/^data:/i.test(s)?'埋め込み画像':/^blob:/i.test(s)?'blob画像':/token=|\/object\/sign\//.test(s)?'署名付きURL・期限切れの可能性':/^https?:/i.test(s)?'外部サイトの画像':'画像'}
+function imgWhere(m,t){var e=m.closest&&m.closest('[data-eid]');if(e){var all=Array.prototype.slice.call(t.querySelectorAll('[data-eid]'));return '自由編集の'+(all.indexOf(e)+1)+'番目の要素（'+e.getAttribute('data-eid')+'）'}var c=(typeof m.className==='string'?m.className:'')+' '+(m.alt||'');return /map|地図/i.test(c)?'地図':/logo|ロゴ/i.test(c)?'ロゴ':'テンプレートの画像'}
+/* foreignObject・外部参照を除いたSVGにする（キャンバスを汚さないように）。失敗は'' */
+function svgClean(src){try{var i=src.indexOf(','),h=src.slice(0,i),p=src.slice(i+1),txt=/;base64/i.test(h)?decodeURIComponent(escape(atob(p))):decodeURIComponent(p),d=new DOMParser().parseFromString(txt,'image/svg+xml');if(d.querySelector('parsererror'))return '';
+d.querySelectorAll('foreignObject,script').forEach(function(n){n.remove()});
+Array.prototype.slice.call(d.querySelectorAll('*')).forEach(function(n){var v=n.getAttribute('href')||n.getAttribute('xlink:href')||'';if(v&&!/^(#|data:)/i.test(v))n.remove()});
+return 'data:image/svg+xml;charset=utf-8,'+encodeURIComponent(new XMLSerializer().serializeToString(d.documentElement))}catch(e){return ''}}
+/* soft=true: ネイティブ描画用（問題の画像は集めて返すだけ・SVGは触らない）。false: 直せるものは直し、残れば場所つきで止める */
+async function safeImgs(t,o,soft){var bads=[];function bad(s,w){bads.push({k:imgKind(s),w:w,s:s})}
 var ims=Array.prototype.slice.call(t.querySelectorAll('img'));
 for(var i=0;i<ims.length;i++){var m=ims[i],src=m.currentSrc||m.src;if(!src||/^data:image\/(?!svg)/.test(src)||!imgTainted(m))continue;
-var d=/^data:/.test(src)?'':await refetchImg(src,o);if(!d){bad++;continue}
-await new Promise(function(r){m.onload=m.onerror=r;m.src=d});if(imgTainted(m))bad++}
+if(soft){bad(src,imgWhere(m,t));continue}
+var d=/^data:image\/svg/i.test(src)?svgClean(src):/^data:/.test(src)?'':await refetchImg(src,o);if(!d){bad(src,imgWhere(m,t));continue}
+await new Promise(function(r){m.onload=m.onerror=r;m.src=d});if(imgTainted(m))bad(src,imgWhere(m,t))}
 var els=[t].concat(Array.prototype.slice.call(t.querySelectorAll('*')));
 for(var j=0;j<els.length;j++){var bi=getComputedStyle(els[j]).backgroundImage,mu=/url\("?([^")]+)"?\)/.exec(bi||'');if(!mu)continue;var u=mu[1];
 try{if(/^(data|blob):/.test(u)||new URL(u,location.href).origin===location.origin)continue}catch(e){continue}
-var d2=await refetchImg(u,o);if(d2)els[j].style.backgroundImage=bi.replace(mu[0],'url("'+d2+'")');else bad++}
-if(bad)throw new Error('PDFに入れられない画像が'+bad+'枚あります（外部サイトから読み込んだ画像は、ブラウザの制限でPDFに描けません）。\n自由編集でその画像を選び「アップロード」または「素材から選ぶ」で入れ直すと保存できます。')}
+if(soft)continue;var d2=await refetchImg(u,o);if(d2)els[j].style.backgroundImage=bi.replace(mu[0],'url("'+d2+'")');else bad(u,imgWhere(els[j],t)+'の背景')}
+if(bads.length&&!soft){bads.forEach(function(x){console.warn('PDFに入れられない画像',x.w,x.k,String(x.s).slice(0,80))});
+throw new Error('PDFに入れられない画像が'+bads.length+'枚あります。\n'+bads.slice(0,5).map(function(x){return '・'+x.w+'の画像（'+x.k+'）'}).join('\n')+'\n（外部サイトから読み込んだ画像は、ブラウザの制限でPDFに描けません）。自由編集でその画像を選び「アップロード」または「素材から選ぶ」で入れ直すと保存できます。')}
+return bads}
 function dlBlob(b,name){var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(a.href)},30000)}
+/* ---------- ネイティブ描画：ブラウザ自身のレイアウトで描く（SVG foreignObject → canvas）。html2canvasより画面に忠実 ---------- */
+function qsa(e){return Array.prototype.slice.call(e.querySelectorAll('*'))}
+function u8b64(u){var s='',k=0x8000;for(var i=0;i<u.length;i+=k)s+=String.fromCharCode.apply(null,u.subarray(i,i+k));return btoa(s)}
+async function fetchData(u,o){var c=(o.fc=o.fc||{gf:{},fd:{}}).fd;if(c[u])return c[u];return c[u]=(async function(){var x=await fetch(u,{mode:'cors'});if(!x.ok)throw new Error('http '+x.status);return blobUrl(await x.blob())})().catch(function(e){delete c[u];throw e})}
+function wRange(v){v=String(v||'400').trim();if(v==='normal')return[400,400];if(v==='bold')return[700,700];var p=v.split(/\s+/).map(Number);return[p[0]||400,p[p.length-1]||p[0]||400]}
+function uInRange(ur,chars){if(!ur)return true;var rs=ur.split(',').map(function(r){var m=/U\+([0-9a-f?]+)(?:-([0-9a-f]+))?/i.exec(r.trim());if(!m)return null;var lo,hi;if(m[1].indexOf('?')>=0){lo=parseInt(m[1].replace(/\?/g,'0'),16);hi=parseInt(m[1].replace(/\?/g,'f'),16)}else{lo=parseInt(m[1],16);hi=m[2]?parseInt(m[2],16):lo}return[lo,hi]}).filter(Boolean);
+return chars.some(function(c){return rs.some(function(r){return c>=r[0]&&c<=r[1]})})}
+function parseFaces(css){var out=[],re=/@font-face\s*\{([^}]*)\}/g,m;while((m=re.exec(css))){var b=m[1];var g=function(p){var r=new RegExp('(?:^|[;\\s])'+p+'\\s*:\\s*([^;]+)','i').exec(b);return r?r[1].trim():''};
+var us=/url\(\s*["']?([^"')]+)["']?\s*\)/.exec(g('src'));if(!us)continue;out.push({fam:g('font-family').replace(/^["']|["']$/g,''),w:g('font-weight'),st:g('font-style')||'normal',ur:g('unicode-range'),url:us[1]})}return out}
+/* 使われているWebフォントのみ @font-face(base64) にして返す。Googleフォント・読める@font-face・持ち込みフォント対応。o.fc に取得結果をPDF作成中ずっと使い回す */
+async function allFaces(o){var F=o.fc=o.fc||{gf:{},fd:{}};if(F.faces)return F.faces;var faces=[];
+var ls=Array.prototype.slice.call(document.querySelectorAll('link[rel~="stylesheet"][href*="fonts.googleapis.com"]'));
+for(var i=0;i<ls.length;i++){var h=ls[i].href;try{if(F.gf[h]===undefined){var x=await fetch(h,{mode:'cors'});F.gf[h]=x.ok?await x.text():''}parseFaces(F.gf[h]).forEach(function(f){faces.push(f)})}catch(e){console.warn('フォントCSSを取得できません',h)}}
+Array.prototype.slice.call(document.styleSheets).forEach(function(sh){var rs;try{rs=sh.cssRules}catch(e){return}if(!rs)return;Array.prototype.slice.call(rs).forEach(function(r){if(r.type!==5)return;var f=parseFaces('@font-face{'+r.style.cssText+'}')[0];if(f){try{f.url=new URL(f.url,sh.href||location.href).href}catch(e){}faces.push(f)}})});
+return F.faces=faces}
+async function fontCssFor(t,o){var els=[t].concat(qsa(t)),fam={};
+els.forEach(function(e){var cs=getComputedStyle(e),own='';for(var c=e.firstChild;c;c=c.nextSibling)if(c.nodeType===3)own+=c.nodeValue;
+cs.fontFamily.split(',').forEach(function(n){n=n.trim().replace(/^["']|["']$/g,'');if(!n)return;var f=fam[n]||(fam[n]={w:{},it:{},ch:{}});f.w[cs.fontWeight]=1;f.it[cs.fontStyle==='normal'?0:1]=1;Array.from(own).forEach(function(ch){f.ch[ch.codePointAt(0)]=1})})});
+var faces=await allFaces(o),css='',F=o.fc;F.up=F.up||{};
+for(var n in fam){var f=fam[n],ws=Object.keys(f.w).map(Number),chars=Object.keys(f.ch).map(Number);
+if(/^JF /.test(n)){var id='up:'+n.slice(3);if(F.up[id]===undefined){var buf=window.JukenFonts&&await JukenFonts.upBuf(id);F.up[id]=buf?u8b64(new Uint8Array(buf)):''}if(F.up[id]){css+='@font-face{font-family:"'+n+'";font-weight:100 900;src:url(data:font/ttf;base64,'+F.up[id]+')}';continue}}
+var mine=faces.filter(function(x){return x.fam===n});
+if(!mine.length){if(!/^(serif|sans-serif|monospace|cursive|fantasy|system-ui|ui-[a-z-]+|-apple-system|emoji|math|fangsong)$/i.test(n)&&document.fonts&&!document.fonts.check('16px "'+n+'"'))console.warn('フォントを埋め込めません（端末に無い可能性）:',n);continue}
+var pick=mine.filter(function(x){var r=wRange(x.w);return ws.some(function(w){return w>=r[0]&&w<=r[1]})});if(!pick.length)pick=mine;
+pick=pick.filter(function(x){return(!/italic|oblique/.test(x.st)||f.it[1])&&uInRange(x.ur,chars)});
+for(var k=0;k<pick.length;k++){var p=pick[k];try{var du=await fetchData(p.url,o);css+='@font-face{font-family:"'+n+'";font-style:'+p.st+';font-weight:'+(p.w||'400')+(p.ur?';unicode-range:'+p.ur:'')+';src:url('+du+')}'}catch(e){console.warn('フォントを取得できません',n,p.url)}}}
+return css}
+/* ネイティブ描画用の画像埋め込み：原寸のまま data URL に（img と CSS背景）。a=画面側の要素, b=そのクローン */
+async function nativeInline(a,b,o){var A=[a].concat(qsa(a)),B=[b].concat(qsa(b));
+for(var i=0;i<A.length;i++){var e=A[i],c=B[i];
+if(e.tagName==='IMG'){var s=e.currentSrc||e.src;if(!s)continue;if(!e.naturalWidth){c.remove();continue}
+if(!/^data:/.test(s)){var d=await refetchImg(s,o);if(!d){try{var cv=document.createElement('canvas');cv.width=e.naturalWidth;cv.height=e.naturalHeight;cv.getContext('2d').drawImage(e,0,0);d=cv.toDataURL('image/png')}catch(er){throw new Error('img')}}c.setAttribute('src',d)}c.removeAttribute('srcset');c.removeAttribute('sizes');c.removeAttribute('loading')}
+var bi=getComputedStyle(e).backgroundImage;if(bi&&/url\(/.test(bi)){var re=/url\((["']?)(.*?)\1\)/g,last=0,m,out='';while((m=re.exec(bi))){out+=bi.slice(last,m.index);last=re.lastIndex;var u=m[2],dd=u;if(!/^data:/.test(u)){dd=await refetchImg(u,o);if(!dd)throw new Error('bg')}out+='url("'+dd+'")'}out+=bi.slice(last);c.style.backgroundImage=out}}}
+async function renderNative(t,pz,scale,o){var w=Math.round(pz.w*C.PXMM),h=Math.round(pz.h*C.PXMM),tt=t.cloneNode(true);
+await nativeInline(t,tt,o);var fcss=await fontCssFor(t,o);
+var ps=t.parentNode?getComputedStyle(t.parentNode):null,st=ps?('font-family:'+ps.fontFamily+';font-size:'+ps.fontSize+';line-height:'+ps.lineHeight+';font-weight:'+ps.fontWeight+';color:'+ps.color+';margin:0').replace(/"/g,"'"):'';
+var svg=ticketSvg(tt,pz,{s:scale,css:fcss,st:st}),im=new Image();im.src='data:image/svg+xml;base64,'+u8b64(new TextEncoder().encode(svg));await im.decode();
+var cw=Math.round(w*scale),ch=Math.round(h*scale),cv=document.createElement('canvas');cv.width=cw;cv.height=ch;var x=cv.getContext('2d');
+if(fcss){var tc=document.createElement('canvas');tc.width=tc.height=8;tc.getContext('2d').drawImage(im,0,0,8,8);await new Promise(function(r){setTimeout(r,60)})}
+x.fillStyle='#fff';x.fillRect(0,0,cw,ch);x.drawImage(im,0,0,cw,ch);
+try{cv.toDataURL('image/jpeg',.1)}catch(e){throw new Error('taint')}
+var sm=document.createElement('canvas');sm.width=80;sm.height=Math.max(1,Math.round(80*ch/cw));var sx=sm.getContext('2d');sx.drawImage(cv,0,0,sm.width,sm.height);var px=sx.getImageData(0,0,sm.width,sm.height).data,ink=0;for(var j=0;j<px.length;j+=4)if(px[j]<245||px[j+1]<245||px[j+2]<245)ink++;
+if(!ink&&(/\S/.test(t.textContent)||t.querySelector('img')))throw new Error('blank');
+return cv}
 /* 全員分のPDFを作る（中止されたら null）。o.cancel を立てると次のページで止まる */
 async function buildPdf(list,pg,o){var host=null;
 try{pg.set('ライブラリを読み込み中…');await loadScript(H2C);await loadScript(JSPDF);if(document.fonts&&document.fonts.ready)await document.fonts.ready;
@@ -1934,14 +1991,14 @@ for(var i=0;i<n;i++){if(o.cancel)break;pg.set('PDF作成中 '+(i+1)+'/'+n,i/n);
 host.textContent='';var t=JT.render(S.tpl,list[i],V);host.appendChild(t);if(JukenCheck.planned())JukenCheck.apply(t);fitAll(t);await JukenFonts.prepare(t);fitAll(t);
 if(i===0||i===n-1||i===Math.floor(n/2)){var vr=await JukenCheck.verify([t]);if(vr.notLoaded.length||vr.missing.some(function(m){return !m.fb})){throw new Error('文字の確認に失敗しました（'+(vr.notLoaded.length?'フォントが読み込めていません：'+vr.notLoaded.join('、'):'字形のない文字があります')+'）。フォントを選び直してください。')}}
 var ims=Array.prototype.slice.call(t.querySelectorAll('img'));await Promise.all(ims.map(function(m){return m.complete?0:new Promise(function(r){m.onload=m.onerror=r})}));
-await safeImgs(t,o);
+await safeImgs(t,o,true);
 await new Promise(function(r){requestAnimationFrame(function(){setTimeout(r,0)})});
-var cv=await window.html2canvas(t,{scale:sc,backgroundColor:'#ffffff',useCORS:true,logging:false});
-var img=cv.toDataURL('image/jpeg',.9);cv.width=cv.height=0;
+var cv=null;try{cv=await renderNative(t,pz,sc,o)}catch(er){console.warn('ネイティブ描画に失敗。互換モードで作成します',er);o.fb=(o.fb||0)+1;await safeImgs(t,o,false);cv=await window.html2canvas(t,{scale:sc,backgroundColor:'#ffffff',useCORS:true,logging:false})}
+var img=cv.toDataURL('image/jpeg',.92);cv.width=cv.height=0;
 if(!pdf)pdf=new window.jspdf.jsPDF({unit:'mm',format:'a4',orientation:land?'landscape':'portrait',compress:true});else pdf.addPage('a4',land?'l':'p');
 pdf.addImage(img,'JPEG',0,0,pz.w,pz.h,undefined,'FAST')}
 host.remove();host=null;
-return (o.cancel||!pdf)?null:{blob:pdf.output('blob'),n:n}}finally{if(host)host.remove()}}
+return (o.cancel||!pdf)?null:{blob:pdf.output('blob'),n:n,fb:o.fb||0}}finally{if(host)host.remove()}}
 async function makePdf(){if(pdfBusy||modalOpen)return;var list=current();if(rows.length&&!list.length){alert('PDFにする生徒が選択されていません。');return}
 var base=cleanFn(S.curName||importName||V.hdr||tpl().name)||'受験票',dn=stamp(new Date());
 var d=await fdlg({title:'PDFをファイル保管へ',text:list.length+'ページ（A4・1名1ページ）のPDFを作り、ファイル保管に保存します。',fields:[{k:'folder',label:'保存先フォルダ（空欄で未分類）',value:base,list:fNames(),max:60},{k:'name',label:'ファイル名',value:base+'_受験票_'+dn+'.pdf',max:120,req:1},{k:'note',label:'メモ',type:'area',value:'',max:500},{k:'dl',type:'check',label:'端末にもダウンロード',value:false}],warn:'このPDFには生徒の氏名などが含まれます。ログインしたスタッフ全員が閲覧できます。',ok:'PDFを作って保存'});
@@ -1954,7 +2011,7 @@ var blob=res.blob,n=res.n;pg.set('保存中…（'+fmtSize(blob.size)+'）',1);p
 if(d.dl)dlBlob(blob,fname);
 var row=null,err='';try{row=await fPut(blob,{name:fname,kind:'pdf',mime:'application/pdf',folder:d.folder,note:d.note})}catch(e){err=fErr(e)}
 pg.close();pdfBusy=false;
-if(row){toast('PDFをファイル保管に保存しました（'+n+'ページ・'+fmtSize(blob.size)+'）','ファイルを開く',function(){FL.folder=row.folder||'';FL.tab='pdf';openFiles()},9000)}
+if(row){toast('PDFをファイル保管に保存しました（'+n+'ページ・'+fmtSize(blob.size)+'）'+(res.fb?'（一部ページは互換モードで作成）':''),'ファイルを開く',function(){FL.folder=row.folder||'';FL.tab='pdf';openFiles()},9000)}
 else{if(!d.dl)dlBlob(blob,fname);alert('ファイル保管への保存に失敗しました。\n'+err+'\n\nPDFは端末にダウンロードしました。')}
 }catch(e){pg.close();pdfBusy=false;alert('PDFを作成できませんでした。'+(e&&e.message==='lib'?'\n作成に必要なライブラリを読み込めません。通信状況を確認してください。':'\n'+((e&&e.message)||e)))}}
 /* PDFをパソコンに保存：Chrome/Edgeはクリック直後に保存ダイアログ（エクスプローラー）を出して場所と名前を決めてから作る。非対応ブラウザはダウンロード */
@@ -1967,7 +2024,7 @@ try{var res=await buildPdf(list,pg,cancel);
 if(!res){pg.close();pdfBusy=false;toast('PDFの作成を中止しました');return}
 pg.set('保存中…（'+fmtSize(res.blob.size)+'）',1);pg.nocancel();
 var nm=fname;if(h){var w=await h.createWritable();await w.write(res.blob);await w.close();nm=h.name||fname}else dlBlob(res.blob,fname);
-pg.close();pdfBusy=false;toast('PDFを保存しました（'+nm+'・'+res.n+'ページ・'+fmtSize(res.blob.size)+'）',null,null,7000)
+pg.close();pdfBusy=false;toast('PDFを保存しました（'+nm+'・'+res.n+'ページ・'+fmtSize(res.blob.size)+'）'+(res.fb?'（一部ページは互換モードで作成）':''),null,null,7000)
 }catch(e){pg.close();pdfBusy=false;alert('PDFを作成できませんでした。'+(e&&e.message==='lib'?'\n作成に必要なライブラリを読み込めません。通信状況を確認してください。':'\n'+((e&&e.message)||e)))}}
 $('pdfsave').onclick=makePdf;$('spdf').onclick=function(){closeSM();makePdf()};$('pdfpc').onclick=makePdfPc;$('spc').onclick=function(){closeSM();makePdfPc()};
 /* ---------- ログイン ---------- */
