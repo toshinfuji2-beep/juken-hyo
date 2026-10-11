@@ -511,7 +511,7 @@ button.dg,.dg{color:var(--err)}
 <button id="undo" class="adv-only" type="button" title="元に戻す (Ctrl+Z)" aria-label="元に戻す" disabled>↶</button><button id="redo" class="adv-only" type="button" title="やり直し (Ctrl+Shift+Z / Ctrl+Y)" aria-label="やり直し" disabled>↷</button>
 <button id="dopen" type="button" title="保存したデザインを開く・整理する">デザイン</button>
 <button id="fopen" type="button" title="ファイル保管（受験票PDF・画像素材・資料）">ファイル</button>
-<span class="sv"><button id="save" class="pri" type="button" title="保存 (Ctrl+S)">保存</button><button id="smore" class="pri" type="button" title="その他の保存方法" aria-label="その他の保存方法" aria-haspopup="true" aria-expanded="false">▾</button><div id="smenu" hidden><button id="sas" type="button">名前を付けて保存</button><button id="spdf" type="button">PDFをファイル保管へ</button><button id="sfile" type="button">ファイル保管に保存</button><button id="sdisk" type="button">パソコンに書き出し</button><button id="sauto" type="button"></button></div></span>
+<span class="sv"><button id="save" class="pri" type="button" title="保存 (Ctrl+S)">保存</button><button id="smore" class="pri" type="button" title="その他の保存方法" aria-label="その他の保存方法" aria-haspopup="true" aria-expanded="false">▾</button><div id="smenu" hidden><button id="sas" type="button">名前を付けて保存</button><button id="spc" type="button">PDFをパソコンに保存</button><button id="spdf" type="button">PDFをファイル保管へ</button><button id="sfile" type="button">ファイル保管に保存</button><button id="sdisk" type="button">パソコンに書き出し</button><button id="sauto" type="button"></button></div></span>
 <button id="modebtn" type="button" class="ghost">詳細編集</button>
 <span id="uem"></span><button id="lout" type="button" class="ghost">ログアウト</button><span class="sv" id="omwrap"><button id="omore" type="button" class="ghost" title="その他（ファイル・ログアウト）" aria-label="その他" aria-haspopup="true" aria-expanded="false">⋯</button><div id="omenu" hidden><button id="ofile" type="button">ファイル保管</button><div id="oem"></div><button id="olout" type="button">ログアウト</button></div></span>
 </div>
@@ -528,7 +528,7 @@ button.dg,.dg{color:var(--err)}
 <h2 class="wh">名簿を入れる</h2><p class="wsub">項目ごとにExcelの1列をコピーして、下の欄に貼り付けます。1行が1人分です。</p>
 <div class="hintbox"><table class="xl" aria-hidden="true"><tr><th></th><th>A</th><th>B</th></tr><tr><th>1</th><td class="hl">受験番号</td><td>氏名</td></tr><tr><th>2</th><td class="hl">101</td><td>藤沢 太郎</td></tr><tr><th>3</th><td class="hl">102</td><td>湘南 花子</td></tr></table><div><b>Excelの列をまるごとコピー</b>して、同じ項目の欄に貼り付けてください。1行目の見出しは自動で除きます。</div></div>
 <div id="s3host"></div>
-<div id="qact" hidden><button id="qprint" type="button" class="pri bigbtn">印刷</button><button id="qpdf" type="button" class="bigbtn">PDFをファイル保管へ</button><div id="qstat"></div></div>
+<div id="qact" hidden><button id="qprint" type="button" class="pri bigbtn">印刷</button><button id="qpc" type="button" class="bigbtn">PDFをパソコンに保存</button><button id="qpdf" type="button" class="bigbtn">PDFをファイル保管へ</button><div id="qstat"></div></div>
 </div>
 <div class="wstep" id="ws4" data-s="4" hidden></div>
 </div>
@@ -553,7 +553,7 @@ button.dg,.dg{color:var(--err)}
 </section>
 </div>
 <div id="pane" tabindex="0">
-<div id="bar"><span id="pcount"></span><span class="seg" id="nav"><button id="nprev" type="button" title="前の1名 (←)" aria-label="前の1名">◀</button><span id="npos"></span><button id="nnext" type="button" title="次の1名 (→)" aria-label="次の1名">▶</button></span><button id="fedit" class="pri" type="button" hidden title="文字・図形・画像を自由に配置するエディタを開きます">デザイン編集</button><button id="fconv" type="button" hidden title="いまのデザインを、自由に動かせる要素に変換して編集します（名簿の値・固定の文字・日付はそのまま入ります）">自由に編集</button><button id="tall" type="button" title="全員をまとめて表示／1名ずつ表示">全員表示</button><span class="seg" id="zseg"><button id="zout" type="button" title="縮小（Ctrl＋マウスホイールでも変えられます）" aria-label="縮小">−</button><select id="zsel" aria-label="表示倍率" title="表示倍率"><option value="fit">幅に合わせる</option><option value="50">50%</option><option value="75">75%</option><option value="100">100%（実寸）</option><option value="125">125%</option><option value="150">150%</option><option value="200">200%</option></select><button id="zin" type="button" title="拡大（Ctrl＋マウスホイールでも変えられます）" aria-label="拡大">＋</button></span><button id="pdfsave" class="adv-only" type="button" title="全員分の受験票PDFを作り、ファイル保管に保存します">PDFをファイル保管へ</button><button class="pri adv-only" id="print" type="button">印刷 / PDF保存</button></div>
+<div id="bar"><span id="pcount"></span><span class="seg" id="nav"><button id="nprev" type="button" title="前の1名 (←)" aria-label="前の1名">◀</button><span id="npos"></span><button id="nnext" type="button" title="次の1名 (→)" aria-label="次の1名">▶</button></span><button id="fedit" class="pri" type="button" hidden title="文字・図形・画像を自由に配置するエディタを開きます">デザイン編集</button><button id="fconv" type="button" hidden title="いまのデザインを、自由に動かせる要素に変換して編集します（名簿の値・固定の文字・日付はそのまま入ります）">自由に編集</button><button id="tall" type="button" title="全員をまとめて表示／1名ずつ表示">全員表示</button><span class="seg" id="zseg"><button id="zout" type="button" title="縮小（Ctrl＋マウスホイールでも変えられます）" aria-label="縮小">−</button><select id="zsel" aria-label="表示倍率" title="表示倍率"><option value="fit">幅に合わせる</option><option value="50">50%</option><option value="75">75%</option><option value="100">100%（実寸）</option><option value="125">125%</option><option value="150">150%</option><option value="200">200%</option></select><button id="zin" type="button" title="拡大（Ctrl＋マウスホイールでも変えられます）" aria-label="拡大">＋</button></span><button id="pdfpc" class="adv-only" type="button" title="全員分の受験票PDFを作り、このパソコンの好きな場所に保存します">PDFをパソコンに保存</button><button id="pdfsave" class="adv-only" type="button" title="全員分の受験票PDFを作り、ファイル保管に保存します">PDFをファイル保管へ</button><button class="pri adv-only" id="print" type="button">印刷 / PDF保存</button></div>
 <div id="pages"></div>
 </div>
 </div>
@@ -1314,7 +1314,7 @@ var cm=btn('書体を見比べる','実際の名前で並べて選ぶ');cm.oncli
 [fb,cm,ws,mi,sz,pl,co].forEach(function(x){b.appendChild(x)});al.forEach(function(x){b.appendChild(x)});b.appendChild(lb);b.appendChild(fl);b.appendChild(vl);
 return det}
 function updQact(){var q=$('qact');if(!q)return;var on=UI.mode==='easy'&&step===3&&S.tpl==='free'&&rows.length>0;q.hidden=!on;if(!on)return;
-var n=current().length;$('qprint').disabled=!n;$('qpdf').disabled=!n;var nb=Object.keys(badRows).length,st=$('qstat');
+var n=current().length;$('qprint').disabled=!n;$('qpdf').disabled=!n;$('qpc').disabled=!n;var nb=Object.keys(badRows).length,st=$('qstat');
 st.className=nb?'ng':'';st.textContent=nb?'⚠ 文字化けの疑いが'+nb+'名分あります。上の赤い欄を確認してください。':n+'名分・入力の文字チェック問題なし（印刷・PDFの前に、字形の有無も自動で確認します）'}
 function isNoSlot(sl){return groupOf(sl.label)==='no'||/番号/.test(sl.label)}
 function slotAuto(sl){if(!isNoSlot(sl))return null;var it=V.items.filter(function(x){return x.id===sl.key})[0];if(!it)return null;if(!it.auto)it.auto={prefix:'',start:1,digits:3};
@@ -1426,7 +1426,7 @@ if(rows.length&&!current().length){alert('印刷する生徒が選択されて�
 try{await JukenFonts.prepare($('pages'));Array.prototype.forEach.call($('pages').querySelectorAll('.ticket'),fitAll)}catch(e){}
 if(!(await fontGate('印刷する')))return;
 applyPageCss();window.print()}
-$('print').onclick=doPrint;$('qprint').onclick=doPrint;$('qpdf').onclick=function(){makePdf()};
+$('print').onclick=doPrint;$('qprint').onclick=doPrint;$('qpdf').onclick=function(){makePdf()};$('qpc').onclick=function(){makePdfPc()};
 var rt;window.addEventListener('resize',function(){clearTimeout(rt);rt=setTimeout(render,100)});
 zoom=UI.zoom;showAll=UI.all;
 /* ---------- トースト ---------- */
@@ -1595,7 +1595,7 @@ function drawFinal(){var box=$('ws4');if(box.hidden)return;box.textContent='';
 whead(box,'確認して印刷','右の受験票を確認してください。問題なければ印刷します。');
 var dl=el('dl','sum');dl.id='wsum';[['デザイン','wsn'],['名簿','wsr'],['印刷する枚数','wsc']].forEach(function(r){dl.appendChild(el('dt',null,r[0]));var d=el('dd');d.id=r[1];dl.appendChild(d)});box.appendChild(dl);
 var wn=el('div','wnote');wn.id='wwarn';wn.hidden=true;box.appendChild(wn);
-var ar=el('div','wsec2');var pd=btn('PDFをファイル保管へ','全員分の受験票PDFを作り、ファイル保管に保存します');pd.id='wpdf';pd.onclick=makePdf;ar.appendChild(pd);
+var ar=el('div','wsec2');var pd=btn('PDFをファイル保管へ','全員分の受験票PDFを作り、ファイル保管に保存します');pd.id='wpdf';pd.onclick=makePdf;var pp=btn('PDFをパソコンに保存','全員分の受験票PDFを作り、このパソコンの好きな場所に保存します');pp.id='wpc';pp.onclick=makePdfPc;ar.appendChild(pp);ar.appendChild(pd);
 var sv=btn('このデザインを保存','共有デザインとして保存（任意）');sv.id='wsave';sv.onclick=saveMain;ar.appendChild(sv);
 var sa=btn('別の名前で保存…');sa.id='wsaveas';sa.className='ghost';sa.onclick=saveAs;ar.appendChild(sa);box.appendChild(ar);
 var st=el('div');st.id='wsst';box.appendChild(st);
@@ -1611,7 +1611,7 @@ else if(!n)msg='印刷する人が選ばれていません。「印刷する人�
 else if(mm)msg='項目ごとの件数がずれています。名簿のステップで行がそろっているか確認してください。';
 else if(bad){var en=emptyReqNames();msg=(en.length&&en.length<=3?'「'+en.join('」「')+'」が未入力です':'未入力の項目が'+bad+'つあります')+'（空欄のまま印刷されます）。'}
 w.hidden=!msg;w.textContent=msg;
-var ok=has&&n>0;$('wpdf').disabled=!ok;$('wnext').disabled=!ok;
+var ok=has&&n>0;$('wpdf').disabled=!ok;$('wpc').disabled=!ok;$('wnext').disabled=!ok;
 var d=dirtyNow();$('wsst').textContent=S.cur?(d?'未保存の変更があります':'保存済み'+(cur&&cur.at?'（'+fmtAt(cur.at)+'）':'')):'まだ保存していません（保存しなくても印刷できます）。';
 $('wsaveas').hidden=!S.cur;$('wsave').textContent=S.cur&&d?'上書き保存':'このデザインを保存'}
 
@@ -1911,16 +1911,12 @@ var H2C='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.mi
 function loadScript(u){return libP[u]||(libP[u]=new Promise(function(ok,ng){var s=document.createElement('script');s.src=u;s.onload=ok;s.onerror=function(){delete libP[u];ng(new Error('lib'))};document.head.appendChild(s)}))}
 function cleanFn(n){return String(n||'').replace(/[\\\/:*?"<>|\u0000-\u001f]+/g,' ').replace(/\s+/g,' ').trim()}
 function dlBlob(b,name){var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(a.href)},30000)}
-async function makePdf(){if(pdfBusy||modalOpen)return;var list=current();if(rows.length&&!list.length){alert('PDFにする生徒が選択されていません。');return}
-var base=cleanFn(S.curName||importName||V.hdr||tpl().name)||'受験票',dn=stamp(new Date());
-var d=await fdlg({title:'PDFをファイル保管へ',text:list.length+'ページ（A4・1名1ページ）のPDFを作り、ファイル保管に保存します。',fields:[{k:'folder',label:'保存先フォルダ（空欄で未分類）',value:base,list:fNames(),max:60},{k:'name',label:'ファイル名',value:base+'_受験票_'+dn+'.pdf',max:120,req:1},{k:'note',label:'メモ',type:'area',value:'',max:500},{k:'dl',type:'check',label:'端末にもダウンロード',value:false}],warn:'このPDFには生徒の氏名などが含まれます。ログインしたスタッフ全員が閲覧できます。',ok:'PDFを作って保存'});
-if(!d)return;var fname=cleanFn(d.name)||base+'_受験票';if(!/\.pdf$/i.test(fname))fname+='.pdf';
-if(!(await fontGate('PDFをファイル保管へ')))return;
-pdfBusy=true;var cancel=false,host=null,pg=progDlg('PDFを作成中',function(){cancel=true});
+/* 全員分のPDFを作る（中止されたら null）。o.cancel を立てると次のページで止まる */
+async function buildPdf(list,pg,o){var host=null;
 try{pg.set('ライブラリを読み込み中…');await loadScript(H2C);await loadScript(JSPDF);if(document.fonts&&document.fonts.ready)await document.fonts.ready;
 host=el('div');var pz=JT.pageSize(V),land=pz.w>pz.h;host.style.cssText='position:fixed;left:0;top:0;width:'+pz.w+'mm;height:'+pz.h+'mm;z-index:-1;overflow:hidden;pointer-events:none;background:#fff';document.body.appendChild(host);
 var T=tpl(),pdf=null,n=list.length,sc=200/96;
-for(var i=0;i<n;i++){if(cancel)break;pg.set('PDF作成中 '+(i+1)+'/'+n,i/n);
+for(var i=0;i<n;i++){if(o.cancel)break;pg.set('PDF作成中 '+(i+1)+'/'+n,i/n);
 host.textContent='';var t=JT.render(S.tpl,list[i],V);host.appendChild(t);if(JukenCheck.planned())JukenCheck.apply(t);fitAll(t);await JukenFonts.prepare(t);fitAll(t);
 if(i===0||i===n-1||i===Math.floor(n/2)){var vr=await JukenCheck.verify([t]);if(vr.notLoaded.length||vr.missing.some(function(m){return !m.fb})){throw new Error('文字の確認に失敗しました（'+(vr.notLoaded.length?'フォントが読み込めていません：'+vr.notLoaded.join('、'):'字形のない文字があります')+'）。フォントを選び直してください。')}}
 var ims=Array.prototype.slice.call(t.querySelectorAll('img'));await Promise.all(ims.map(function(m){return m.complete?0:new Promise(function(r){m.onload=m.onerror=r})}));
@@ -1930,15 +1926,35 @@ var img=cv.toDataURL('image/jpeg',.9);cv.width=cv.height=0;
 if(!pdf)pdf=new window.jspdf.jsPDF({unit:'mm',format:'a4',orientation:land?'landscape':'portrait',compress:true});else pdf.addPage('a4',land?'l':'p');
 pdf.addImage(img,'JPEG',0,0,pz.w,pz.h,undefined,'FAST')}
 host.remove();host=null;
-if(cancel||!pdf){pg.close();pdfBusy=false;toast('PDFの作成を中止しました');return}
-var blob=pdf.output('blob');pg.set('保存中…（'+fmtSize(blob.size)+'）',1);pg.nocancel();
+return (o.cancel||!pdf)?null:{blob:pdf.output('blob'),n:n}}finally{if(host)host.remove()}}
+async function makePdf(){if(pdfBusy||modalOpen)return;var list=current();if(rows.length&&!list.length){alert('PDFにする生徒が選択されていません。');return}
+var base=cleanFn(S.curName||importName||V.hdr||tpl().name)||'受験票',dn=stamp(new Date());
+var d=await fdlg({title:'PDFをファイル保管へ',text:list.length+'ページ（A4・1名1ページ）のPDFを作り、ファイル保管に保存します。',fields:[{k:'folder',label:'保存先フォルダ（空欄で未分類）',value:base,list:fNames(),max:60},{k:'name',label:'ファイル名',value:base+'_受験票_'+dn+'.pdf',max:120,req:1},{k:'note',label:'メモ',type:'area',value:'',max:500},{k:'dl',type:'check',label:'端末にもダウンロード',value:false}],warn:'このPDFには生徒の氏名などが含まれます。ログインしたスタッフ全員が閲覧できます。',ok:'PDFを作って保存'});
+if(!d)return;var fname=cleanFn(d.name)||base+'_受験票';if(!/\.pdf$/i.test(fname))fname+='.pdf';
+if(!(await fontGate('PDFをファイル保管へ')))return;
+pdfBusy=true;var cancel={cancel:false},pg=progDlg('PDFを作成中',function(){cancel.cancel=true});
+try{var res=await buildPdf(list,pg,cancel);
+if(!res){pg.close();pdfBusy=false;toast('PDFの作成を中止しました');return}
+var blob=res.blob,n=res.n;pg.set('保存中…（'+fmtSize(blob.size)+'）',1);pg.nocancel();
 if(d.dl)dlBlob(blob,fname);
 var row=null,err='';try{row=await fPut(blob,{name:fname,kind:'pdf',mime:'application/pdf',folder:d.folder,note:d.note})}catch(e){err=fErr(e)}
 pg.close();pdfBusy=false;
 if(row){toast('PDFをファイル保管に保存しました（'+n+'ページ・'+fmtSize(blob.size)+'）','ファイルを開く',function(){FL.folder=row.folder||'';FL.tab='pdf';openFiles()},9000)}
 else{if(!d.dl)dlBlob(blob,fname);alert('ファイル保管への保存に失敗しました。\n'+err+'\n\nPDFは端末にダウンロードしました。')}
-}catch(e){if(host)host.remove();pg.close();pdfBusy=false;alert('PDFを作成できませんでした。'+(e&&e.message==='lib'?'\n作成に必要なライブラリを読み込めません。通信状況を確認してください。':'\n'+((e&&e.message)||e)))}}
-$('pdfsave').onclick=makePdf;$('spdf').onclick=function(){closeSM();makePdf()};
+}catch(e){pg.close();pdfBusy=false;alert('PDFを作成できませんでした。'+(e&&e.message==='lib'?'\n作成に必要なライブラリを読み込めません。通信状況を確認してください。':'\n'+((e&&e.message)||e)))}}
+/* PDFをパソコンに保存：Chrome/Edgeはクリック直後に保存ダイアログ（エクスプローラー）を出して場所と名前を決めてから作る。非対応ブラウザはダウンロード */
+async function makePdfPc(){if(pdfBusy||modalOpen)return;var list=current();if(rows.length&&!list.length){alert('PDFにする生徒が選択されていません。');return}
+var fname=(cleanFn(S.curName||importName||V.hdr||tpl().name)||'受験票')+'_受験票_'+stamp(new Date())+'.pdf',h=null;
+if(window.showSaveFilePicker&&window.isSecureContext&&window.top===window){try{h=await window.showSaveFilePicker({suggestedName:fname,types:[{description:'PDF',accept:{'application/pdf':['.pdf']}}]})}catch(e){if(e&&e.name==='AbortError')return;h=null}}
+if(!(await fontGate('PDFを作って保存')))return;
+pdfBusy=true;var cancel={cancel:false},pg=progDlg('PDFを作成中',function(){cancel.cancel=true});
+try{var res=await buildPdf(list,pg,cancel);
+if(!res){pg.close();pdfBusy=false;toast('PDFの作成を中止しました');return}
+pg.set('保存中…（'+fmtSize(res.blob.size)+'）',1);pg.nocancel();
+var nm=fname;if(h){var w=await h.createWritable();await w.write(res.blob);await w.close();nm=h.name||fname}else dlBlob(res.blob,fname);
+pg.close();pdfBusy=false;toast('PDFを保存しました（'+nm+'・'+res.n+'ページ・'+fmtSize(res.blob.size)+'）',null,null,7000)
+}catch(e){pg.close();pdfBusy=false;alert('PDFを作成できませんでした。'+(e&&e.message==='lib'?'\n作成に必要なライブラリを読み込めません。通信状況を確認してください。':'\n'+((e&&e.message)||e)))}}
+$('pdfsave').onclick=makePdf;$('spdf').onclick=function(){closeSM();makePdf()};$('pdfpc').onclick=makePdfPc;$('spc').onclick=function(){closeSM();makePdfPc()};
 /* ---------- ログイン ---------- */
 var sb=null;
 try{sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY,{auth:{storageKey:'juken-hyo-auth',persistSession:true,autoRefreshToken:true}})}catch(e){sb=null}
