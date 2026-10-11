@@ -1402,7 +1402,7 @@ s.onchange=function(){setOrder(s.value)};return s}
 function setOrder(v){UI.order=v==='no'?'no':'roster';saveUi();navPos=0;Array.prototype.forEach.call(document.querySelectorAll('select.ordsel'),function(x){x.value=UI.order});if(rows.length)drawList();render()}
 var PXMM=96/25.4;
 function applyPageCss(){var p=JT.pageSize(V),s=document.getElementById('pgsz');if(!s){s=document.createElement('style');s.id='pgsz';document.head.appendChild(s)}
-s.textContent='@page{size:A4 '+(p.w>p.h?'landscape':'portrait')+';margin:0}@media print{.pw{width:'+p.w+'mm!important;height:'+p.h+'mm!important}}'}
+s.textContent='@page{size:A4 '+(p.w>p.h?'landscape':'portrait')+';margin:0}@media print{.pw{width:'+p.w+'mm!important;height:'+p.h+'mm!important}.ticket,.ticket *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}'}
 function render(){var list=current(),box=$('pages');box.textContent='';
 applyPageCss();var pz=JT.pageSize(V),avail=Math.max(200,$('pane').clientWidth-32);var sc=zoom==='fit'?Math.min(1,avail/(pz.w*PXMM)):(+zoom||100)/100;curSc=sc;zoomUi();
 var fl=[],T=tpl();
